@@ -25,7 +25,7 @@
 ## 3. 폴더 구조 초안
 
 ```text
-scrum-helper-v2/
+repository-root/
   SPEC.md
   DB_SCHEMA.md
   API_SPEC.md

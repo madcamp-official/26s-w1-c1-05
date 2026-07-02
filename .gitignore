@@ -1,31 +1,34 @@
-# Local planning notes generated during discussion.
+# Local planning notes that are not part of the deliverable.
 local-notes/
 
-# Previous Markdown planning pass.
-README.md
-docs/
-
-# Keep deliverable docs for the fresh spec-driven project.
-!scrum-helper-v2/docs/
-!scrum-helper-v2/docs/**
-
-# Local environment and secrets.
+# Environment and secrets.
 .env
 .env.*
 !.env.example
 
-# Local SQLite databases.
+# Node dependencies and build artifacts.
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+coverage/
+**/coverage/
+
+# Java/Gradle build artifacts.
+.gradle/
+**/.gradle/
+build/
+**/build/
+!backend/gradle/wrapper/gradle-wrapper.jar
+
+# Local database files.
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
 
-# Node build artifacts.
-node_modules/
-dist/
-
-build/
-coverage/
+# Logs.
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

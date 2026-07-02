@@ -35,7 +35,7 @@ CREATE DATABASE scrum_helper
 경로:
 
 ```text
-scrum-helper-v2/backend
+backend
 ```
 
 PowerShell 예시:
@@ -71,7 +71,7 @@ GET http://localhost:8080/api/health
 경로:
 
 ```text
-scrum-helper-v2/frontend
+frontend
 ```
 
 최초 1회:
@@ -130,13 +130,13 @@ VITE_API_BASE_URL=http://localhost:8080/api
 백엔드:
 
 ```powershell
-cd scrum-helper-v2/backend
+cd backend
 .\gradlew.bat test
 ```
 
 프론트엔드:
 
 ```powershell
-cd scrum-helper-v2/frontend
+cd frontend
 npm run build
 ```

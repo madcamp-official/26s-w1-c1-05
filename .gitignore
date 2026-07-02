@@ -1,6 +1,13 @@
 # Local planning notes generated during discussion.
 local-notes/
-docs
+
+# Previous Markdown planning pass.
+README.md
+docs/
+
+# Keep deliverable docs for the fresh spec-driven project.
+!scrum-helper-v2/docs/
+!scrum-helper-v2/docs/**
 
 # Local environment and secrets.
 .env

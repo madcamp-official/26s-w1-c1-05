@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface MeetingRepository extends JpaRepository<Meeting, Long> {
 	List<Meeting> findByTeamIdOrderByMeetingAtDescCreatedAtDesc(Long teamId);
+
+	List<Meeting> findByTeamIdAndIdInOrderByMeetingAtAscCreatedAtAsc(Long teamId, List<Long> ids);
 }

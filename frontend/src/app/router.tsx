@@ -14,6 +14,7 @@ import { TaskListPage } from '../pages/tasks/TaskListPage';
 import { TaskDetailPage } from '../pages/tasks/TaskDetailPage';
 import { MeetingListPage } from '../pages/meetings/MeetingListPage';
 import { MeetingDetailPage } from '../pages/meetings/MeetingDetailPage';
+import { SpecDocumentPage } from '../pages/specDocuments/SpecDocumentPage';
 import { RetrospectiveListPage } from '../pages/retrospectives/RetrospectiveListPage';
 import { RetrospectiveDetailPage } from '../pages/retrospectives/RetrospectiveDetailPage';
 
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
               { path: 'settings', element: <TeamSettingsPage /> },
               { path: 'meetings', element: <MeetingListPage /> },
               { path: 'meetings/:meetingId', element: <MeetingDetailPage /> },
+              { path: 'spec-documents', element: <SpecDocumentPage /> },
               { path: 'tasks', element: <TaskListPage /> },
               { path: 'tasks/:taskId', element: <TaskDetailPage /> },
               { path: 'retrospectives', element: <RetrospectiveListPage /> },

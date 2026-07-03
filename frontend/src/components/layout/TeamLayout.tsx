@@ -12,6 +12,7 @@ export function TeamLayout() {
         </NavLink>
         <NavLink to={`/teams/${teamId}/tasks`}>Task</NavLink>
         <NavLink to={`/teams/${teamId}/meetings`}>회의</NavLink>
+        <NavLink to={`/teams/${teamId}/spec-documents`}>스펙</NavLink>
         <NavLink to={`/teams/${teamId}/retrospectives`}>회고록</NavLink>
         <NavLink to={`/teams/${teamId}/members`}>팀원</NavLink>
         <NavLink to={`/teams/${teamId}/settings`}>설정</NavLink>

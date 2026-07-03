@@ -219,6 +219,38 @@ Content-Type: application/json
 }
 ```
 
+### 3.8 SpecDraftResponse
+
+```json
+{
+  "title": "Scrum Helper Alpha 스펙 문서 초안",
+  "content": "# 스펙 문서 초안\n\n## 프로젝트 목적\n...",
+  "sourceMeetingIds": [300, 301],
+  "generatedBy": "GEMINI"
+}
+```
+
+`generatedBy`는 Gemini 호출 성공 시 `GEMINI`, API 키가 없거나 호출 실패 시 `LOCAL_FALLBACK`이다.
+
+### 3.9 SpecDocumentResponse
+
+```json
+{
+  "id": 400,
+  "teamId": 1,
+  "title": "Scrum Helper Alpha 스펙 문서 초안",
+  "content": "# 스펙 문서 초안\n\n## 프로젝트 목적\n...",
+  "sourceMeetingIds": [300, 301],
+  "createdBy": {
+    "id": 1,
+    "name": "안종화",
+    "email": "owner@example.com"
+  },
+  "createdAt": "2026-07-03T16:20:00",
+  "updatedAt": "2026-07-03T16:20:00"
+}
+```
+
 ## 4. Auth API
 
 ### 4.1 회원가입
@@ -1224,9 +1256,82 @@ Errors:
 | `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
 | `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 작성자 또는 팀장이 아님 |
 
-## 9. Retrospective API
+## 9. Spec Document API
 
-### 9.1 회고록 목록 조회
+### 9.1 스펙 문서 목록 조회
+
+```http
+GET /api/teams/{teamId}/spec-documents
+```
+
+권한: 팀원
+
+Response `200`: `SpecDocumentResponse[]`
+
+### 9.2 회의록 기반 스펙 초안 생성
+
+```http
+POST /api/teams/{teamId}/spec-documents/draft
+```
+
+권한: 팀원
+
+Request:
+
+```json
+{
+  "meetingIds": [300, 301]
+}
+```
+
+Response `200`: `SpecDraftResponse`
+
+정책:
+
+- 회의록은 1개 이상 선택해야 한다.
+- 선택한 모든 회의록은 요청한 팀에 속해야 한다.
+- `GEMINI_API_KEY`가 설정되어 있으면 Gemini API로 초안을 생성한다.
+- Gemini 키가 없거나 API 호출에 실패하면 로컬 규칙 기반 초안을 생성한다.
+- 초안 생성 결과는 즉시 DB에 저장하지 않고, 사용자가 검토 후 저장한다.
+- 프롬프트에는 팀 이름, 회의록 제목, 회의 일시, 요약, 원문만 포함한다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `VALIDATION_ERROR` | 400 | 회의록 미선택 |
+| `MEETING_NOT_FOUND` | 404 | 선택한 회의록이 없거나 해당 팀 소속이 아님 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+
+### 9.3 스펙 문서 저장
+
+```http
+POST /api/teams/{teamId}/spec-documents
+```
+
+권한: 팀원
+
+Request:
+
+```json
+{
+  "title": "Scrum Helper Alpha 스펙 문서 초안",
+  "content": "# 스펙 문서 초안\n\n## 프로젝트 목적\n...",
+  "sourceMeetingIds": [300, 301]
+}
+```
+
+Response `201`: `SpecDocumentResponse`
+
+Validation:
+
+- `title`: required, blank 불가, 200자 이하
+- `content`: required, blank 불가
+- `sourceMeetingIds`: optional. 값이 있으면 모두 같은 팀의 회의록이어야 한다.
+
+## 10. Retrospective API
+
+### 10.1 회고록 목록 조회
 
 ```http
 GET /api/teams/{teamId}/retrospectives
@@ -1276,7 +1381,7 @@ Response `200`:
 
 현재 구현은 목록 응답에도 본문 필드(`yesterdayWork`, `todayPlan`, `note`)를 포함한다.
 
-### 9.2 회고록 생성
+### 10.2 회고록 생성
 
 ```http
 POST /api/teams/{teamId}/retrospectives
@@ -1312,7 +1417,7 @@ Errors:
 | `COLLABORATOR_NOT_TEAM_MEMBER` | 400 | 공동 작업자가 팀원이 아님 |
 | `AUTHOR_CANNOT_BE_COLLABORATOR` | 400 | 작성자를 공동 작업자로 포함 |
 
-### 9.3 회고록 상세 조회
+### 10.3 회고록 상세 조회
 
 ```http
 GET /api/retrospectives/{retrospectiveId}
@@ -1322,7 +1427,7 @@ GET /api/retrospectives/{retrospectiveId}
 
 Response `200`: `RetrospectiveResponse`
 
-### 9.4 회고록 수정
+### 10.4 회고록 수정
 
 ```http
 PATCH /api/retrospectives/{retrospectiveId}
@@ -1360,7 +1465,7 @@ Errors:
 | `COLLABORATOR_NOT_TEAM_MEMBER` | 400 | 공동 작업자가 팀원이 아님 |
 | `AUTHOR_CANNOT_BE_COLLABORATOR` | 400 | 작성자를 공동 작업자로 포함 |
 
-### 9.5 회고록 삭제
+### 10.5 회고록 삭제
 
 ```http
 DELETE /api/retrospectives/{retrospectiveId}
@@ -1384,7 +1489,7 @@ Response `200`:
 - 팀장이라도 작성자나 공동 작업자가 아니면 삭제할 수 없다.
 - 삭제 시 공동 작업자 연결도 삭제된다.
 
-## 10. 권한 매트릭스
+## 11. 권한 매트릭스
 
 | API 영역 | 로그인 | 팀원 | 팀장 | 작성자 | 공동 작업자 |
 |---|---:|---:|---:|---:|---:|
@@ -1402,11 +1507,12 @@ Response `200`:
 | 댓글 수정/삭제 | Y | - | - | Y | - |
 | 회의록 조회/생성 | Y | Y | - | - | - |
 | 회의록 수정/삭제 | Y | Y | Y | Y | - |
+| 스펙 문서 조회/초안 생성/저장 | Y | Y | - | - | - |
 | 회고록 조회/생성 | Y | Y | - | - | - |
 | 회고록 본문 수정/삭제 | Y | - | - | Y | Y |
 | 회고록 공동 작업자 목록 변경 | Y | - | - | Y | - |
 
-## 11. 주요 에러 코드
+## 12. 주요 에러 코드
 
 | Code | HTTP | 설명 |
 |---|---:|---|
@@ -1440,16 +1546,16 @@ Response `200`:
 | `MEETING_NOT_FOUND` | 404 | 회의록 없음 |
 | `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 회의록 작성자 또는 팀장만 가능 |
 
-## 12. 화면별 API 호출 흐름
+## 13. 화면별 API 호출 흐름
 
-### 12.1 로그인/회원가입 화면
+### 13.1 로그인/회원가입 화면
 
 1. `POST /api/auth/signup`
 2. `POST /api/auth/login`
 3. 성공 시 access token 저장
 4. `GET /api/me`
 
-### 12.2 팀 목록 화면
+### 13.2 팀 목록 화면
 
 1. `GET /api/teams`
 2. 공개 팀 가입: `POST /api/teams/{teamId}/join`
@@ -1458,13 +1564,13 @@ Response `200`:
 5. 팀 생성: `POST /api/teams`
 6. 가입/생성 성공 후 `GET /api/teams/{teamId}/dashboard`
 
-### 12.3 팀 대시보드
+### 13.3 팀 대시보드
 
 1. `GET /api/teams/{teamId}`
 2. `GET /api/teams/{teamId}/dashboard`
 3. `GET /api/teams/{teamId}/members`
 
-### 12.4 task 화면
+### 13.4 task 화면
 
 1. `GET /api/teams/{teamId}/tasks`
 2. 생성: `POST /api/teams/{teamId}/tasks`
@@ -1473,7 +1579,7 @@ Response `200`:
 5. 삭제: `DELETE /api/tasks/{taskId}`
 6. 댓글 조회: `GET /api/tasks/{taskId}/comments`
 
-### 12.5 회의록 화면
+### 13.5 회의록 화면
 
 1. `GET /api/teams/{teamId}/meetings`
 2. 생성: `POST /api/teams/{teamId}/meetings`
@@ -1481,7 +1587,14 @@ Response `200`:
 4. 수정: `PATCH /api/meetings/{meetingId}`
 5. 삭제: `DELETE /api/meetings/{meetingId}`
 
-### 12.6 회고록 화면
+### 13.6 스펙 문서 화면
+
+1. `GET /api/teams/{teamId}/meetings`
+2. `GET /api/teams/{teamId}/spec-documents`
+3. 초안 생성: `POST /api/teams/{teamId}/spec-documents/draft`
+4. 저장: `POST /api/teams/{teamId}/spec-documents`
+
+### 13.7 회고록 화면
 
 1. `GET /api/teams/{teamId}/retrospectives`
 2. 생성: `POST /api/teams/{teamId}/retrospectives`
@@ -1489,9 +1602,9 @@ Response `200`:
 4. 수정: `PATCH /api/retrospectives/{retrospectiveId}`
 5. 삭제: `DELETE /api/retrospectives/{retrospectiveId}`
 
-## 13. 구현 메모
+## 14. 구현 메모
 
-### 13.1 Controller 분리
+### 14.1 Controller 분리
 
 권장 Controller:
 
@@ -1501,9 +1614,10 @@ Response `200`:
 - `TaskController`
 - `TaskCommentController`
 - `MeetingController`
+- `SpecDocumentController`
 - `RetrospectiveController`
 
-### 13.2 Service 필수 transaction
+### 14.2 Service 필수 transaction
 
 아래 API는 반드시 transaction으로 처리한다.
 
@@ -1514,9 +1628,10 @@ Response `200`:
 | 팀원 제거 | 담당자/공동 작업자 연결 정리 |
 | task 생성/수정 | task와 담당자 목록 동시 저장 |
 | 회의록 생성/수정/삭제 | 작성자 또는 팀장 권한 확인 후 저장 |
+| 스펙 문서 저장 | 원본 회의록 팀 소속 검증 후 저장 |
 | 회고록 생성/수정 | 회고록과 공동 작업자 목록 동시 저장 |
 
-### 13.3 노출 금지 필드
+### 14.3 노출 금지 필드
 
 아래 필드는 API 응답에 절대 포함하지 않는다.
 

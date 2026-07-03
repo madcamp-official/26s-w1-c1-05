@@ -1016,6 +1016,77 @@ h2 {
   font-size: 20px;
 }
 
+.spec-layout {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.meeting-choice-list {
+  display: grid;
+  gap: 10px;
+  max-height: 520px;
+  overflow: auto;
+}
+
+.meeting-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.meeting-choice input {
+  margin-top: 4px;
+}
+
+.meeting-choice span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.meeting-choice small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.spec-editor {
+  min-height: 620px;
+}
+
+.spec-textarea {
+  min-height: 430px;
+  font-family:
+    "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.spec-preview {
+  max-height: 260px;
+  overflow: auto;
+  margin: 0;
+  padding: 14px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family:
+    "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.empty-panel.compact {
+  padding: 18px;
+}
+
 @media (max-width: 760px) {
   .topbar {
     height: auto;
@@ -1054,7 +1125,8 @@ h2 {
   .summary-grid,
   .retro-grid,
   .task-board,
-  .dashboard-grid {
+  .dashboard-grid,
+  .spec-layout {
     grid-template-columns: 1fr;
   }
 

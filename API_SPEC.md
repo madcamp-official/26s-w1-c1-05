@@ -1050,6 +1050,9 @@ Response `200`:
       "id": 200,
       "teamId": 1,
       "title": "Day 1 회고",
+      "yesterdayWork": "프로젝트 주제 확정",
+      "todayPlan": "DB와 API 설계",
+      "note": "Spring Security JWT 설정 확인 필요",
       "author": {
         "id": 1,
         "name": "안종화",
@@ -1070,7 +1073,7 @@ Response `200`:
 }
 ```
 
-목록 응답에서는 본문 필드(`yesterdayWork`, `todayPlan`, `note`)를 생략할 수 있다.
+현재 구현은 목록 응답에도 본문 필드(`yesterdayWork`, `todayPlan`, `note`)를 포함한다.
 
 ### 8.2 회고록 생성
 

@@ -114,16 +114,33 @@ VITE_API_BASE_URL=http://localhost:8080/api
 - 프론트 인증 상태 복구
 - 보호 라우트
 - 로그인/회원가입 화면
-- 팀 관련 화면 placeholder
-
-다음 구현 대상:
-
-- Team Entity/API
+- Team, TeamMember Entity/API
 - 전체 팀 목록
 - 팀 생성
 - 공개 팀 가입
 - 비밀번호 팀 가입
-- 팀 대시보드
+- 팀 대시보드 요약
+- 팀원 목록 조회
+- 팀 목록/생성/가입 프론트 연동
+- 팀장 변경
+- 팀원 제거
+- 팀 설정
+- Task Entity/API
+- task 목록 조회
+- task 생성
+- task 완료 변경
+- task 담당자 지정 UI
+- task 상세 수정/삭제
+- task 댓글 작성/수정/삭제
+- 회고록 목록/생성/수정/삭제
+- 회고록 공동 작업자 지정
+- 회고록 작성자/공동 작업자 권한 검증
+- 팀 대시보드 회고록 집계
+
+다음 구현 대상:
+
+- 전체 사용자 흐름 수동 테스트
+- KCloud 배포 준비 문서화
 
 ## 6. 검증 명령
 
@@ -140,3 +157,7 @@ cd backend
 cd frontend
 npm run build
 ```
+
+## 7. 수동 테스트
+
+기능별 재현 절차는 `docs/TEST_SCENARIOS.md`를 따른다.

@@ -10,6 +10,7 @@ public record TeamDetailResponse(
 		String name,
 		String description,
 		boolean hasPassword,
+		String inviteCode,
 		UserSummaryResponse leader,
 		TeamRole myRole,
 		LocalDateTime createdAt,

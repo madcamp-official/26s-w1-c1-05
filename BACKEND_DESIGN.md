@@ -18,11 +18,13 @@ MVP 백엔드는 아래 기능을 제공한다.
 - 회원가입, 로그인, 내 정보 조회
 - JWT 인증
 - 전체 팀 목록 조회
-- 팀 생성, 팀 가입, 팀 상세, 팀 대시보드
+- 팀 생성, 공개/비밀번호/초대코드 가입, 팀 상세, 팀 대시보드
 - 팀 정보 수정, 팀 비밀번호 변경
+- 팀장 전용 초대코드 재발급
 - 팀원 목록, 팀원 제거, 팀장 변경
 - task 생성, 조회, 수정, 완료 변경, 삭제
 - task 댓글 작성, 조회, 수정, 삭제
+- 회의록 생성, 조회, 수정, 삭제
 - 회고록 생성, 조회, 수정, 삭제
 - 회고록 공동 작업자 지정과 권한 검증
 
@@ -228,6 +230,7 @@ public enum ErrorCode {
     ALREADY_TEAM_MEMBER(HttpStatus.CONFLICT, "이미 가입한 팀입니다."),
     TEAM_PASSWORD_REQUIRED(HttpStatus.BAD_REQUEST, "팀 비밀번호가 필요합니다."),
     INVALID_TEAM_PASSWORD(HttpStatus.UNAUTHORIZED, "팀 비밀번호가 올바르지 않습니다."),
+    INVALID_INVITE_CODE(HttpStatus.NOT_FOUND, "초대코드가 올바르지 않습니다."),
     CANNOT_REMOVE_SELF(HttpStatus.BAD_REQUEST, "본인은 제거할 수 없습니다."),
     CANNOT_REMOVE_LEADER(HttpStatus.BAD_REQUEST, "팀장은 제거할 수 없습니다."),
     REASSIGN_TASK_REQUIRED(HttpStatus.CONFLICT, "담당자 재배정이 필요한 task가 있습니다."),
@@ -239,8 +242,11 @@ public enum ErrorCode {
     COMMENT_AUTHOR_ONLY(HttpStatus.FORBIDDEN, "댓글 작성자만 수정 또는 삭제할 수 있습니다."),
     RETROSPECTIVE_NOT_FOUND(HttpStatus.NOT_FOUND, "회고록을 찾을 수 없습니다."),
     RETROSPECTIVE_EDITOR_ONLY(HttpStatus.FORBIDDEN, "회고록 작성자 또는 공동 작업자만 가능합니다."),
+    RETROSPECTIVE_AUTHOR_ONLY_FOR_COLLABORATORS(HttpStatus.FORBIDDEN, "회고록 작성자만 공동 작업자를 변경할 수 있습니다."),
     COLLABORATOR_NOT_TEAM_MEMBER(HttpStatus.BAD_REQUEST, "공동 작업자는 팀원이어야 합니다."),
-    AUTHOR_CANNOT_BE_COLLABORATOR(HttpStatus.BAD_REQUEST, "작성자는 공동 작업자에 포함할 수 없습니다.");
+    AUTHOR_CANNOT_BE_COLLABORATOR(HttpStatus.BAD_REQUEST, "작성자는 공동 작업자에 포함할 수 없습니다."),
+    MEETING_NOT_FOUND(HttpStatus.NOT_FOUND, "회의록을 찾을 수 없습니다."),
+    MEETING_AUTHOR_OR_LEADER_ONLY(HttpStatus.FORBIDDEN, "회의록 작성자 또는 팀장만 가능합니다.");
 }
 ```
 
@@ -547,6 +553,7 @@ Request:
 - `TeamUpdateRequest(name, description)`
 - `TeamPasswordUpdateRequest(password)`
 - `TeamJoinRequest(password)`
+- `JoinTeamByInviteCodeRequest(inviteCode)`
 - `ChangeLeaderRequest(newLeaderUserId)`
 
 Response:
@@ -555,6 +562,7 @@ Response:
 - `TeamResponse`
 - `TeamDashboardResponse`
 - `TeamMemberResponse`
+- `TeamInviteCodeResponse`
 - `ChangeLeaderResponse`
 
 ### 8.3 Task DTO
@@ -582,6 +590,16 @@ Response:
 
 - `RetrospectiveSummaryResponse`
 - `RetrospectiveResponse`
+
+### 8.5 Meeting DTO
+
+Request:
+
+- `SaveMeetingRequest(title, meetingAt, rawContent, summary)`
+
+Response:
+
+- `MeetingResponse`
 
 ## 9. Service 설계
 
@@ -640,9 +658,10 @@ Steps:
 1. 팀 이름 중복 확인
 2. 현재 User 조회
 3. 팀 비밀번호가 있으면 hash
-4. Team 저장
-5. TeamMember를 `LEADER`로 저장
-6. TeamResponse 반환
+4. unique 초대코드 생성
+5. Team 저장
+6. TeamMember를 `LEADER`로 저장
+7. TeamResponse 반환
 
 ### `joinTeam(Long currentUserId, Long teamId, TeamJoinRequest request)`
 
@@ -655,6 +674,29 @@ Steps:
 3. 팀이 비밀번호 팀이면 비밀번호 검증
 4. TeamMember를 `MEMBER`로 저장
 5. TeamMemberResponse 반환
+
+### `joinTeamByInviteCode(Long currentUserId, JoinTeamByInviteCodeRequest request)`
+
+Transaction required.
+
+Steps:
+
+1. 초대코드 입력값에서 공백/하이픈을 제거하고 대문자로 정규화
+2. 초대코드로 Team 조회
+3. 이미 팀원인지 확인
+4. TeamMember를 `MEMBER`로 저장
+5. TeamMemberResponse 반환
+
+### `rotateInviteCode(Long currentUserId, Long teamId)`
+
+Transaction required.
+
+Steps:
+
+1. 요청자가 현재 팀장인지 확인
+2. 기존 코드와 다른 unique 초대코드 생성
+3. Team.inviteCode 변경
+4. TeamInviteCodeResponse 반환
 
 ### `changeLeader(Long currentUserId, Long teamId, ChangeLeaderRequest request)`
 
@@ -786,15 +828,17 @@ Steps:
 
 1. Retrospective 조회
 2. 요청자가 작성자 또는 공동 작업자인지 확인
-3. 공동 작업자가 모두 팀원인지 확인
-4. 작성자가 공동 작업자 목록에 없는지 확인
-5. 본문 필드 수정
-6. 기존 공동 작업자 목록 삭제 후 새 목록 저장
+3. 요청자가 작성자인지 확인
+4. 작성자가 아니면 요청 공동 작업자 목록이 기존 목록과 같은지 확인
+5. 작성자인 경우 공동 작업자가 모두 팀원인지 확인
+6. 작성자가 공동 작업자 목록에 없는지 확인
+7. 본문 필드 수정
+8. 작성자인 경우에만 기존 공동 작업자 목록 삭제 후 새 목록 저장
 
 주의:
 
-- 공동 작업자가 자기 자신을 collaborator 목록에서 제거할 수도 있다.
-- 이 경우 요청 자체는 성공하고, 이후에는 수정 권한을 잃는다.
+- 공동 작업자는 본문만 수정할 수 있다.
+- 공동 작업자가 공동 작업자 목록을 변경하려고 하면 `RETROSPECTIVE_AUTHOR_ONLY_FOR_COLLABORATORS` 오류를 반환한다.
 
 ### `deleteRetrospective(Long currentUserId, Long retrospectiveId)`
 
@@ -818,6 +862,7 @@ void requireCommentAuthor(TaskComment comment, Long userId);
 void requireRetrospectiveEditor(Retrospective retrospective, Long userId);
 void validateTaskAssignees(Long teamId, List<Long> assigneeUserIds);
 void validateRetrospectiveCollaborators(Long teamId, Long authorUserId, List<Long> collaboratorUserIds);
+boolean hasSameRetrospectiveCollaborators(Long retrospectiveId, List<Long> requestedCollaboratorUserIds);
 ```
 
 헬퍼 위치:
@@ -1024,5 +1069,6 @@ public ResponseEntity<ApiResponse<TaskResponse>> createTask(
 - task 담당자 1명 이상은 DB가 아니라 Service에서 보장한다.
 - 팀원 제거 시 task 담당자 0명 발생을 막는다.
 - 댓글은 작성자만 수정/삭제 가능하다.
-- 회고록은 작성자와 공동 작업자만 수정/삭제 가능하다.
+- 회고록 본문은 작성자와 공동 작업자만 수정/삭제 가능하다.
+- 회고록 공동 작업자 목록은 작성자만 변경 가능하다.
 - 팀장 권한은 팀 정보/팀원 관리에만 적용된다. 댓글과 회고록 작성자 권한을 침범하지 않는다.

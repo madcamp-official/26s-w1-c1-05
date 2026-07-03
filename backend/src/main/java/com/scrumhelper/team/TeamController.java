@@ -2,9 +2,11 @@ package com.scrumhelper.team;
 
 import com.scrumhelper.common.ApiResponse;
 import com.scrumhelper.team.dto.CreateTeamRequest;
+import com.scrumhelper.team.dto.JoinTeamByInviteCodeRequest;
 import com.scrumhelper.team.dto.JoinTeamRequest;
 import com.scrumhelper.team.dto.TeamDashboardResponse;
 import com.scrumhelper.team.dto.TeamDetailResponse;
+import com.scrumhelper.team.dto.TeamInviteCodeResponse;
 import com.scrumhelper.team.dto.TeamMemberResponse;
 import com.scrumhelper.team.dto.TeamPasswordResponse;
 import com.scrumhelper.team.dto.TeamSummaryResponse;
@@ -82,6 +84,16 @@ public class TeamController {
 				.body(ApiResponse.created(teamService.joinTeam(currentUserId(authentication), teamId, request)));
 	}
 
+	@PostMapping("/join-by-invite")
+	public ResponseEntity<ApiResponse<TeamMemberResponse>> joinTeamByInviteCode(
+			@Valid @RequestBody JoinTeamByInviteCodeRequest request,
+			Authentication authentication
+	) {
+		return ResponseEntity
+				.status(HttpStatus.CREATED)
+				.body(ApiResponse.created(teamService.joinTeamByInviteCode(currentUserId(authentication), request)));
+	}
+
 	@GetMapping("/{teamId}/members")
 	public ApiResponse<List<TeamMemberResponse>> getMembers(
 			@PathVariable Long teamId,
@@ -106,6 +118,14 @@ public class TeamController {
 			Authentication authentication
 	) {
 		return ApiResponse.ok(teamService.updatePassword(currentUserId(authentication), teamId, request));
+	}
+
+	@PatchMapping("/{teamId}/invite-code")
+	public ApiResponse<TeamInviteCodeResponse> rotateInviteCode(
+			@PathVariable Long teamId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(teamService.rotateInviteCode(currentUserId(authentication), teamId));
 	}
 
 	@PatchMapping("/{teamId}/leader")

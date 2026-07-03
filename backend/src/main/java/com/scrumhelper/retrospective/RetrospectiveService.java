@@ -18,7 +18,9 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class RetrospectiveService {
@@ -87,7 +89,12 @@ public class RetrospectiveService {
 		Team team = retrospective.getTeam();
 		requireMembership(team.getId(), currentUserId);
 		requireEditor(retrospective, currentUserId);
-		validateCollaborators(team.getId(), retrospective.getAuthor().getId(), request.collaboratorUserIds());
+		boolean isAuthor = retrospective.getAuthor().getId().equals(currentUserId);
+		if (isAuthor) {
+			validateCollaborators(team.getId(), retrospective.getAuthor().getId(), request.collaboratorUserIds());
+		} else if (!hasSameCollaborators(retrospective.getId(), request.collaboratorUserIds())) {
+			throw new BusinessException(ErrorCode.RETROSPECTIVE_AUTHOR_ONLY_FOR_COLLABORATORS);
+		}
 
 		retrospective.update(
 				request.title().trim(),
@@ -95,7 +102,9 @@ public class RetrospectiveService {
 				normalizeOptionalText(request.todayPlan()),
 				normalizeOptionalText(request.note())
 		);
-		replaceCollaborators(retrospective, team, request.collaboratorUserIds());
+		if (isAuthor) {
+			replaceCollaborators(retrospective, team, request.collaboratorUserIds());
+		}
 		return toResponse(retrospective);
 	}
 
@@ -158,6 +167,16 @@ public class RetrospectiveService {
 		if (hasInvalidCollaborator) {
 			throw new BusinessException(ErrorCode.COLLABORATOR_NOT_TEAM_MEMBER);
 		}
+	}
+
+	private boolean hasSameCollaborators(Long retrospectiveId, List<Long> requestedCollaboratorUserIds) {
+		Set<Long> currentCollaboratorUserIds = retrospectiveCollaboratorRepository.findByRetrospectiveId(retrospectiveId).stream()
+				.map(collaborator -> collaborator.getUser().getId())
+				.collect(java.util.stream.Collectors.toSet());
+		Set<Long> requestedIds = requestedCollaboratorUserIds == null
+				? Set.of()
+				: new HashSet<>(requestedCollaboratorUserIds);
+		return currentCollaboratorUserIds.equals(requestedIds);
 	}
 
 	private RetrospectiveResponse toResponse(Retrospective retrospective) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Lock, Plus, Search, Users } from 'lucide-react';
+import { KeyRound, Lock, Plus, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
@@ -20,6 +20,7 @@ export function TeamListPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [joinPasswordTeamId, setJoinPasswordTeamId] = useState<number | null>(null);
   const [joinPassword, setJoinPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [createForm, setCreateForm] = useState({
     name: '',
     description: '',
@@ -97,6 +98,28 @@ export function TeamListPage() {
     await submitJoin(joinPasswordTeamId, joinPassword);
   }
 
+  async function handleInviteJoin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage(null);
+
+    if (!inviteCode.trim()) {
+      setErrorMessage('초대코드를 입력하세요.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const member = await teamApi.joinTeamByInviteCode({
+        inviteCode,
+      });
+      navigate(`/teams/${member.teamId}`);
+    } catch (error) {
+      setErrorMessage(toErrorMessage(error, '초대코드로 팀에 가입하지 못했습니다.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function submitJoin(teamId: number, password?: string) {
     try {
       setIsSubmitting(true);
@@ -137,6 +160,22 @@ export function TeamListPage() {
         </label>
         <Button type="submit" variant="secondary">
           검색
+        </Button>
+      </form>
+
+      <form className="panel inline-form" onSubmit={handleInviteJoin}>
+        <label className="field">
+          <span>초대코드로 가입</span>
+          <input
+            type="text"
+            placeholder="예: ABCD1234"
+            value={inviteCode}
+            onChange={(event) => setInviteCode(event.target.value)}
+          />
+        </label>
+        <Button type="submit" variant="secondary" isLoading={isSubmitting}>
+          <KeyRound size={16} aria-hidden="true" />
+          가입
         </Button>
       </form>
 

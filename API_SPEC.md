@@ -199,6 +199,26 @@ Content-Type: application/json
 }
 ```
 
+### 3.7 MeetingResponse
+
+```json
+{
+  "id": 300,
+  "teamId": 1,
+  "title": "Day 1 회의",
+  "meetingAt": "2026-07-03T14:40:00",
+  "rawContent": "회의 원문 기록",
+  "summary": "회의 요약",
+  "author": {
+    "id": 1,
+    "name": "안종화",
+    "email": "owner@example.com"
+  },
+  "createdAt": "2026-07-03T14:40:00",
+  "updatedAt": "2026-07-03T14:40:00"
+}
+```
+
 ## 4. Auth API
 
 ### 4.1 회원가입
@@ -392,7 +412,7 @@ Request:
 }
 ```
 
-`password`는 optional이다. `null`, 미전달, blank면 공개 팀으로 생성한다.
+`password`는 optional이다. `null`, 미전달, blank면 공개 팀으로 생성한다. 팀 생성 시 unique 초대코드가 자동으로 발급된다.
 
 Response `201`:
 
@@ -404,6 +424,7 @@ Response `201`:
     "name": "Scrum Helper Alpha",
     "description": "공통과제 1주차 팀",
     "hasPassword": true,
+    "inviteCode": "ABCD1234",
     "leader": {
       "id": 1,
       "name": "안종화",
@@ -446,6 +467,7 @@ Response `200`:
     "name": "Scrum Helper Alpha",
     "description": "공통과제 1주차 팀",
     "hasPassword": true,
+    "inviteCode": "ABCD1234",
     "leader": {
       "id": 1,
       "name": "안종화",
@@ -544,6 +566,7 @@ Response `201`:
 - 공개 팀은 즉시 가입한다.
 - 비밀번호 팀은 비밀번호가 일치해야 가입한다.
 - 가입 후 기본 화면은 팀 대시보드다.
+- 초대코드를 받은 사용자는 `POST /api/teams/join-by-invite`로 팀 비밀번호 없이 가입할 수 있다.
 
 Errors:
 
@@ -554,7 +577,39 @@ Errors:
 | `TEAM_PASSWORD_REQUIRED` | 400 | 비밀번호 팀인데 비밀번호 미입력 |
 | `INVALID_TEAM_PASSWORD` | 401 | 팀 비밀번호 불일치 |
 
-### 5.6 팀 정보 수정
+### 5.6 초대코드로 팀 가입
+
+```http
+POST /api/teams/join-by-invite
+```
+
+권한: 로그인 사용자
+
+Request:
+
+```json
+{
+  "inviteCode": "ABCD1234"
+}
+```
+
+Response `201`: `TeamMemberResponse`
+
+정책:
+
+- 초대코드는 대소문자를 구분하지 않는다.
+- 입력값의 공백과 하이픈은 제거하고 검증한다.
+- 초대코드 가입은 공개/비밀번호 팀 여부와 무관하게 가입을 허용한다.
+- 가입 후 기본 화면은 팀 대시보드다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `INVALID_INVITE_CODE` | 404 | 존재하지 않거나 재발급되어 만료된 초대코드 |
+| `ALREADY_TEAM_MEMBER` | 409 | 이미 가입한 팀 |
+
+### 5.7 팀 정보 수정
 
 ```http
 PATCH /api/teams/{teamId}
@@ -586,7 +641,7 @@ Errors:
 | `LEADER_ONLY` | 403 | 팀장이 아님 |
 | `TEAM_NAME_ALREADY_EXISTS` | 409 | 팀 이름 중복 |
 
-### 5.7 팀 비밀번호 변경
+### 5.8 팀 비밀번호 변경
 
 ```http
 PATCH /api/teams/{teamId}/password
@@ -623,7 +678,42 @@ Response `200`:
 }
 ```
 
-### 5.8 팀원 목록 조회
+### 5.9 팀 초대코드 재발급
+
+```http
+PATCH /api/teams/{teamId}/invite-code
+```
+
+권한: 팀장
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": {
+    "teamId": 1,
+    "inviteCode": "WXYZ7890"
+  },
+  "message": "ok"
+}
+```
+
+정책:
+
+- 팀장만 초대코드를 재발급할 수 있다.
+- 재발급 후 이전 초대코드는 사용할 수 없다.
+- 초대코드는 팀 상세와 팀 설정 화면에서 팀원에게 표시한다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `TEAM_NOT_FOUND` | 404 | 팀 없음 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+| `LEADER_ONLY` | 403 | 팀장이 아님 |
+
+### 5.10 팀원 목록 조회
 
 ```http
 GET /api/teams/{teamId}/members
@@ -653,7 +743,7 @@ Response `200`:
 }
 ```
 
-### 5.9 팀원 제거
+### 5.11 팀원 제거
 
 ```http
 DELETE /api/teams/{teamId}/members/{memberId}
@@ -689,7 +779,7 @@ Errors:
 | `CANNOT_REMOVE_LEADER` | 400 | 팀장 제거 시도 |
 | `REASSIGN_TASK_REQUIRED` | 409 | 제거 대상이 유일 담당자인 task 존재 |
 
-### 5.10 팀장 변경
+### 5.12 팀장 변경
 
 ```http
 PATCH /api/teams/{teamId}/leader
@@ -1023,9 +1113,120 @@ Response `200`:
 - 댓글 수정/삭제는 작성자만 가능하다.
 - 팀장도 다른 사용자의 댓글을 수정/삭제할 수 없다.
 
-## 8. Retrospective API
+## 8. Meeting API
 
-### 8.1 회고록 목록 조회
+### 8.1 회의록 목록 조회
+
+```http
+GET /api/teams/{teamId}/meetings
+```
+
+권한: 팀원
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 300,
+      "teamId": 1,
+      "title": "Day 1 회의",
+      "meetingAt": "2026-07-03T14:40:00",
+      "rawContent": "회의 원문 기록",
+      "summary": "회의 요약",
+      "author": {
+        "id": 1,
+        "name": "안종화",
+        "email": "owner@example.com"
+      },
+      "createdAt": "2026-07-03T14:40:00",
+      "updatedAt": "2026-07-03T14:40:00"
+    }
+  ],
+  "message": "ok"
+}
+```
+
+### 8.2 회의록 생성
+
+```http
+POST /api/teams/{teamId}/meetings
+```
+
+권한: 팀원
+
+Request:
+
+```json
+{
+  "title": "Day 1 회의",
+  "meetingAt": "2026-07-03T14:40:00",
+  "rawContent": "회의 원문 기록",
+  "summary": "회의 요약"
+}
+```
+
+Response `201`: `MeetingResponse`
+
+Validation:
+
+- `title`: required, blank 불가, 200자 이하
+- `meetingAt`: required
+- `rawContent`, `summary`: optional
+
+### 8.3 회의록 상세 조회
+
+```http
+GET /api/meetings/{meetingId}
+```
+
+권한: 회의록이 속한 팀의 팀원
+
+Response `200`: `MeetingResponse`
+
+### 8.4 회의록 수정
+
+```http
+PATCH /api/meetings/{meetingId}
+```
+
+권한: 작성자 또는 팀장
+
+Request: 회의록 생성 request와 동일
+
+Response `200`: `MeetingResponse`
+
+### 8.5 회의록 삭제
+
+```http
+DELETE /api/meetings/{meetingId}
+```
+
+권한: 작성자 또는 팀장
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "deleted"
+}
+```
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `MEETING_NOT_FOUND` | 404 | 회의록 없음 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+| `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 작성자 또는 팀장이 아님 |
+
+## 9. Retrospective API
+
+### 9.1 회고록 목록 조회
 
 ```http
 GET /api/teams/{teamId}/retrospectives
@@ -1075,7 +1276,7 @@ Response `200`:
 
 현재 구현은 목록 응답에도 본문 필드(`yesterdayWork`, `todayPlan`, `note`)를 포함한다.
 
-### 8.2 회고록 생성
+### 9.2 회고록 생성
 
 ```http
 POST /api/teams/{teamId}/retrospectives
@@ -1111,7 +1312,7 @@ Errors:
 | `COLLABORATOR_NOT_TEAM_MEMBER` | 400 | 공동 작업자가 팀원이 아님 |
 | `AUTHOR_CANNOT_BE_COLLABORATOR` | 400 | 작성자를 공동 작업자로 포함 |
 
-### 8.3 회고록 상세 조회
+### 9.3 회고록 상세 조회
 
 ```http
 GET /api/retrospectives/{retrospectiveId}
@@ -1121,7 +1322,7 @@ GET /api/retrospectives/{retrospectiveId}
 
 Response `200`: `RetrospectiveResponse`
 
-### 8.4 회고록 수정
+### 9.4 회고록 수정
 
 ```http
 PATCH /api/retrospectives/{retrospectiveId}
@@ -1146,7 +1347,8 @@ Response `200`: `RetrospectiveResponse`
 정책:
 
 - 작성자와 공동 작업자는 회고록 본문을 수정할 수 있다.
-- 작성자와 공동 작업자는 공동 작업자 목록도 변경할 수 있다.
+- 공동 작업자 목록은 작성자만 변경할 수 있다.
+- 공동 작업자는 공동 작업자 목록을 기존과 동일하게 보낸 경우에만 본문을 수정할 수 있다.
 - 작성자는 공동 작업자 목록에 포함하지 않는다.
 
 Errors:
@@ -1154,10 +1356,11 @@ Errors:
 | Code | HTTP | 조건 |
 |---|---:|---|
 | `RETROSPECTIVE_EDITOR_ONLY` | 403 | 작성자 또는 공동 작업자가 아님 |
+| `RETROSPECTIVE_AUTHOR_ONLY_FOR_COLLABORATORS` | 403 | 작성자가 아닌 사용자가 공동 작업자 목록 변경 시도 |
 | `COLLABORATOR_NOT_TEAM_MEMBER` | 400 | 공동 작업자가 팀원이 아님 |
 | `AUTHOR_CANNOT_BE_COLLABORATOR` | 400 | 작성자를 공동 작업자로 포함 |
 
-### 8.5 회고록 삭제
+### 9.5 회고록 삭제
 
 ```http
 DELETE /api/retrospectives/{retrospectiveId}
@@ -1181,7 +1384,7 @@ Response `200`:
 - 팀장이라도 작성자나 공동 작업자가 아니면 삭제할 수 없다.
 - 삭제 시 공동 작업자 연결도 삭제된다.
 
-## 9. 권한 매트릭스
+## 10. 권한 매트릭스
 
 | API 영역 | 로그인 | 팀원 | 팀장 | 작성자 | 공동 작업자 |
 |---|---:|---:|---:|---:|---:|
@@ -1197,10 +1400,13 @@ Response `200`:
 | task 완료 변경 | Y | Y | - | - | - |
 | 댓글 작성/조회 | Y | Y | - | - | - |
 | 댓글 수정/삭제 | Y | - | - | Y | - |
+| 회의록 조회/생성 | Y | Y | - | - | - |
+| 회의록 수정/삭제 | Y | Y | Y | Y | - |
 | 회고록 조회/생성 | Y | Y | - | - | - |
-| 회고록 수정/삭제 | Y | - | - | Y | Y |
+| 회고록 본문 수정/삭제 | Y | - | - | Y | Y |
+| 회고록 공동 작업자 목록 변경 | Y | - | - | Y | - |
 
-## 10. 주요 에러 코드
+## 11. 주요 에러 코드
 
 | Code | HTTP | 설명 |
 |---|---:|---|
@@ -1216,6 +1422,7 @@ Response `200`:
 | `ALREADY_TEAM_MEMBER` | 409 | 이미 가입한 팀 |
 | `TEAM_PASSWORD_REQUIRED` | 400 | 팀 비밀번호 필요 |
 | `INVALID_TEAM_PASSWORD` | 401 | 팀 비밀번호 불일치 |
+| `INVALID_INVITE_CODE` | 404 | 초대코드 없음 또는 만료 |
 | `CANNOT_REMOVE_SELF` | 400 | 팀장 본인 제거 시도 |
 | `CANNOT_REMOVE_LEADER` | 400 | 팀장 제거 시도 |
 | `REASSIGN_TASK_REQUIRED` | 409 | 팀원 제거 전 task 담당자 재배정 필요 |
@@ -1227,33 +1434,37 @@ Response `200`:
 | `COMMENT_AUTHOR_ONLY` | 403 | 댓글 작성자만 가능 |
 | `RETROSPECTIVE_NOT_FOUND` | 404 | 회고록 없음 |
 | `RETROSPECTIVE_EDITOR_ONLY` | 403 | 회고록 작성자 또는 공동 작업자만 가능 |
+| `RETROSPECTIVE_AUTHOR_ONLY_FOR_COLLABORATORS` | 403 | 회고록 작성자만 공동 작업자 변경 가능 |
 | `COLLABORATOR_NOT_TEAM_MEMBER` | 400 | 공동 작업자가 팀원이 아님 |
 | `AUTHOR_CANNOT_BE_COLLABORATOR` | 400 | 작성자를 공동 작업자로 포함 |
+| `MEETING_NOT_FOUND` | 404 | 회의록 없음 |
+| `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 회의록 작성자 또는 팀장만 가능 |
 
-## 11. 화면별 API 호출 흐름
+## 12. 화면별 API 호출 흐름
 
-### 11.1 로그인/회원가입 화면
+### 12.1 로그인/회원가입 화면
 
 1. `POST /api/auth/signup`
 2. `POST /api/auth/login`
 3. 성공 시 access token 저장
 4. `GET /api/me`
 
-### 11.2 팀 목록 화면
+### 12.2 팀 목록 화면
 
 1. `GET /api/teams`
 2. 공개 팀 가입: `POST /api/teams/{teamId}/join`
 3. 비밀번호 팀 가입: password 입력 후 `POST /api/teams/{teamId}/join`
-4. 팀 생성: `POST /api/teams`
-5. 가입/생성 성공 후 `GET /api/teams/{teamId}/dashboard`
+4. 초대코드 가입: inviteCode 입력 후 `POST /api/teams/join-by-invite`
+5. 팀 생성: `POST /api/teams`
+6. 가입/생성 성공 후 `GET /api/teams/{teamId}/dashboard`
 
-### 11.3 팀 대시보드
+### 12.3 팀 대시보드
 
 1. `GET /api/teams/{teamId}`
 2. `GET /api/teams/{teamId}/dashboard`
 3. `GET /api/teams/{teamId}/members`
 
-### 11.4 task 화면
+### 12.4 task 화면
 
 1. `GET /api/teams/{teamId}/tasks`
 2. 생성: `POST /api/teams/{teamId}/tasks`
@@ -1262,7 +1473,15 @@ Response `200`:
 5. 삭제: `DELETE /api/tasks/{taskId}`
 6. 댓글 조회: `GET /api/tasks/{taskId}/comments`
 
-### 11.5 회고록 화면
+### 12.5 회의록 화면
+
+1. `GET /api/teams/{teamId}/meetings`
+2. 생성: `POST /api/teams/{teamId}/meetings`
+3. 상세: `GET /api/meetings/{meetingId}`
+4. 수정: `PATCH /api/meetings/{meetingId}`
+5. 삭제: `DELETE /api/meetings/{meetingId}`
+
+### 12.6 회고록 화면
 
 1. `GET /api/teams/{teamId}/retrospectives`
 2. 생성: `POST /api/teams/{teamId}/retrospectives`
@@ -1270,9 +1489,9 @@ Response `200`:
 4. 수정: `PATCH /api/retrospectives/{retrospectiveId}`
 5. 삭제: `DELETE /api/retrospectives/{retrospectiveId}`
 
-## 12. 구현 메모
+## 13. 구현 메모
 
-### 12.1 Controller 분리
+### 13.1 Controller 분리
 
 권장 Controller:
 
@@ -1281,9 +1500,10 @@ Response `200`:
 - `TeamMemberController`
 - `TaskController`
 - `TaskCommentController`
+- `MeetingController`
 - `RetrospectiveController`
 
-### 12.2 Service 필수 transaction
+### 13.2 Service 필수 transaction
 
 아래 API는 반드시 transaction으로 처리한다.
 
@@ -1293,9 +1513,10 @@ Response `200`:
 | 팀장 변경 | 기존 팀장 demote, 새 팀장 promote, `teams.leader_user_id` 갱신 |
 | 팀원 제거 | 담당자/공동 작업자 연결 정리 |
 | task 생성/수정 | task와 담당자 목록 동시 저장 |
+| 회의록 생성/수정/삭제 | 작성자 또는 팀장 권한 확인 후 저장 |
 | 회고록 생성/수정 | 회고록과 공동 작업자 목록 동시 저장 |
 
-### 12.3 노출 금지 필드
+### 13.3 노출 금지 필드
 
 아래 필드는 API 응답에 절대 포함하지 않는다.
 

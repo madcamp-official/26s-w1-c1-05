@@ -1,9 +1,11 @@
 import { request } from './client';
 import type {
   CreateTeamRequest,
+  JoinTeamByInviteCodeRequest,
   JoinTeamRequest,
   TeamDashboard,
   TeamDetail,
+  TeamInviteCodeStatus,
   TeamMember,
   TeamPasswordStatus,
   TeamSummary,
@@ -40,6 +42,13 @@ export function joinTeam(teamId: number, data?: JoinTeamRequest) {
   });
 }
 
+export function joinTeamByInviteCode(data: JoinTeamByInviteCodeRequest) {
+  return request<TeamMember>('/teams/join-by-invite', {
+    method: 'POST',
+    body: data,
+  });
+}
+
 export function getMembers(teamId: number) {
   return request<TeamMember[]>(`/teams/${teamId}/members`);
 }
@@ -58,6 +67,12 @@ export function updateTeamPassword(
   return request<TeamPasswordStatus>(`/teams/${teamId}/password`, {
     method: 'PATCH',
     body: data,
+  });
+}
+
+export function rotateInviteCode(teamId: number) {
+  return request<TeamInviteCodeStatus>(`/teams/${teamId}/invite-code`, {
+    method: 'PATCH',
   });
 }
 

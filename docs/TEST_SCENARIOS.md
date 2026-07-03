@@ -7,10 +7,11 @@
 목표는 아래 흐름을 실제 사용자 관점에서 끝까지 검증하는 것이다.
 
 - 회원가입/로그인
-- 팀 생성/가입/설정
+- 팀 생성/가입/초대코드/설정
 - 팀장 변경/팀원 제거
 - task 생성/수정/완료/삭제
 - task 댓글 작성/수정/삭제
+- 회의록 작성/수정/삭제
 - 회고록 작성/수정/삭제
 - 회고록 공동 작업자 권한
 - 팀 대시보드 집계
@@ -74,7 +75,8 @@ http://localhost:5173
 | AUTH-02 | 로그인/토큰 복구 | PASS / FAIL |  |
 | TEAM-01 | 공개 팀 생성 | PASS / FAIL |  |
 | TEAM-02 | 비밀번호 팀 생성/가입 | PASS / FAIL |  |
-| TEAM-03 | 팀 설정 변경 | PASS / FAIL |  |
+| TEAM-03 | 초대코드 가입/재발급 | PASS / FAIL |  |
+| TEAM-04 | 팀 설정 변경 | PASS / FAIL |  |
 | MEMBER-01 | 팀원 목록/역할 | PASS / FAIL |  |
 | MEMBER-02 | 팀장 변경 | PASS / FAIL |  |
 | MEMBER-03 | 팀원 제거 제약 | PASS / FAIL |  |
@@ -82,8 +84,10 @@ http://localhost:5173
 | TASK-02 | task 완료/미완료 | PASS / FAIL |  |
 | TASK-03 | task 수정/삭제 | PASS / FAIL |  |
 | COMMENT-01 | 댓글 작성/수정/삭제 | PASS / FAIL |  |
+| MEETING-01 | 회의록 작성/조회 | PASS / FAIL |  |
+| MEETING-02 | 회의록 수정/삭제 권한 | PASS / FAIL |  |
 | RETRO-01 | 회고록 생성 | PASS / FAIL |  |
-| RETRO-02 | 회고록 공동 작업자 수정 | PASS / FAIL |  |
+| RETRO-02 | 회고록 본문/공동 작업자 권한 | PASS / FAIL |  |
 | RETRO-03 | 회고록 권한 제한 | PASS / FAIL |  |
 | DASH-01 | 대시보드 집계 | PASS / FAIL |  |
 
@@ -186,7 +190,39 @@ http://localhost:5173
 - 팀 목록에는 비밀번호 원문이 보이면 안 된다.
 - `hasPassword` 성격의 표시만 보여야 한다.
 
-### TEAM-03. 팀 설정 변경
+### TEAM-03. 초대코드 가입과 재발급
+
+목적:
+
+- 팀 초대코드 가입과 팀장 전용 재발급 정책을 확인한다.
+
+사전 조건:
+
+- User A가 `Scrum Test Private` 팀장
+- User B는 아직 `Scrum Test Private` 팀원이 아님
+- User C가 `Scrum Test Private` 팀원
+
+절차:
+
+| 단계 | 행동 | 기대 결과 |
+|---:|---|---|
+| 1 | User A로 `Scrum Test Private` 팀 설정 화면 접속 | 초대코드가 표시됨 |
+| 2 | 표시된 초대코드를 복사 | 코드 원문 확인 가능 |
+| 3 | User B로 로그인 후 팀 목록 화면에서 초대코드 입력 | 비밀번호 입력 없이 가입 성공 |
+| 4 | User C로 로그인 후 팀 설정 화면 접속 | 초대코드 재발급 버튼이 없거나 비활성화 |
+| 5 | User C가 API로 `PATCH /api/teams/{teamId}/invite-code` 직접 호출 | `LEADER_ONLY` 오류 |
+| 6 | User A가 초대코드 재발급 | 새 초대코드 표시 |
+| 7 | User X가 이전 초대코드로 가입 시도 | `INVALID_INVITE_CODE` 오류 |
+| 8 | User X가 새 초대코드로 가입 시도 | 가입 성공 |
+
+확인 포인트:
+
+- 초대코드 가입은 공개 팀과 비밀번호 팀 모두에서 동작해야 한다.
+- 초대코드 입력값의 대소문자, 공백, 하이픈은 허용되어야 한다.
+- 초대코드 재발급은 팀장만 가능해야 한다.
+- 기존 초대코드는 재발급 직후 사용할 수 없어야 한다.
+
+### TEAM-04. 팀 설정 변경
 
 목적:
 
@@ -390,7 +426,62 @@ http://localhost:5173
 - 팀장도 다른 사용자의 댓글을 수정/삭제할 수 없어야 한다.
 - 댓글 작성 후 task의 commentCount가 증가해야 한다.
 
-## 9. 회고록 시나리오
+## 9. 회의록 시나리오
+
+### MEETING-01. 회의록 작성과 조회
+
+목적:
+
+- 회의 탭에서 회의록을 여러 개 작성하고 조회할 수 있는지 확인한다.
+
+사전 조건:
+
+- 팀에 User A, User B가 가입되어 있음
+- User A 로그인 상태
+
+절차:
+
+| 단계 | 행동 | 기대 결과 |
+|---:|---|---|
+| 1 | 회의 화면 접속 | 회의록 목록 또는 빈 상태 표시 |
+| 2 | 회의록 작성 버튼 클릭 | 작성 폼 표시 |
+| 3 | 제목 없이 저장 | 오류 메시지 표시 |
+| 4 | 제목, 회의 일시, 회의 원문, 요약 입력 후 저장 | 회의록 생성 성공 |
+| 5 | 목록 확인 | 회의록 카드 표시 |
+| 6 | User B로 로그인 후 같은 회의록 상세 접속 | 회의록 내용 조회 가능 |
+
+확인 포인트:
+
+- 팀원은 회의록 목록과 상세를 조회할 수 있어야 한다.
+- 팀 외부 사용자는 회의록 목록과 상세를 조회할 수 없어야 한다.
+
+### MEETING-02. 회의록 수정/삭제 권한
+
+목적:
+
+- 회의록 작성자 또는 팀장만 회의록을 수정/삭제할 수 있는지 확인한다.
+
+사전 조건:
+
+- User A가 팀장 및 회의록 작성자
+- User B가 같은 팀 팀원
+
+절차:
+
+| 단계 | 행동 | 기대 결과 |
+|---:|---|---|
+| 1 | User B로 회의록 상세 접속 | 내용 조회 가능, 수정 입력 비활성화 |
+| 2 | User B가 API로 회의록 수정 시도 | `MEETING_AUTHOR_OR_LEADER_ONLY` 오류 |
+| 3 | User A로 회의록 상세 접속 | 수정/삭제 가능 |
+| 4 | 회의 원문과 요약 수정 후 저장 | 저장 성공 |
+| 5 | 삭제 버튼 클릭 후 확인 | 회의록 삭제 성공, 목록으로 이동 |
+
+확인 포인트:
+
+- 작성자가 아니어도 팀장이면 수정/삭제할 수 있다.
+- 삭제 후 상세 URL 직접 접근 시 `MEETING_NOT_FOUND`가 반환되어야 한다.
+
+## 10. 회고록 시나리오
 
 ### RETRO-01. 회고록 생성
 
@@ -424,7 +515,7 @@ http://localhost:5173
 
 목적:
 
-- 작성자와 공동 작업자가 회고록을 수정할 수 있는지 확인한다.
+- 작성자와 공동 작업자의 회고록 본문 수정 권한과 공동 작업자 목록 변경 제한을 확인한다.
 
 사전 조건:
 
@@ -437,15 +528,17 @@ http://localhost:5173
 |---:|---|---|
 | 1 | User B로 회고록 상세 접속 | 수정 가능 |
 | 2 | `오늘 할 일` 내용 수정 후 저장 | 저장 성공 |
-| 3 | 로그아웃 후 User C로 로그인 | 같은 회고록 상세 접속 |
-| 4 | `궁금한/필요한/알아낸 것` 수정 후 저장 | 저장 성공 |
-| 5 | User C가 공동 작업자 목록에서 본인 제외 후 저장 | 저장 성공 |
-| 6 | 새로고침 | User C는 더 이상 수정 권한 없음 |
+| 3 | User B가 공동 작업자 목록에서 User C를 제외 후 저장 | 저장 성공 |
+| 4 | User B가 다시 User C를 공동 작업자로 추가 후 저장 | 저장 성공 |
+| 5 | 로그아웃 후 User C로 로그인 | 같은 회고록 상세 접속 |
+| 6 | `궁금한/필요한/알아낸 것` 수정 후 저장 | 저장 성공 |
+| 7 | User C가 공동 작업자 목록 변경 후 저장 시도 | 저장 실패, 작성자만 가능 오류 표시 |
 
 확인 포인트:
 
-- 공동 작업자도 본문과 공동 작업자 목록을 바꿀 수 있다.
-- 공동 작업자에서 제외된 사용자는 이후 읽기만 가능해야 한다.
+- 공동 작업자는 본문을 수정할 수 있다.
+- 공동 작업자는 공동 작업자 목록을 변경할 수 없다.
+- 공동 작업자 목록 변경은 작성자만 가능해야 한다.
 
 ### RETRO-03. 권한 없는 팀원의 회고록 제한
 
@@ -492,7 +585,7 @@ http://localhost:5173
 - 삭제 시 공동 작업자 연결도 함께 삭제되어야 한다.
 - 삭제된 상세 URL 직접 접근 시 찾을 수 없어야 한다.
 
-## 10. 대시보드 시나리오
+## 11. 대시보드 시나리오
 
 ### DASH-01. 팀 대시보드 집계
 
@@ -523,7 +616,7 @@ http://localhost:5173
 - 새로고침 후에도 집계가 유지되어야 한다.
 - 사용자별 `myCount`, `collaboratingCount`는 로그인 계정에 따라 달라져야 한다.
 
-## 11. API 보조 검증
+## 12. API 보조 검증
 
 브라우저 UI에서 만들기 어려운 오류 케이스는 API로 보조 검증한다.
 
@@ -605,7 +698,66 @@ Invoke-RestMethod `
 
 - `RETROSPECTIVE_EDITOR_ONLY` 오류
 
-## 12. 최종 데모 시나리오
+### API-04. 공동 작업자가 공동 작업자 목록 변경 시도
+
+```powershell
+$token = "COLLABORATOR_TOKEN"
+$body = @{
+  title = "공동 작업자 목록 변경 시도"
+  yesterdayWork = "본문 수정은 허용"
+  todayPlan = "본문 수정은 허용"
+  note = "공동 작업자 목록 변경은 차단"
+  collaboratorUserIds = @()
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Patch `
+  -Uri "http://localhost:8080/api/retrospectives/RETROSPECTIVE_ID" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+기대 결과:
+
+- `RETROSPECTIVE_AUTHOR_ONLY_FOR_COLLABORATORS` 오류
+
+### API-05. 팀 외부 사용자가 teamId 직접 접근
+
+```powershell
+$token = "OUTSIDER_TOKEN"
+
+Invoke-RestMethod `
+  -Method Get `
+  -Uri "http://localhost:8080/api/teams/TEAM_ID" `
+  -Headers @{ Authorization = "Bearer $token" }
+```
+
+기대 결과:
+
+- `NOT_TEAM_MEMBER` 오류
+
+### API-06. 잘못된 초대코드 가입
+
+```powershell
+$token = "TOKEN"
+$body = @{
+  inviteCode = "WRONG-CODE"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8080/api/teams/join-by-invite" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+기대 결과:
+
+- `INVALID_INVITE_CODE` 오류
+
+## 13. 최종 데모 시나리오
 
 발표 또는 제출 전에는 아래 흐름을 한 번에 완주한다.
 
@@ -625,7 +777,7 @@ Invoke-RestMethod `
 
 이 흐름이 막힘 없이 진행되면 MVP 핵심 기능은 통과로 본다.
 
-## 13. 발견 이슈 기록 양식
+## 14. 발견 이슈 기록 양식
 
 테스트 중 문제가 생기면 아래 형식으로 기록한다.
 

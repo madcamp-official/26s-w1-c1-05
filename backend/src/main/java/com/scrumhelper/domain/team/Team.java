@@ -31,6 +31,9 @@ public class Team {
 	@Column(name = "password_hash", length = 255)
 	private String passwordHash;
 
+	@Column(name = "invite_code", unique = true, length = 16)
+	private String inviteCode;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "leader_user_id", nullable = false)
 	private User leader;
@@ -44,15 +47,16 @@ public class Team {
 	protected Team() {
 	}
 
-	private Team(String name, String description, String passwordHash, User leader) {
+	private Team(String name, String description, String passwordHash, String inviteCode, User leader) {
 		this.name = name;
 		this.description = description;
 		this.passwordHash = passwordHash;
+		this.inviteCode = inviteCode;
 		this.leader = leader;
 	}
 
-	public static Team create(String name, String description, String passwordHash, User leader) {
-		return new Team(name, description, passwordHash, leader);
+	public static Team create(String name, String description, String passwordHash, String inviteCode, User leader) {
+		return new Team(name, description, passwordHash, inviteCode, leader);
 	}
 
 	@PrePersist
@@ -83,6 +87,10 @@ public class Team {
 		return passwordHash;
 	}
 
+	public String getInviteCode() {
+		return inviteCode;
+	}
+
 	public User getLeader() {
 		return leader;
 	}
@@ -106,6 +114,10 @@ public class Team {
 
 	public void updatePasswordHash(String passwordHash) {
 		this.passwordHash = passwordHash;
+	}
+
+	public void updateInviteCode(String inviteCode) {
+		this.inviteCode = inviteCode;
 	}
 
 	public void changeLeader(User leader) {

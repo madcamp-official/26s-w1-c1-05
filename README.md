@@ -20,6 +20,8 @@ backend/                 Spring Boot API server
 frontend/                React TypeScript client
 docs/                    Local runbook and deliverable docs
 docs/TEST_SCENARIOS.md   Manual test scenarios
+docs/TEST_RESULTS.md     Latest test execution result
+docs/ROADMAP.md          Post-MVP feature roadmap
 SPEC.md                  Product specification
 DB_SCHEMA.md             DB schema
 API_SPEC.md              API specification
@@ -65,19 +67,24 @@ Backend:  http://localhost:8080
 - JWT 기반 회원가입/로그인/내 정보 조회
 - 프론트 인증 상태 복구와 보호 라우트
 - Team / TeamMember Entity
-- 팀 생성, 팀 목록, 팀 상세, 팀 가입, 팀 대시보드 API
-- 팀 목록 화면과 팀 생성/가입 UI
+- 팀 생성, 팀 목록, 팀 상세, 공개/비밀번호/초대코드 가입, 팀 대시보드 API
+- 팀 목록 화면과 팀 생성/가입/초대코드 가입 UI
 - 팀장 변경, 팀원 제거, 팀 설정 API/UI
+- 팀장 전용 초대코드 재발급 API/UI
 - Task Entity/API
 - task 목록, 생성, 완료 변경 UI
 - task 상세 수정/삭제 UI
 - task 댓글 작성/수정/삭제 API/UI
 - 회고록 작성/목록/상세/수정/삭제 API/UI
 - 회고록 공동 작업자 지정과 작성자/공동 작업자 권한 검증
+- 회고록 공동 작업자 목록 작성자 전용 변경 제한
 - 팀 대시보드 회고록 집계
+- 회의록 작성/목록/상세/수정/삭제 API/UI
 
 다음 구현 대상:
 
 - 전체 사용자 흐름 수동 테스트
 - 제출용 산출물 최종 동기화
+- Gemini 기반 스펙 문서 초안 생성
+- 스펙 문서 기반 task 자동 추천
 - KCloud 배포 준비

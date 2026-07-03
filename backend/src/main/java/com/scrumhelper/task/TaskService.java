@@ -156,6 +156,7 @@ public class TaskService {
 
 	private void replaceAssignees(Task task, Team team, List<Long> assigneeUserIds) {
 		taskAssigneeRepository.deleteByTaskId(task.getId());
+		taskAssigneeRepository.flush();
 		assigneeUserIds.stream()
 				.distinct()
 				.map(this::findUser)

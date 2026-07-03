@@ -35,6 +35,8 @@ export function RetrospectiveDetailPage() {
     retrospective != null &&
     (retrospective.author.id === user?.id ||
       retrospective.collaborators.some((collaborator) => collaborator.id === user?.id));
+  const canManageCollaborators =
+    retrospective != null && retrospective.author.id === user?.id;
 
   async function loadPage() {
     if (!Number.isFinite(numericTeamId) || !Number.isFinite(numericRetrospectiveId)) {
@@ -116,6 +118,9 @@ export function RetrospectiveDetailPage() {
   }
 
   function toggleCollaborator(userId: number) {
+    if (!canManageCollaborators) {
+      return;
+    }
     setForm((current) => ({
       ...current,
       collaboratorUserIds: current.collaboratorUserIds.includes(userId)
@@ -160,6 +165,11 @@ export function RetrospectiveDetailPage() {
               작성자 또는 공동 작업자만 이 회고록을 수정할 수 있습니다.
             </div>
           )}
+          {canEdit && !canManageCollaborators && (
+            <div className="notice">
+              공동 작업자 목록은 회고록 작성자만 변경할 수 있습니다.
+            </div>
+          )}
 
           <label className="field">
             <span>제목</span>
@@ -199,7 +209,7 @@ export function RetrospectiveDetailPage() {
             />
           </label>
 
-          <fieldset className="assignee-fieldset" disabled={!canEdit}>
+          <fieldset className="assignee-fieldset" disabled={!canEdit || !canManageCollaborators}>
             <legend>공동 작업자</legend>
             <div className="checkbox-grid">
               {members

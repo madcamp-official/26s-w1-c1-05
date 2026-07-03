@@ -15,9 +15,11 @@ import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
 import com.scrumhelper.team.dto.CreateTeamRequest;
+import com.scrumhelper.team.dto.JoinTeamByInviteCodeRequest;
 import com.scrumhelper.team.dto.JoinTeamRequest;
 import com.scrumhelper.team.dto.TeamDashboardResponse;
 import com.scrumhelper.team.dto.TeamDetailResponse;
+import com.scrumhelper.team.dto.TeamInviteCodeResponse;
 import com.scrumhelper.team.dto.TeamMemberResponse;
 import com.scrumhelper.team.dto.TeamPasswordResponse;
 import com.scrumhelper.team.dto.TeamSummaryResponse;
@@ -29,10 +31,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class TeamService {
+	private static final String INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+	private static final int INVITE_CODE_LENGTH = 8;
+	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
 	private final RetrospectiveRepository retrospectiveRepository;
@@ -89,6 +97,7 @@ public class TeamService {
 				name,
 				normalizeOptionalText(request.description()),
 				passwordHash,
+				generateUniqueInviteCode(),
 				leader
 		));
 		teamMemberRepository.save(TeamMember.create(team, leader, TeamRole.LEADER));
@@ -147,6 +156,20 @@ public class TeamService {
 		return TeamMemberResponse.from(member);
 	}
 
+	@Transactional
+	public TeamMemberResponse joinTeamByInviteCode(Long currentUserId, JoinTeamByInviteCodeRequest request) {
+		String inviteCode = normalizeInviteCode(request.inviteCode());
+		Team team = teamRepository.findByInviteCode(inviteCode)
+				.orElseThrow(() -> new BusinessException(ErrorCode.INVALID_INVITE_CODE));
+		if (teamMemberRepository.existsByTeamIdAndUserId(team.getId(), currentUserId)) {
+			throw new BusinessException(ErrorCode.ALREADY_TEAM_MEMBER);
+		}
+
+		User user = findUser(currentUserId);
+		TeamMember member = teamMemberRepository.save(TeamMember.create(team, user, TeamRole.MEMBER));
+		return TeamMemberResponse.from(member);
+	}
+
 	@Transactional(readOnly = true)
 	public List<TeamMemberResponse> getMembers(Long currentUserId, Long teamId) {
 		requireMembership(teamId, currentUserId);
@@ -179,6 +202,14 @@ public class TeamService {
 				: passwordEncoder.encode(request.password());
 		team.updatePasswordHash(passwordHash);
 		return new TeamPasswordResponse(team.getId(), team.hasPassword());
+	}
+
+	@Transactional
+	public TeamInviteCodeResponse rotateInviteCode(Long currentUserId, Long teamId) {
+		Team team = findTeam(teamId);
+		requireLeader(teamId, currentUserId);
+		team.updateInviteCode(generateUniqueInviteCode());
+		return new TeamInviteCodeResponse(team.getId(), team.getInviteCode());
 	}
 
 	@Transactional
@@ -250,6 +281,7 @@ public class TeamService {
 				team.getName(),
 				team.getDescription(),
 				team.hasPassword(),
+				team.getInviteCode(),
 				UserSummaryResponse.from(team.getLeader()),
 				myRole,
 				team.getCreatedAt(),
@@ -282,5 +314,28 @@ public class TeamService {
 
 	private String normalizeOptionalText(String value) {
 		return value == null || value.isBlank() ? null : value.trim();
+	}
+
+	private String normalizeInviteCode(String value) {
+		return value.trim()
+				.replace("-", "")
+				.replace(" ", "")
+				.toUpperCase(Locale.ROOT);
+	}
+
+	private String generateUniqueInviteCode() {
+		String inviteCode;
+		do {
+			inviteCode = generateInviteCode();
+		} while (teamRepository.existsByInviteCode(inviteCode));
+		return inviteCode;
+	}
+
+	private String generateInviteCode() {
+		StringBuilder builder = new StringBuilder(INVITE_CODE_LENGTH);
+		for (int i = 0; i < INVITE_CODE_LENGTH; i++) {
+			builder.append(INVITE_CODE_ALPHABET.charAt(SECURE_RANDOM.nextInt(INVITE_CODE_ALPHABET.length())));
+		}
+		return builder.toString();
 	}
 }

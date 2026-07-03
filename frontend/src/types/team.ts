@@ -18,6 +18,7 @@ export type TeamDetail = {
   name: string;
   description: string | null;
   hasPassword: boolean;
+  inviteCode: string | null;
   leader: UserSummary;
   myRole: TeamRole;
   createdAt: string;
@@ -59,6 +60,10 @@ export type JoinTeamRequest = {
   password?: string;
 };
 
+export type JoinTeamByInviteCodeRequest = {
+  inviteCode: string;
+};
+
 export type UpdateTeamRequest = {
   name: string;
   description?: string;
@@ -71,6 +76,11 @@ export type UpdateTeamPasswordRequest = {
 export type TeamPasswordStatus = {
   teamId: number;
   hasPassword: boolean;
+};
+
+export type TeamInviteCodeStatus = {
+  teamId: number;
+  inviteCode: string;
 };
 
 export type TransferLeaderResponse = {

@@ -86,6 +86,7 @@ http://localhost:5173
 | COMMENT-01 | 댓글 작성/수정/삭제 | PASS / FAIL |  |
 | MEETING-01 | 회의록 작성/조회 | PASS / FAIL |  |
 | MEETING-02 | 회의록 수정/삭제 권한 | PASS / FAIL |  |
+| SPEC-01 | 회의록 기반 스펙 초안 생성/저장 | PASS / FAIL |  |
 | RETRO-01 | 회고록 생성 | PASS / FAIL |  |
 | RETRO-02 | 회고록 본문/공동 작업자 권한 | PASS / FAIL |  |
 | RETRO-03 | 회고록 권한 제한 | PASS / FAIL |  |
@@ -481,7 +482,40 @@ http://localhost:5173
 - 작성자가 아니어도 팀장이면 수정/삭제할 수 있다.
 - 삭제 후 상세 URL 직접 접근 시 `MEETING_NOT_FOUND`가 반환되어야 한다.
 
-## 10. 회고록 시나리오
+## 10. 스펙 문서 시나리오
+
+### SPEC-01. 회의록 기반 스펙 초안 생성과 저장
+
+목적:
+
+- 여러 회의록을 선택해 스펙 문서 초안을 생성하고, 수정 후 저장할 수 있는지 확인한다.
+
+사전 조건:
+
+- 팀에 User A, User B가 가입되어 있음
+- 회의록이 1개 이상 작성되어 있음
+- User A 로그인 상태
+
+절차:
+
+| 단계 | 행동 | 기대 결과 |
+|---:|---|---|
+| 1 | 스펙 화면 접속 | 회의록 선택 영역과 저장된 스펙 문서 목록 표시 |
+| 2 | 회의록을 선택하지 않고 초안 생성 클릭 | 회의록 1개 이상 선택 오류 표시 |
+| 3 | 회의록 1개 이상 선택 후 초안 생성 | 스펙 초안 제목과 내용이 생성됨 |
+| 4 | 생성 방식 표시 확인 | Gemini 키가 있으면 `Gemini`, 없거나 실패하면 `Local` 표시 |
+| 5 | 제목 또는 본문 일부 수정 | 입력 가능 |
+| 6 | 스펙 문서 저장 클릭 | 저장 성공 메시지 표시 |
+| 7 | 저장된 스펙 문서 목록 확인 | 새 문서 카드, 작성자, 수정 시각, 근거 회의록 개수 표시 |
+| 8 | User B로 같은 스펙 화면 접속 | 저장된 문서 목록 조회 가능 |
+
+확인 포인트:
+
+- 팀원만 스펙 문서 목록과 초안 생성 API를 사용할 수 있어야 한다.
+- 다른 팀의 회의록 ID를 `meetingIds`에 넣으면 `MEETING_NOT_FOUND`가 반환되어야 한다.
+- Gemini API 키가 없어도 로컬 초안으로 기능이 막히지 않아야 한다.
+
+## 11. 회고록 시나리오
 
 ### RETRO-01. 회고록 생성
 
@@ -585,7 +619,7 @@ http://localhost:5173
 - 삭제 시 공동 작업자 연결도 함께 삭제되어야 한다.
 - 삭제된 상세 URL 직접 접근 시 찾을 수 없어야 한다.
 
-## 11. 대시보드 시나리오
+## 12. 대시보드 시나리오
 
 ### DASH-01. 팀 대시보드 집계
 
@@ -616,7 +650,7 @@ http://localhost:5173
 - 새로고침 후에도 집계가 유지되어야 한다.
 - 사용자별 `myCount`, `collaboratingCount`는 로그인 계정에 따라 달라져야 한다.
 
-## 12. API 보조 검증
+## 13. API 보조 검증
 
 브라우저 UI에서 만들기 어려운 오류 케이스는 API로 보조 검증한다.
 
@@ -757,7 +791,27 @@ Invoke-RestMethod `
 
 - `INVALID_INVITE_CODE` 오류
 
-## 13. 최종 데모 시나리오
+### API-07. 다른 팀 회의록으로 스펙 초안 생성 시도
+
+```powershell
+$token = "TOKEN"
+$body = @{
+  meetingIds = @(OTHER_TEAM_MEETING_ID)
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8080/api/teams/TEAM_ID/spec-documents/draft" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+기대 결과:
+
+- `MEETING_NOT_FOUND` 오류
+
+## 14. 최종 데모 시나리오
 
 발표 또는 제출 전에는 아래 흐름을 한 번에 완주한다.
 
@@ -769,15 +823,16 @@ Invoke-RestMethod `
 | 4 | User A | task 생성, User B 담당자 지정 | task 생성 |
 | 5 | User B | task 완료 처리 | 완료 상태 반영 |
 | 6 | User B | task 댓글 작성 | 댓글 표시 |
-| 7 | User A | 회고록 생성, User B 공동 작업자 지정 | 회고록 생성 |
-| 8 | User B | 회고록 수정 | 수정 성공 |
-| 9 | User A | User B에게 팀장 위임 | 팀장 변경 |
-| 10 | User B | 팀 설정 수정 | 새 팀장 권한 확인 |
-| 11 | User B | 대시보드 확인 | 멤버/task/회고록 집계 표시 |
+| 7 | User A | 회의록 작성 후 스펙 초안 생성/저장 | 스펙 문서 저장 |
+| 8 | User A | 회고록 생성, User B 공동 작업자 지정 | 회고록 생성 |
+| 9 | User B | 회고록 수정 | 수정 성공 |
+| 10 | User A | User B에게 팀장 위임 | 팀장 변경 |
+| 11 | User B | 팀 설정 수정 | 새 팀장 권한 확인 |
+| 12 | User B | 대시보드 확인 | 멤버/task/회고록 집계 표시 |
 
 이 흐름이 막힘 없이 진행되면 MVP 핵심 기능은 통과로 본다.
 
-## 14. 발견 이슈 기록 양식
+## 15. 발견 이슈 기록 양식
 
 테스트 중 문제가 생기면 아래 형식으로 기록한다.
 

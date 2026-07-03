@@ -59,6 +59,8 @@ API 초안:
 
 ## 4. Phase 2: Gemini 기반 문서/Task 자동 생성
 
+상태: 일부 구현 완료
+
 목표:
 
 - 선택한 회의록들을 바탕으로 스펙 문서 초안을 만들고, 스펙 문서에서 task 후보를 추천한다.
@@ -71,17 +73,18 @@ API 초안:
 
 주요 기능:
 
-- 회의록 다중 선택
-- 스펙 문서 초안 생성
-- 생성 결과 수정 후 저장
-- 스펙 문서 기반 task 추천
-- 추천 task 중 선택한 항목만 실제 task로 생성
+- 회의록 다중 선택: 구현 완료
+- 스펙 문서 초안 생성: 구현 완료
+- Gemini API 키가 없거나 호출 실패 시 로컬 초안 생성: 구현 완료
+- 생성 결과 수정 후 저장: 구현 완료
+- 스펙 문서 기반 task 추천: 미구현
+- 추천 task 중 선택한 항목만 실제 task로 생성: 미구현
 
 예상 DB:
 
 | 테이블 | 주요 컬럼 |
 |---|---|
-| `spec_documents` | `id`, `team_id`, `created_by_user_id`, `title`, `content`, `source_meeting_ids_json`, `created_at`, `updated_at` |
+| `spec_documents` | `id`, `team_id`, `created_by_user_id`, `title`, `content`, `source_meeting_ids`, `created_at`, `updated_at` |
 | `task_suggestions` | `id`, `team_id`, `spec_document_id`, `title`, `description`, `priority`, `due_date`, `accepted`, `created_at` |
 
 API 초안:

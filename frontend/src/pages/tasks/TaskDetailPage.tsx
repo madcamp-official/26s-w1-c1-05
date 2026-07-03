@@ -219,11 +219,23 @@ export function TaskDetailPage() {
   }
 
   return (
-    <section className="page-section">
-      <div className="page-header">
+    <section className="detail-document">
+      <div className="document-header">
         <div>
-          <h1>Task 상세</h1>
-          <p className="muted">Task #{taskId}를 수정하고 댓글로 의견을 남깁니다.</p>
+          <span className="eyebrow">Task #{taskId}</span>
+          <h1>{task?.title ?? 'Task 상세'}</h1>
+          {task && (
+            <div className="document-meta">
+              <span className={`priority priority-${task.priority.toLowerCase()}`}>
+                {priorityLabel(task.priority)}
+              </span>
+              <span className={task.completed ? 'soft-pill success' : 'soft-pill'}>
+                {task.completed ? 'Completed' : 'Open'}
+              </span>
+              <span>마감 {task.dueDate}</span>
+              <span>댓글 {task.commentCount}</span>
+            </div>
+          )}
         </div>
         {task && (
           <div className="row-actions">
@@ -251,7 +263,7 @@ export function TaskDetailPage() {
 
       {task && (
         <>
-          <form className="panel form-stack-plain" onSubmit={handleSaveTask}>
+          <form className="document-panel form-stack-plain" onSubmit={handleSaveTask}>
             <h2>기본 정보</h2>
             <label className="field">
               <span>제목</span>
@@ -265,8 +277,7 @@ export function TaskDetailPage() {
             </label>
             <label className="field">
               <span>설명</span>
-              <input
-                type="text"
+              <textarea
                 value={form.description}
                 onChange={(event) =>
                   setForm((current) => ({
@@ -326,7 +337,7 @@ export function TaskDetailPage() {
             </div>
           </form>
 
-          <section className="panel form-stack-plain">
+          <section className="document-panel form-stack-plain">
             <div className="page-header">
               <div>
                 <h2>댓글</h2>
@@ -437,4 +448,14 @@ function formatDateTime(value: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function priorityLabel(priority: TaskPriority) {
+  if (priority === 'HIGH') {
+    return '높음';
+  }
+  if (priority === 'LOW') {
+    return '낮음';
+  }
+  return '보통';
 }

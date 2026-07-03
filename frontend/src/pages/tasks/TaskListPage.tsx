@@ -39,7 +39,8 @@ export function TaskListPage() {
     return tasks;
   }, [tasks, completedFilter]);
 
-  const incompleteTasks = visibleTasks.filter((task) => !task.completed);
+  const backlogTasks = visibleTasks.filter((task) => !task.completed && !isInProgress(task));
+  const inProgressTasks = visibleTasks.filter((task) => !task.completed && isInProgress(task));
   const completedTasks = visibleTasks.filter((task) => task.completed);
 
   async function loadPage() {
@@ -137,8 +138,9 @@ export function TaskListPage() {
     <section className="page-section">
       <div className="page-header">
         <div>
-          <h1>Task 목록</h1>
-          <p className="muted">Team #{teamId}의 할 일을 등록하고 완료 상태를 관리합니다.</p>
+          <span className="eyebrow">Kanban</span>
+          <h1>Task Board</h1>
+          <p className="muted">작업을 등록하고 마감이 가까운 항목을 한눈에 확인합니다.</p>
         </div>
         <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
           Task 생성
@@ -256,14 +258,26 @@ export function TaskListPage() {
       ) : (
         <div className="task-board">
           <TaskColumn
-            title="미완료"
-            tasks={incompleteTasks}
+            title="Backlog"
+            description="여유가 있는 미완료 작업"
+            tasks={backlogTasks}
+            tone="neutral"
             isSubmitting={isSubmitting}
             onToggle={handleToggleCompletion}
           />
           <TaskColumn
-            title="완료"
+            title="In Progress"
+            description="오늘 기준 2일 이내 마감"
+            tasks={inProgressTasks}
+            tone="blue"
+            isSubmitting={isSubmitting}
+            onToggle={handleToggleCompletion}
+          />
+          <TaskColumn
+            title="Completed"
+            description="완료 처리된 작업"
             tasks={completedTasks}
+            tone="green"
             isSubmitting={isSubmitting}
             onToggle={handleToggleCompletion}
           />
@@ -273,19 +287,30 @@ export function TaskListPage() {
   );
 }
 
+function isInProgress(task: Task) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const dueDate = new Date(`${task.dueDate}T00:00:00`);
+  const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / 86_400_000);
+  return diffDays <= 2;
+}
+
 type TaskColumnProps = {
   title: string;
+  description: string;
   tasks: Task[];
+  tone: 'neutral' | 'blue' | 'green';
   isSubmitting: boolean;
   onToggle: (task: Task) => Promise<void>;
 };
 
-function TaskColumn({ title, tasks, isSubmitting, onToggle }: TaskColumnProps) {
+function TaskColumn({ title, description, tasks, tone, isSubmitting, onToggle }: TaskColumnProps) {
   return (
-    <section className="task-column">
+    <section className={`task-column task-column-${tone}`}>
       <h2>
         {title} <span>{tasks.length}</span>
       </h2>
+      <p className="column-description">{description}</p>
       {tasks.map((task) => (
         <article className="task-card" key={task.id}>
           <div className="task-card-top">
@@ -297,7 +322,14 @@ function TaskColumn({ title, tasks, isSubmitting, onToggle }: TaskColumnProps) {
           <p className="muted">{task.description || '설명이 없습니다.'}</p>
           <div className="task-meta">
             <span>마감 {task.dueDate}</span>
-            <span>담당 {task.assignees.map((user) => user.name).join(', ')}</span>
+            <div className="avatar-row" aria-label="담당자">
+              {task.assignees.map((user) => (
+                <span className="avatar" key={user.id} title={user.name}>
+                  {user.name.slice(0, 1)}
+                </span>
+              ))}
+              <span>{task.assignees.map((user) => user.name).join(', ')}</span>
+            </div>
           </div>
           <Button
             type="button"

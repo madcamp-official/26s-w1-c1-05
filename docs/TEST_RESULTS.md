@@ -2,20 +2,19 @@
 
 ## 1. 실행 일시
 
-- 일시: 2026-07-03 14:30 KST
+- 일시: 2026-07-03 16:21 KST
 - 대상 코드: 현재 workspace 최신 코드
-- 백엔드 검증 방식: `.\gradlew.bat test`, `bootTestRun` + H2 in-memory DB
-- 백엔드 포트: `18080`
+- 백엔드 검증 방식: `.\gradlew.bat test` + H2 in-memory DB
 - 프론트엔드 검증 방식: `npm run build`
 
-기존 `8080` 서버와 MySQL 데이터는 건드리지 않기 위해 별도 포트와 H2 테스트 런타임으로 API를 검증했다.
+기존 `8080` 서버와 MySQL 데이터는 건드리지 않기 위해 H2 테스트 런타임으로 서비스 시나리오를 검증했다.
 
 ## 2. 사전 검증
 
 | 항목 | 결과 | 메모 |
 |---|---|---|
 | 백엔드 테스트 | PASS | `.\gradlew.bat test` 성공 |
-| 백엔드 헬스 체크 | PASS | `GET /api/health` |
+| 스펙 문서 서비스 통합 테스트 | PASS | 회원가입, 팀 생성, 회의록 생성, 초안 생성, 저장, 외부 사용자 차단 |
 | 프론트 빌드 | PASS | `npm run build` 성공 |
 | 프론트 린트 | PASS | `npm run lint` 성공, 기존 Fast Refresh/useEffect 경고만 출력 |
 
@@ -124,6 +123,27 @@ failedCount: 0
 
 ```text
 resultCount: 16
+failedCount: 0
+```
+
+### 4.3 스펙 문서 서비스 검증
+
+회의록 기반 스펙 문서 초안 생성/저장 기능을 H2 테스트 런타임의 서비스 통합 테스트로 검증했다.
+
+| 검증 항목 | 결과 |
+|---|---|
+| 회원가입 후 팀 생성 | PASS |
+| 팀 회의록 생성 | PASS |
+| 회의록 기반 스펙 초안 생성 | PASS |
+| Gemini 키 미설정 시 `LOCAL_FALLBACK` 생성 | PASS |
+| 생성 초안 저장 | PASS |
+| 저장된 스펙 문서 목록 조회 | PASS |
+| 팀 외부 사용자의 스펙 초안 생성 차단 | PASS |
+
+스펙 문서 검증 요약:
+
+```text
+resultCount: 7
 failedCount: 0
 ```
 

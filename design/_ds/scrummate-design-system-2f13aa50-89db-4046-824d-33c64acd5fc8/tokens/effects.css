@@ -1,0 +1,18 @@
+/* ScrumMate effects — hairlines over shadows. Shadow exists only to lift overlays. */
+:root {
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 999px;
+
+  --shadow-card: none; /* cards are bordered, not shadowed */
+  --shadow-raised: 0 1px 2px rgba(10, 10, 10, 0.06);
+  --shadow-overlay: 0 4px 16px rgba(10, 10, 10, 0.10), 0 12px 40px rgba(10, 10, 10, 0.12);
+
+  --ease-out: cubic-bezier(0.2, 0, 0, 1); /* @kind other */
+  --duration-fast: 120ms; /* @kind other */
+  --duration-normal: 180ms; /* @kind other */
+
+  --focus-ring: 0 0 0 2px var(--paper), 0 0 0 4px var(--ink);
+}

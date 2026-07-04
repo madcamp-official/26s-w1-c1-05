@@ -2,13 +2,14 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { CalendarDays, FileAudio, Plus } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
-import { Alert, Button, Card, EmptyState, Field, FieldInput, FieldTextarea, LoadingState } from '../../components/ui';
+import { Alert, Button, Card, EmptyState, Field, FieldInput, FieldTextarea, LoadingState, useToast } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function MeetingListPage() {
+  const toast = useToast();
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
   const navigate = useNavigate();
@@ -63,6 +64,7 @@ export function MeetingListPage() {
         rawContent: form.rawContent || undefined,
         summary: form.summary || undefined,
       });
+      toast();
       setForm({ title: '', meetingAt: toDatetimeLocalValue(new Date()), rawContent: '', summary: '' });
       setCreateOpen(false);
       await loadPage();

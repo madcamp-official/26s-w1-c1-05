@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Avatar, Button, useConfirm } from '../../components/ui';
+import { Alert, Avatar, Button, useConfirm, useToast } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Retrospective } from '../../types/retrospective';
@@ -13,6 +13,7 @@ import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function RetrospectiveDetailPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const { teamId, retrospectiveId } = useParams();
   const numericTeamId = Number(teamId);
   const numericRetrospectiveId = Number(retrospectiveId);
@@ -94,6 +95,7 @@ export function RetrospectiveDetailPage() {
         note: updated.note ?? '',
         collaboratorUserIds: updated.collaborators.map((c) => c.id),
       });
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not save this retro entry.');
     } finally {

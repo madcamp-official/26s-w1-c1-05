@@ -2,12 +2,13 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Copy } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
-import { Alert, Button, Card, Field, FieldInput, FieldTextarea, LoadingState, useConfirm } from '../../components/ui';
+import { Alert, Button, Card, Field, FieldInput, FieldTextarea, LoadingState, useConfirm, useToast } from '../../components/ui';
 import { ApiError } from '../../types/api';
 import type { TeamRole } from '../../types/team';
 
 export function TeamSettingsPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
   const [name, setName] = useState('');
@@ -69,6 +70,7 @@ export function TeamSettingsPage() {
       setName(team.name);
       setDescription(team.description ?? '');
       setSuccessMessage('Team info saved.');
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not save team info.');
     } finally {
@@ -115,6 +117,7 @@ export function TeamSettingsPage() {
       setHasPassword(result.hasPassword);
       setPassword('');
       setSuccessMessage(result.hasPassword ? 'Join password updated.' : 'Team is now public.');
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the join password.');
     } finally {

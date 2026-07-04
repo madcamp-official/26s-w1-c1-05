@@ -1001,7 +1001,7 @@ p {
 .task-new-layout {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
-  gap: 24px;
+  gap: 36px;
   align-items: start;
 }
 

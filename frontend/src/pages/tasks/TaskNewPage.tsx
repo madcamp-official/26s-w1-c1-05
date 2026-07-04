@@ -137,7 +137,7 @@ export function TaskNewPage() {
   }
 
   return (
-    <div className="page-container-doc">
+    <div className="page-container">
       <button type="button" className="back-link" onClick={() => navigate(`/teams/${numericTeamId}/tasks`)}>
         <ArrowLeft size={15} aria-hidden="true" />
         Back to board

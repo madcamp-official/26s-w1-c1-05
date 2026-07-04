@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as specDocumentApi from '../../api/specDocumentApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Badge, Button, LoadingState, useConfirm } from '../../components/ui';
+import { Alert, Badge, Button, LoadingState, useConfirm, useToast } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { SpecDocument } from '../../types/specDocument';
@@ -13,6 +13,7 @@ import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function SpecDocumentDetailPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const { teamId, documentId } = useParams();
   const numericTeamId = Number(teamId);
   const numericDocumentId = Number(documentId);
@@ -69,6 +70,7 @@ export function SpecDocumentDetailPage() {
       });
       setSpecDoc(updated);
       setTitle(updated.title);
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not save this spec doc.');
     } finally {

@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Button, useConfirm } from '../../components/ui';
+import { Alert, Button, useConfirm, useToast } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
@@ -13,6 +13,7 @@ import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function MeetingDetailPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const { teamId, meetingId } = useParams();
   const numericTeamId = Number(teamId);
   const numericMeetingId = Number(meetingId);
@@ -90,6 +91,7 @@ export function MeetingDetailPage() {
         rawContent: updated.rawContent ?? '',
         summary: updated.summary ?? '',
       });
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not save the meeting.');
     } finally {

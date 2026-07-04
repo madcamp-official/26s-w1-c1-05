@@ -5,7 +5,7 @@ import * as taskApi from '../../api/taskApi';
 import * as taskDependencyApi from '../../api/taskDependencyApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, IconButton, LoadingState, StatusDot, useConfirm } from '../../components/ui';
+import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, IconButton, LoadingState, StatusDot, useConfirm, useToast } from '../../components/ui';
 import { dueLabel, priorityTone, relativeTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Task, TaskComment, TaskDependency, TaskPriority, TaskStatus } from '../../types/task';
@@ -14,6 +14,7 @@ import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function TaskDetailPage() {
   const confirm = useConfirm();
+  const toast = useToast();
   const { teamId, taskId } = useParams();
   const numericTeamId = Number(teamId);
   const numericTaskId = Number(taskId);
@@ -95,6 +96,7 @@ export function TaskDetailPage() {
         assigneeUserIds: nextForm.assigneeUserIds,
       });
       setTask(updated);
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not save the task.');
     } finally {
@@ -200,6 +202,7 @@ export function TaskDetailPage() {
       setEditingCommentId(null);
       setEditingCommentContent('');
       setComments(await taskApi.getComments(numericTaskId));
+      toast();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the comment.');
     } finally {

@@ -100,7 +100,6 @@ export function SpecDocumentListPage() {
                 </div>
               </div>
               <div className="row-trailing">
-                <Badge variant="outline">{doc.status}</Badge>
                 {!doc.isMain && (
                   <Button type="button" variant="secondary" size="sm" disabled={isSubmitting} onClick={(event) => void handleSetMain(doc, event)}>
                     Set main

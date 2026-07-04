@@ -12,6 +12,7 @@ import com.scrumhelper.domain.team.TeamRepository;
 import com.scrumhelper.domain.team.TeamRole;
 import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskRepository;
+import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
 import com.scrumhelper.team.dto.CreateTeamRequest;
@@ -127,6 +128,9 @@ public class TeamService {
 						taskRepository.countByTeamId(teamId),
 						taskRepository.countByTeamIdAndCompleted(teamId, true),
 						taskRepository.countByTeamIdAndCompleted(teamId, false),
+						taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.BACKLOG)
+								+ taskRepository.countByTeamIdAndStatusIsNullAndCompletedFalse(teamId),
+						taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.IN_PROGRESS),
 						taskRepository.countByTeamIdAndCompletedFalseAndDueDateBefore(teamId, today),
 						taskRepository.countByTeamIdAndCompletedFalseAndDueDateBetween(teamId, today, today.plusDays(2))
 				),

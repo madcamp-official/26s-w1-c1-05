@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import './Button.css';
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -8,7 +8,7 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
 };
 
-export function Button({
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
   variant = 'primary',
   size = 'md',
   isLoading = false,
@@ -16,12 +16,12 @@ export function Button({
   children,
   className = '',
   ...props
-}: ButtonProps) {
+}, ref) {
   const classes = ['ds-btn', `ds-btn-${variant}`, `ds-btn-${size}`, className].filter(Boolean).join(' ');
 
   return (
-    <button className={classes} disabled={disabled || isLoading} {...props}>
+    <button ref={ref} className={classes} disabled={disabled || isLoading} {...props}>
       {isLoading ? 'Working…' : children}
     </button>
   );
-}
+});

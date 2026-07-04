@@ -10,6 +10,8 @@ public record TeamDashboardResponse(
 			long totalCount,
 			long completedCount,
 			long incompleteCount,
+			long backlogCount,
+			long inProgressCount,
 			long overdueCount,
 			long dueSoonCount
 	) {

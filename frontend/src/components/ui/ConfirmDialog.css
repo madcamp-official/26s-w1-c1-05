@@ -1,0 +1,40 @@
+.ds-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(10 10 10 / 38%);
+  backdrop-filter: blur(2px);
+}
+
+.ds-confirm-dialog {
+  width: min(100%, 400px);
+  padding: 22px;
+  border: var(--border-hairline);
+  border-radius: var(--radius-xl);
+  background: var(--paper);
+  box-shadow: 0 18px 50px rgb(10 10 10 / 18%);
+}
+
+.ds-confirm-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ds-confirm-dialog p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+.ds-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}

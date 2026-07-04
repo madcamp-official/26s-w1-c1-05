@@ -13,4 +13,8 @@ public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificat
 	long countByTeamIdAndCompletedFalseAndDueDateBefore(Long teamId, LocalDate dueDate);
 
 	long countByTeamIdAndCompletedFalseAndDueDateBetween(Long teamId, LocalDate from, LocalDate to);
+
+	long countByTeamIdAndStatus(Long teamId, TaskStatus status);
+
+	long countByTeamIdAndStatusIsNullAndCompletedFalse(Long teamId);
 }

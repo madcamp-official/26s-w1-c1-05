@@ -40,6 +40,8 @@ export type TeamDashboard = {
     totalCount: number;
     completedCount: number;
     incompleteCount: number;
+    backlogCount: number;
+    inProgressCount: number;
     overdueCount: number;
     dueSoonCount: number;
   };

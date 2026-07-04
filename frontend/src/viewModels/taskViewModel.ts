@@ -34,22 +34,17 @@ export function toTaskCardView(task: Task): TaskCardView {
 }
 
 export function getTaskColumn(task: Task): TaskColumnKey {
-  if (task.completed) {
+  if (task.status === 'DONE') {
     return 'done';
   }
-  return isDueSoon(task) ? 'progress' : 'backlog';
-}
-
-function isDueSoon(task: Task) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const dueDate = new Date(`${task.dueDate}T00:00:00`);
-  const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / 86_400_000);
-  return diffDays <= 2;
+  if (task.status === 'IN_PROGRESS') {
+    return 'progress';
+  }
+  return 'backlog';
 }
 
 function getDueLabel(task: Task) {
-  if (task.completed) {
+  if (task.status === 'DONE') {
     return 'Completed';
   }
   const now = new Date();

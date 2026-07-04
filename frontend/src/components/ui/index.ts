@@ -10,3 +10,5 @@ export { StatTile } from './StatTile';
 export { Avatar } from './Avatar';
 export { StatusDot } from './StatusDot';
 export { IconButton } from './IconButton';
+export { ConfirmProvider } from './ConfirmDialog';
+export { useConfirm } from './ConfirmContext';

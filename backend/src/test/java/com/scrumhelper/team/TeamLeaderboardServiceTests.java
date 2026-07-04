@@ -5,10 +5,11 @@ import com.scrumhelper.auth.dto.SignupRequest;
 import com.scrumhelper.common.BusinessException;
 import com.scrumhelper.common.ErrorCode;
 import com.scrumhelper.domain.task.TaskPriority;
+import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.task.TaskService;
 import com.scrumhelper.task.dto.SaveTaskRequest;
-import com.scrumhelper.task.dto.TaskCompletionRequest;
 import com.scrumhelper.task.dto.TaskResponse;
+import com.scrumhelper.task.dto.TaskStatusRequest;
 import com.scrumhelper.team.dto.CreateTeamRequest;
 import com.scrumhelper.team.dto.TeamDetailResponse;
 import com.scrumhelper.team.dto.TeamLeaderboardResponse;
@@ -106,7 +107,7 @@ class TeamLeaderboardServiceTests {
 
 	private TaskResponse createCompletedTask(Long currentUserId, Long teamId, List<Long> assigneeUserIds) {
 		TaskResponse task = taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds));
-		return taskService.updateCompletion(currentUserId, task.id(), new TaskCompletionRequest(true));
+		return taskService.updateStatus(currentUserId, task.id(), new TaskStatusRequest(TaskStatus.DONE));
 	}
 
 	private TaskResponse createIncompleteTask(Long currentUserId, Long teamId, List<Long> assigneeUserIds) {

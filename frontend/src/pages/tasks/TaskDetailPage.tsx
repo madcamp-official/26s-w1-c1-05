@@ -4,14 +4,15 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, LoadingState, StatusDot } from '../../components/ui';
+import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, LoadingState, StatusDot, useConfirm } from '../../components/ui';
 import { dueLabel, priorityTone, relativeTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
-import type { Task, TaskComment, TaskPriority } from '../../types/task';
+import type { Task, TaskComment, TaskPriority, TaskStatus } from '../../types/task';
 import type { TeamMember } from '../../types/team';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function TaskDetailPage() {
+  const confirm = useConfirm();
   const { teamId, taskId } = useParams();
   const numericTeamId = Number(teamId);
   const numericTaskId = Number(taskId);
@@ -93,14 +94,14 @@ export function TaskDetailPage() {
     }
   }
 
-  async function handleToggleCompletion() {
+  async function handleStatusChange(status: TaskStatus) {
     if (!task) {
       return;
     }
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
-      setTask(await taskApi.updateTaskCompletion(task.id, !task.completed));
+      setTask(await taskApi.updateTaskStatus(task.id, status));
       void refreshTeamChrome();
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the task.');
@@ -110,7 +111,7 @@ export function TaskDetailPage() {
   }
 
   async function handleDeleteTask() {
-    if (!task || !window.confirm('Delete this task? Its comments will be deleted too.')) {
+    if (!task || !await confirm({ title: 'Delete task?', message: 'The task and all of its comments will be permanently deleted.', confirmLabel: 'Delete', tone: 'danger' })) {
       return;
     }
     try {
@@ -166,7 +167,7 @@ export function TaskDetailPage() {
   }
 
   async function handleDeleteComment(commentId: number) {
-    if (!window.confirm('Delete this comment?')) {
+    if (!await confirm({ title: 'Delete comment?', message: 'This comment will be permanently deleted.', confirmLabel: 'Delete', tone: 'danger' })) {
       return;
     }
     try {
@@ -198,10 +199,9 @@ export function TaskDetailPage() {
     return <Alert message={errorMessage ?? 'Task not found.'} />;
   }
 
-  const due = dueLabel(task.dueDate, task.completed);
+  const due = dueLabel(task.dueDate, task.status === 'DONE');
   const priority = priorityTone(task.priority);
-  const statusLabel = task.completed ? 'Completed' : due.tone === 'soon' ? 'In progress' : 'Backlog';
-  const statusDotVariant = task.completed ? 'filled' : due.tone === 'soon' ? 'half' : 'outline';
+  const statusDotVariant = task.status === 'DONE' ? 'filled' : task.status === 'IN_PROGRESS' ? 'half' : 'outline';
 
   return (
     <div className="page-container-doc">
@@ -228,10 +228,20 @@ export function TaskDetailPage() {
       <div className="detail-meta-row">
         <div className="detail-meta-item">
           <span className="detail-meta-label">Status</span>
-          <span className="detail-meta-value">
+          <label className="detail-meta-value">
             <StatusDot variant={statusDotVariant} />
-            {statusLabel}
-          </span>
+            <select
+              className="detail-status-select"
+              value={task.status}
+              disabled={isSubmitting}
+              aria-label="Task status"
+              onChange={(event) => void handleStatusChange(event.target.value as TaskStatus)}
+            >
+              <option value="BACKLOG">Backlog</option>
+              <option value="IN_PROGRESS">In progress</option>
+              <option value="DONE">Done</option>
+            </select>
+          </label>
         </div>
         <div className="detail-meta-item">
           <span className="detail-meta-label">Due</span>
@@ -303,14 +313,27 @@ export function TaskDetailPage() {
       </div>
 
       <div className="detail-action-bar">
-        <Button
-          type="button"
-          variant={task.completed ? 'secondary' : 'primary'}
-          disabled={isSubmitting}
-          onClick={() => void handleToggleCompletion()}
-        >
-          {task.completed ? 'Mark incomplete' : 'Mark complete'}
-        </Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {task.status !== 'BACKLOG' && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isSubmitting}
+              onClick={() => void handleStatusChange(task.status === 'DONE' ? 'IN_PROGRESS' : 'BACKLOG')}
+            >
+              {task.status === 'DONE' ? 'Move to in progress' : 'Move to backlog'}
+            </Button>
+          )}
+          {task.status !== 'DONE' && (
+            <Button
+              type="button"
+              disabled={isSubmitting}
+              onClick={() => void handleStatusChange(task.status === 'BACKLOG' ? 'IN_PROGRESS' : 'DONE')}
+            >
+              {task.status === 'BACKLOG' ? 'Start task' : 'Mark done'}
+            </Button>
+          )}
+        </div>
         <div className="detail-action-bar-end">
           <Button type="button" variant="danger" disabled={isSubmitting} onClick={() => void handleDeleteTask()}>
             <Trash2 size={14} aria-hidden="true" />

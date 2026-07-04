@@ -5,13 +5,14 @@ import com.scrumhelper.auth.dto.SignupRequest;
 import com.scrumhelper.common.BusinessException;
 import com.scrumhelper.common.ErrorCode;
 import com.scrumhelper.domain.task.TaskPriority;
+import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.notification.dto.NotificationEventResponse;
 import com.scrumhelper.task.TaskDependencyService;
 import com.scrumhelper.task.TaskService;
 import com.scrumhelper.task.dto.AddTaskDependencyRequest;
 import com.scrumhelper.task.dto.SaveTaskRequest;
-import com.scrumhelper.task.dto.TaskCompletionRequest;
 import com.scrumhelper.task.dto.TaskResponse;
+import com.scrumhelper.task.dto.TaskStatusRequest;
 import com.scrumhelper.team.TeamService;
 import com.scrumhelper.team.dto.CreateTeamRequest;
 import com.scrumhelper.team.dto.TeamDetailResponse;
@@ -58,7 +59,7 @@ class NotificationEventServiceTests {
 
 		assertThat(notificationEventService.getMyNotifications(context.memberId(), context.team().id())).isEmpty();
 
-		taskService.updateCompletion(context.ownerId(), predecessor.id(), new TaskCompletionRequest(true));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE));
 
 		List<NotificationEventResponse> notifications = notificationEventService.getMyNotifications(
 				context.memberId(),
@@ -83,9 +84,9 @@ class NotificationEventServiceTests {
 				new AddTaskDependencyRequest(predecessor.id())
 		);
 
-		taskService.updateCompletion(context.ownerId(), predecessor.id(), new TaskCompletionRequest(true));
-		taskService.updateCompletion(context.ownerId(), predecessor.id(), new TaskCompletionRequest(false));
-		taskService.updateCompletion(context.ownerId(), predecessor.id(), new TaskCompletionRequest(true));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.BACKLOG));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE));
 
 		assertThat(notificationEventService.getMyNotifications(context.memberId(), context.team().id())).hasSize(1);
 	}

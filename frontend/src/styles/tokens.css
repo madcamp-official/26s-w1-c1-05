@@ -42,6 +42,7 @@
   --content-max: 1120px;
   --content-max-doc: 820px;
   --content-max-narrow: 760px;
+  --page-gutter: 24px;
 
   --border-hairline: 1px solid var(--gray-200);
 }

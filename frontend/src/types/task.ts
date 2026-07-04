@@ -1,6 +1,7 @@
 import type { UserSummary } from './auth';
 
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH';
+export type TaskStatus = 'BACKLOG' | 'IN_PROGRESS' | 'DONE';
 
 export type Task = {
   id: number;
@@ -9,7 +10,7 @@ export type Task = {
   description: string | null;
   priority: TaskPriority;
   dueDate: string;
-  completed: boolean;
+  status: TaskStatus;
   createdBy: UserSummary;
   assignees: UserSummary[];
   commentCount: number;
@@ -27,7 +28,6 @@ export type TaskComment = {
 };
 
 export type TaskFilter = {
-  completed?: boolean;
   priority?: TaskPriority;
   assigneeId?: number;
   dueFrom?: string;

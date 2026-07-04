@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
-import { Alert, Avatar, Badge, Button, LoadingState } from '../../components/ui';
+import { Alert, Avatar, Badge, Button, LoadingState, useConfirm } from '../../components/ui';
 import { ApiError } from '../../types/api';
 import type { TeamDetail, TeamMember } from '../../types/team';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function TeamMembersPage() {
+  const confirm = useConfirm();
   const { teamId } = useParams();
   const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const numericTeamId = Number(teamId);
@@ -43,7 +44,7 @@ export function TeamMembersPage() {
   useEffect(() => void loadPage(), [loadPage]);
 
   async function handleTransferLeader(member: TeamMember) {
-    if (!window.confirm(`Make ${member.user.name} the team leader?`)) {
+    if (!await confirm({ title: 'Transfer leadership?', message: `${member.user.name} will become the new team leader.`, confirmLabel: 'Transfer' })) {
       return;
     }
     try {
@@ -59,7 +60,7 @@ export function TeamMembersPage() {
   }
 
   async function handleRemoveMember(member: TeamMember) {
-    if (!window.confirm(`Remove ${member.user.name} from the team?`)) {
+    if (!await confirm({ title: 'Remove member?', message: `${member.user.name} will lose access to this team.`, confirmLabel: 'Remove', tone: 'danger' })) {
       return;
     }
     try {
@@ -80,7 +81,7 @@ export function TeamMembersPage() {
   }
 
   return (
-    <div className="page-container" style={{ maxWidth: 900 }}>
+    <div className="page-container" style={{ maxWidth: 720 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 className="page-title">Members</h1>
         <p className="page-subtitle">People with access to this team.</p>

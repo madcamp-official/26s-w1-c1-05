@@ -3,6 +3,7 @@ package com.scrumhelper.task.dto;
 import com.scrumhelper.auth.dto.UserSummaryResponse;
 import com.scrumhelper.domain.task.Task;
 import com.scrumhelper.domain.task.TaskPriority;
+import com.scrumhelper.domain.task.TaskStatus;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,7 +16,7 @@ public record TaskResponse(
 		String description,
 		TaskPriority priority,
 		LocalDate dueDate,
-		boolean completed,
+		TaskStatus status,
 		UserSummaryResponse createdBy,
 		List<UserSummaryResponse> assignees,
 		long commentCount,
@@ -30,7 +31,7 @@ public record TaskResponse(
 				task.getDescription(),
 				task.getPriority(),
 				task.getDueDate(),
-				task.isCompleted(),
+				task.getStatus(),
 				UserSummaryResponse.from(task.getCreatedBy()),
 				assignees,
 				commentCount,

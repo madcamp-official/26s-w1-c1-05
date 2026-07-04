@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Avatar, Button } from '../../components/ui';
+import { Alert, Avatar, Button, useConfirm } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Retrospective } from '../../types/retrospective';
@@ -12,6 +12,7 @@ import type { TeamMember } from '../../types/team';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function RetrospectiveDetailPage() {
+  const confirm = useConfirm();
   const { teamId, retrospectiveId } = useParams();
   const numericTeamId = Number(teamId);
   const numericRetrospectiveId = Number(retrospectiveId);
@@ -101,7 +102,7 @@ export function RetrospectiveDetailPage() {
   }
 
   async function handleDeleteRetrospective() {
-    if (!retrospective || !window.confirm('Delete this retro entry?')) {
+    if (!retrospective || !await confirm({ title: 'Delete retrospective?', message: 'This retrospective entry will be permanently deleted.', confirmLabel: 'Delete', tone: 'danger' })) {
       return;
     }
     try {

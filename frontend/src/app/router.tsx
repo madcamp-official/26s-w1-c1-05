@@ -2,7 +2,7 @@ import { createBrowserRouter, Navigate, Outlet, useLocation } from 'react-router
 import { AuthLayout } from '../components/layout/AuthLayout';
 import { AppLayout } from '../components/layout/AppLayout';
 import { TeamLayout } from '../components/layout/TeamLayout';
-import { LoadingState } from '../components/common/LoadingState';
+import { LoadingState } from '../components/ui';
 import { useAuth } from '../auth/useAuth';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { SignupPage } from '../pages/auth/SignupPage';
@@ -11,10 +11,13 @@ import { TeamDashboardPage } from '../pages/teams/TeamDashboardPage';
 import { TeamMembersPage } from '../pages/teams/TeamMembersPage';
 import { TeamSettingsPage } from '../pages/teams/TeamSettingsPage';
 import { TaskListPage } from '../pages/tasks/TaskListPage';
+import { TaskNewPage } from '../pages/tasks/TaskNewPage';
 import { TaskDetailPage } from '../pages/tasks/TaskDetailPage';
 import { MeetingListPage } from '../pages/meetings/MeetingListPage';
 import { MeetingDetailPage } from '../pages/meetings/MeetingDetailPage';
-import { SpecDocumentPage } from '../pages/specDocuments/SpecDocumentPage';
+import { SpecDocumentListPage } from '../pages/specDocuments/SpecDocumentListPage';
+import { SpecDocumentNewPage } from '../pages/specDocuments/SpecDocumentNewPage';
+import { SpecDocumentDetailPage } from '../pages/specDocuments/SpecDocumentDetailPage';
 import { RetrospectiveListPage } from '../pages/retrospectives/RetrospectiveListPage';
 import { RetrospectiveDetailPage } from '../pages/retrospectives/RetrospectiveDetailPage';
 
@@ -72,8 +75,11 @@ export const router = createBrowserRouter([
               { path: 'settings', element: <TeamSettingsPage /> },
               { path: 'meetings', element: <MeetingListPage /> },
               { path: 'meetings/:meetingId', element: <MeetingDetailPage /> },
-              { path: 'spec-documents', element: <SpecDocumentPage /> },
+              { path: 'spec-documents', element: <SpecDocumentListPage /> },
+              { path: 'spec-documents/new', element: <SpecDocumentNewPage /> },
+              { path: 'spec-documents/:documentId', element: <SpecDocumentDetailPage /> },
               { path: 'tasks', element: <TaskListPage /> },
+              { path: 'tasks/new', element: <TaskNewPage /> },
               { path: 'tasks/:taskId', element: <TaskDetailPage /> },
               { path: 'retrospectives', element: <RetrospectiveListPage /> },
               {

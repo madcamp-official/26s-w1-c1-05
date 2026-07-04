@@ -1,0 +1,23 @@
+.ds-status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  box-sizing: border-box;
+}
+
+.ds-status-dot-outline {
+  border: 1.5px solid var(--gray-300);
+}
+
+.ds-status-dot-half {
+  background: var(--gray-500);
+}
+
+.ds-status-dot-filled {
+  background: var(--ink);
+}
+
+.ds-status-dot-danger {
+  background: var(--danger);
+}

@@ -1,9 +1,7 @@
-import { LogOut } from 'lucide-react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../auth/useAuth';
-import { Button } from '../common/Button';
+import { Outlet } from 'react-router-dom';
 
 export function AppLayout() {
+<<<<<<< HEAD
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -32,4 +30,7 @@ export function AppLayout() {
       </main>
     </div>
   );
+=======
+  return <Outlet />;
+>>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 }

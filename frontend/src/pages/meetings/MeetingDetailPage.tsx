@@ -1,20 +1,27 @@
+<<<<<<< HEAD
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+=======
+import { useEffect, useState, type FormEvent } from 'react';
+import { ArrowLeft, Clock, Trash2 } from 'lucide-react';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+>>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as meetingApi from '../../api/meetingApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { LoadingState } from '../../components/common/LoadingState';
+import { Alert, Button } from '../../components/ui';
+import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
 import type { TeamDetail } from '../../types/team';
+import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function MeetingDetailPage() {
   const { teamId, meetingId } = useParams();
   const numericTeamId = Number(teamId);
   const numericMeetingId = Number(meetingId);
   const navigate = useNavigate();
+  const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const { user } = useAuth();
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [team, setTeam] = useState<TeamDetail | null>(null);
@@ -28,17 +35,22 @@ export function MeetingDetailPage() {
     summary: '',
   });
 
+<<<<<<< HEAD
   const canManage =
     meeting != null &&
     (meeting.author.id === user?.id || team?.myRole === 'LEADER');
+=======
+  useEffect(() => void loadPage(), [numericMeetingId, numericTeamId]);
+
+  const canManage = meeting != null && (meeting.author.id === user?.id || team?.myRole === 'LEADER');
+>>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
   const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId) || !Number.isFinite(numericMeetingId)) {
-      setErrorMessage('회의록 정보가 올바르지 않습니다.');
+      setErrorMessage('Invalid meeting.');
       setIsLoading(false);
       return;
     }
-
     try {
       setIsLoading(true);
       setErrorMessage(null);
@@ -55,7 +67,7 @@ export function MeetingDetailPage() {
         summary: meetingData.summary ?? '',
       });
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '회의록 정보를 불러오지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not load this meeting.');
     } finally {
       setIsLoading(false);
     }
@@ -67,12 +79,8 @@ export function MeetingDetailPage() {
     event.preventDefault();
     setErrorMessage(null);
 
-    if (!form.title.trim()) {
-      setErrorMessage('회의 제목을 입력하세요.');
-      return;
-    }
-    if (!form.meetingAt) {
-      setErrorMessage('회의 일시를 입력하세요.');
+    if (!form.title.trim() || !form.meetingAt) {
+      setErrorMessage('Enter a title and meeting time.');
       return;
     }
 
@@ -92,33 +100,38 @@ export function MeetingDetailPage() {
         summary: updated.summary ?? '',
       });
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '회의록을 저장하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not save the meeting.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDeleteMeeting() {
-    if (!meeting || !window.confirm('이 회의록을 삭제할까요?')) {
+    if (!meeting || !window.confirm('Delete this meeting?')) {
       return;
     }
-
     try {
       setIsSubmitting(true);
       await meetingApi.deleteMeeting(meeting.id);
+      void refreshTeamChrome();
       navigate(`/teams/${numericTeamId}/meetings`);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '회의록을 삭제하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not delete the meeting.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   if (isLoading) {
-    return <LoadingState label="회의록 상세를 불러오고 있습니다." />;
+    return <div className="page-container-doc">Loading…</div>;
+  }
+
+  if (!meeting) {
+    return <Alert message={errorMessage ?? 'Meeting not found.'} />;
   }
 
   return (
+<<<<<<< HEAD
     <section className="page-section">
       <div className="page-header">
         <div>
@@ -138,69 +151,83 @@ export function MeetingDetailPage() {
             onClick={() => void handleDeleteMeeting()}
           >
             삭제
+=======
+    <div className="page-container-doc">
+      <button type="button" className="back-link" onClick={() => navigate(`/teams/${numericTeamId}/meetings`)}>
+        <ArrowLeft size={15} aria-hidden="true" />
+        All meetings
+      </button>
+
+      <div className="detail-title-row">
+        {canManage ? (
+          <input
+            className="detail-title spec-title-input"
+            style={{ marginBottom: 0, flex: 1 }}
+            value={form.title}
+            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+          />
+        ) : (
+          <h1 className="detail-title" style={{ marginBottom: 0 }}>
+            {meeting.title}
+          </h1>
+        )}
+        {canManage && (
+          <Button type="button" variant="danger" size="sm" disabled={isSubmitting} onClick={() => void handleDeleteMeeting()}>
+            <Trash2 size={14} aria-hidden="true" />
+            Delete
+>>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
           </Button>
         )}
       </div>
 
-      <ErrorMessage message={errorMessage} />
+      <div className="doc-meta-row">
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Clock size={14} color="var(--gray-400)" aria-hidden="true" />
+          <span className="mono">{formatDateTime(meeting.meetingAt)}</span>
+        </span>
+        <span>Logged by {meeting.author.name}</span>
+      </div>
 
-      {meeting && (
-        <form className="panel form-stack-plain" onSubmit={handleSaveMeeting}>
-          {!canManage && (
-            <div className="notice">회의록 작성자 또는 팀장만 회의록을 수정하거나 삭제할 수 있습니다.</div>
-          )}
-
-          <div className="form-row">
-            <label className="field">
-              <span>제목</span>
-              <input
-                type="text"
-                value={form.title}
-                disabled={!canManage}
-                onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-              />
-            </label>
-            <label className="field">
-              <span>회의 일시</span>
-              <input
-                type="datetime-local"
-                value={form.meetingAt}
-                disabled={!canManage}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, meetingAt: event.target.value }))
-                }
-              />
-            </label>
-          </div>
-
-          <label className="field">
-            <span>회의 원문</span>
-            <textarea
-              value={form.rawContent}
-              disabled={!canManage}
-              onChange={(event) => setForm((current) => ({ ...current, rawContent: event.target.value }))}
-            />
-          </label>
-
-          <label className="field">
-            <span>요약</span>
-            <textarea
-              value={form.summary}
-              disabled={!canManage}
-              onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))}
-            />
-          </label>
-
-          {canManage && (
-            <div className="form-actions">
-              <Button type="submit" isLoading={isSubmitting}>
-                저장
-              </Button>
-            </div>
-          )}
-        </form>
+      {!canManage && (
+        <div className="readonly-note">Only {meeting.author.name} or a team leader can edit this meeting. You're viewing it read-only.</div>
       )}
-    </section>
+
+      <Alert message={errorMessage} />
+
+      <form onSubmit={handleSaveMeeting}>
+        <div className="doc-section-head">
+          <span className="detail-section-label" style={{ marginBottom: 0 }}>
+            Summary
+          </span>
+        </div>
+        <textarea
+          className="doc-textarea"
+          style={{ minHeight: 140 }}
+          value={form.summary}
+          disabled={!canManage}
+          onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))}
+        />
+
+        <div className="detail-section-label" style={{ margin: '24px 0 10px' }}>
+          Raw transcript
+        </div>
+        <textarea
+          className="doc-textarea"
+          style={{ minHeight: 180 }}
+          value={form.rawContent}
+          disabled={!canManage}
+          onChange={(event) => setForm((current) => ({ ...current, rawContent: event.target.value }))}
+        />
+
+        {canManage && (
+          <div className="doc-save-row">
+            <Button type="submit" isLoading={isSubmitting}>
+              Save
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }
 
@@ -210,14 +237,4 @@ function toDatetimeLocalValue(value: string) {
 
 function toApiDateTime(value: string) {
   return value.length === 16 ? `${value}:00` : value;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }

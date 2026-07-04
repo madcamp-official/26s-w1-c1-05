@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { CircleAlert } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { Button, Card, Field, FieldInput } from '../../components/ui';
 import { ApiError } from '../../types/api';
 
 type LocationState = {
@@ -25,7 +25,7 @@ export function LoginPage() {
     setErrorMessage(null);
 
     if (!email.trim() || !password.trim()) {
-      setErrorMessage('이메일과 비밀번호를 입력하세요.');
+      setErrorMessage('Enter your email and password.');
       return;
     }
 
@@ -35,52 +35,49 @@ export function LoginPage() {
       const state = location.state as LocationState | null;
       navigate(state?.from?.pathname ?? '/teams', { replace: true });
     } catch (error) {
-      setErrorMessage(
-        error instanceof ApiError
-          ? error.message
-          : '로그인 중 오류가 발생했습니다.',
-      );
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not sign in.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form className="form-stack" onSubmit={handleSubmit}>
-      <div>
-        <h1>로그인</h1>
-        <p className="muted">팀 스크럼을 이어서 관리합니다.</p>
+    <>
+      <Card className="auth-card">
+        <h1 className="auth-heading">Sign in</h1>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <Field label="Email">
+            <FieldInput
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              placeholder="you@team.com"
+            />
+          </Field>
+          <Field label="Password">
+            <FieldInput
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="current-password"
+              placeholder="••••••••"
+            />
+          </Field>
+          {errorMessage && (
+            <div className="auth-error">
+              <CircleAlert size={14} aria-hidden="true" />
+              {errorMessage}
+            </div>
+          )}
+          <Button type="submit" size="lg" isLoading={isSubmitting}>
+            Sign in
+          </Button>
+        </form>
+      </Card>
+      <div className="auth-switch">
+        Don't have an account? <Link className="auth-switch-link" to="/signup">Sign up</Link>
       </div>
-
-      <label className="field">
-        <span>이메일</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          autoComplete="email"
-        />
-      </label>
-
-      <label className="field">
-        <span>비밀번호</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="current-password"
-        />
-      </label>
-
-      <ErrorMessage message={errorMessage} />
-
-      <Button type="submit" isLoading={isSubmitting}>
-        로그인
-      </Button>
-
-      <p className="muted center-text">
-        계정이 없다면 <Link to="/signup">회원가입</Link>
-      </p>
-    </form>
+    </>
   );
 }

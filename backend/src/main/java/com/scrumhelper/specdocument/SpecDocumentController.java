@@ -5,11 +5,14 @@ import com.scrumhelper.specdocument.dto.GenerateSpecDraftRequest;
 import com.scrumhelper.specdocument.dto.SaveSpecDocumentRequest;
 import com.scrumhelper.specdocument.dto.SpecDocumentResponse;
 import com.scrumhelper.specdocument.dto.SpecDraftResponse;
+import com.scrumhelper.specdocument.dto.UpdateSpecDocumentRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -53,6 +56,40 @@ public class SpecDocumentController {
 		return ResponseEntity
 				.status(HttpStatus.CREATED)
 				.body(ApiResponse.created(specDocumentService.createSpecDocument(currentUserId(authentication), teamId, request)));
+	}
+
+	@GetMapping("/spec-documents/{documentId}")
+	public ApiResponse<SpecDocumentResponse> getSpecDocument(
+			@PathVariable Long documentId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(specDocumentService.getSpecDocument(currentUserId(authentication), documentId));
+	}
+
+	@PatchMapping("/spec-documents/{documentId}")
+	public ApiResponse<SpecDocumentResponse> updateSpecDocument(
+			@PathVariable Long documentId,
+			@Valid @RequestBody UpdateSpecDocumentRequest request,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(specDocumentService.updateSpecDocument(currentUserId(authentication), documentId, request));
+	}
+
+	@DeleteMapping("/spec-documents/{documentId}")
+	public ApiResponse<Void> deleteSpecDocument(
+			@PathVariable Long documentId,
+			Authentication authentication
+	) {
+		specDocumentService.deleteSpecDocument(currentUserId(authentication), documentId);
+		return ApiResponse.deleted();
+	}
+
+	@PatchMapping("/spec-documents/{documentId}/main")
+	public ApiResponse<SpecDocumentResponse> setMainSpecDocument(
+			@PathVariable Long documentId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(specDocumentService.setMainSpecDocument(currentUserId(authentication), documentId));
 	}
 
 	private Long currentUserId(Authentication authentication) {

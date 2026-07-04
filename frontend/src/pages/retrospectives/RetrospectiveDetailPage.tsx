@@ -1,20 +1,27 @@
+<<<<<<< HEAD
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+=======
+import { useEffect, useState, type FormEvent } from 'react';
+import { ArrowLeft, Trash2 } from 'lucide-react';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+>>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { LoadingState } from '../../components/common/LoadingState';
+import { Alert, Avatar, Button } from '../../components/ui';
+import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Retrospective } from '../../types/retrospective';
 import type { TeamMember } from '../../types/team';
+import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function RetrospectiveDetailPage() {
   const { teamId, retrospectiveId } = useParams();
   const numericTeamId = Number(teamId);
   const numericRetrospectiveId = Number(retrospectiveId);
   const navigate = useNavigate();
+  const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const { user } = useAuth();
   const [retrospective, setRetrospective] = useState<Retrospective | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -31,18 +38,15 @@ export function RetrospectiveDetailPage() {
 
   const canEdit =
     retrospective != null &&
-    (retrospective.author.id === user?.id ||
-      retrospective.collaborators.some((collaborator) => collaborator.id === user?.id));
-  const canManageCollaborators =
-    retrospective != null && retrospective.author.id === user?.id;
+    (retrospective.author.id === user?.id || retrospective.collaborators.some((c) => c.id === user?.id));
+  const canManageCollaborators = retrospective != null && retrospective.author.id === user?.id;
 
   const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId) || !Number.isFinite(numericRetrospectiveId)) {
-      setErrorMessage('회고록 정보가 올바르지 않습니다.');
+      setErrorMessage('Invalid retro entry.');
       setIsLoading(false);
       return;
     }
-
     try {
       setIsLoading(true);
       setErrorMessage(null);
@@ -57,10 +61,10 @@ export function RetrospectiveDetailPage() {
         yesterdayWork: retrospectiveData.yesterdayWork ?? '',
         todayPlan: retrospectiveData.todayPlan ?? '',
         note: retrospectiveData.note ?? '',
-        collaboratorUserIds: retrospectiveData.collaborators.map((collaborator) => collaborator.id),
+        collaboratorUserIds: retrospectiveData.collaborators.map((c) => c.id),
       });
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '회고록 정보를 불러오지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not load this retro entry.');
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +77,7 @@ export function RetrospectiveDetailPage() {
     setErrorMessage(null);
 
     if (!form.title.trim()) {
-      setErrorMessage('회고록 제목을 입력하세요.');
+      setErrorMessage('Enter a title.');
       return;
     }
 
@@ -92,26 +96,26 @@ export function RetrospectiveDetailPage() {
         yesterdayWork: updated.yesterdayWork ?? '',
         todayPlan: updated.todayPlan ?? '',
         note: updated.note ?? '',
-        collaboratorUserIds: updated.collaborators.map((collaborator) => collaborator.id),
+        collaboratorUserIds: updated.collaborators.map((c) => c.id),
       });
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '회고록을 저장하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not save this retro entry.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDeleteRetrospective() {
-    if (!retrospective || !window.confirm('이 회고록을 삭제할까요?')) {
+    if (!retrospective || !window.confirm('Delete this retro entry?')) {
       return;
     }
-
     try {
       setIsSubmitting(true);
       await retrospectiveApi.deleteRetrospective(retrospective.id);
+      void refreshTeamChrome();
       navigate(`/teams/${numericTeamId}/retrospectives`);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '회고록을 삭제하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not delete this retro entry.');
     } finally {
       setIsSubmitting(false);
     }
@@ -130,10 +134,15 @@ export function RetrospectiveDetailPage() {
   }
 
   if (isLoading) {
-    return <LoadingState label="회고록 상세를 불러오고 있습니다." />;
+    return <div className="page-container-narrow">Loading…</div>;
+  }
+
+  if (!retrospective) {
+    return <Alert message={errorMessage ?? 'Retro entry not found.'} />;
   }
 
   return (
+<<<<<<< HEAD
     <section className="page-section">
       <div className="page-header">
         <div>
@@ -153,100 +162,116 @@ export function RetrospectiveDetailPage() {
             onClick={() => void handleDeleteRetrospective()}
           >
             삭제
+=======
+    <div className="page-container-narrow">
+      <button type="button" className="back-link" onClick={() => navigate(`/teams/${numericTeamId}/retrospectives`)}>
+        <ArrowLeft size={15} aria-hidden="true" />
+        All entries
+      </button>
+
+      <div className="detail-title-row">
+        {canEdit ? (
+          <input
+            className="detail-title spec-title-input"
+            style={{ marginBottom: 0, flex: 1 }}
+            value={form.title}
+            onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+          />
+        ) : (
+          <h1 className="detail-title" style={{ marginBottom: 0 }}>
+            {retrospective.title}
+          </h1>
+        )}
+        <span className="mono muted" style={{ fontSize: 12, marginTop: 8 }}>
+          {formatDateTime(retrospective.createdAt)}
+        </span>
+      </div>
+      <div className="doc-meta-row">
+        <span>By {retrospective.author.name}</span>
+        {canEdit && (
+          <Button type="button" variant="danger" size="sm" disabled={isSubmitting} onClick={() => void handleDeleteRetrospective()}>
+            <Trash2 size={14} aria-hidden="true" />
+            Delete
+>>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
           </Button>
         )}
       </div>
 
-      <ErrorMessage message={errorMessage} />
+      {!canEdit && <div className="readonly-note">Only the author or a collaborator can edit this entry.</div>}
 
-      {retrospective && (
-        <form className="panel form-stack-plain" onSubmit={handleSaveRetrospective}>
-          {!canEdit && (
-            <div className="notice">
-              작성자 또는 공동 작업자만 이 회고록을 수정할 수 있습니다.
-            </div>
-          )}
-          {canEdit && !canManageCollaborators && (
-            <div className="notice">
-              공동 작업자 목록은 회고록 작성자만 변경할 수 있습니다.
-            </div>
-          )}
+      <Alert message={errorMessage} />
 
-          <label className="field">
-            <span>제목</span>
-            <input
-              type="text"
-              value={form.title}
-              disabled={!canEdit}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>어제 한 일</span>
+      <form onSubmit={handleSaveRetrospective}>
+        <div className="retro-sections">
+          <div>
+            <div className="retro-section-label">Yesterday</div>
             <textarea
+              className="doc-textarea"
+              style={{ minHeight: 90 }}
               value={form.yesterdayWork}
               disabled={!canEdit}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, yesterdayWork: event.target.value }))
-              }
+              onChange={(event) => setForm((current) => ({ ...current, yesterdayWork: event.target.value }))}
             />
-          </label>
-          <label className="field">
-            <span>오늘 할 일</span>
+          </div>
+          <div>
+            <div className="retro-section-label">Today</div>
             <textarea
+              className="doc-textarea"
+              style={{ minHeight: 90 }}
               value={form.todayPlan}
               disabled={!canEdit}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, todayPlan: event.target.value }))
-              }
+              onChange={(event) => setForm((current) => ({ ...current, todayPlan: event.target.value }))}
             />
-          </label>
-          <label className="field">
-            <span>궁금한/필요한/알아낸 것</span>
+          </div>
+          <div>
+            <div className="retro-section-label">Questions, needs &amp; findings</div>
             <textarea
+              className="doc-textarea"
+              style={{ minHeight: 90 }}
               value={form.note}
               disabled={!canEdit}
               onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
             />
-          </label>
+          </div>
+        </div>
 
-          <fieldset className="assignee-fieldset" disabled={!canEdit || !canManageCollaborators}>
-            <legend>공동 작업자</legend>
-            <div className="checkbox-grid">
-              {members
-                .filter((member) => member.user.id !== retrospective.author.id)
-                .map((member) => (
-                  <label key={member.id} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={form.collaboratorUserIds.includes(member.user.id)}
-                      onChange={() => toggleCollaborator(member.user.id)}
-                    />
-                    {member.user.name}
-                  </label>
-                ))}
-            </div>
-          </fieldset>
+        <div className="collab-section">
+          <div className="collab-section-head">
+            <span className="detail-section-label" style={{ marginBottom: 0 }}>
+              Collaborators
+            </span>
+            {canEdit && !canManageCollaborators && (
+              <span className="muted" style={{ fontSize: 12 }}>
+                Only {retrospective.author.name} can change this list
+              </span>
+            )}
+          </div>
+          <div className="option-list">
+            {members
+              .filter((member) => member.user.id !== retrospective.author.id)
+              .map((member) => (
+                <label className="option-row" key={member.id} style={!canManageCollaborators ? { cursor: 'default' } : undefined}>
+                  <input
+                    type="checkbox"
+                    checked={form.collaboratorUserIds.includes(member.user.id)}
+                    disabled={!canManageCollaborators}
+                    onChange={() => toggleCollaborator(member.user.id)}
+                  />
+                  <Avatar name={member.user.name} size="sm" />
+                  <span className="option-row-name">{member.user.name}</span>
+                </label>
+              ))}
+          </div>
+        </div>
 
-          {canEdit && (
-            <div className="form-actions">
-              <Button type="submit" isLoading={isSubmitting}>
-                저장
-              </Button>
-            </div>
-          )}
-        </form>
-      )}
-    </section>
+        {canEdit && (
+          <div className="doc-save-row">
+            <Button type="submit" isLoading={isSubmitting}>
+              Save
+            </Button>
+          </div>
+        )}
+      </form>
+    </div>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }

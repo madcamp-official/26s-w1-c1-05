@@ -1,0 +1,48 @@
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.ds-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.ds-field-hint {
+  font-size: 12px;
+  color: var(--gray-400);
+}
+
+.ds-field-control {
+  height: var(--control-height);
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.12s;
+}
+
+.ds-field-control:focus {
+  border-color: var(--ink);
+}
+
+.ds-field-control:disabled {
+  color: var(--gray-500);
+  background: var(--gray-50);
+  cursor: not-allowed;
+}
+
+.ds-field-textarea {
+  height: auto;
+  min-height: 96px;
+  padding: 10px 12px;
+  line-height: 1.6;
+  resize: vertical;
+}

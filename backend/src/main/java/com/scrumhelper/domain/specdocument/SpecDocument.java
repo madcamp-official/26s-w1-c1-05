@@ -4,6 +4,8 @@ import com.scrumhelper.domain.team.Team;
 import com.scrumhelper.domain.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -40,6 +42,13 @@ public class SpecDocument {
 	@Column(name = "source_meeting_ids", columnDefinition = "TEXT")
 	private String sourceMeetingIds;
 
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private SpecDocumentStatus status;
+
+	@Column(name = "is_main", nullable = false)
+	private boolean isMain;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -55,6 +64,8 @@ public class SpecDocument {
 		this.title = title;
 		this.content = content;
 		this.sourceMeetingIds = sourceMeetingIds;
+		this.status = SpecDocumentStatus.CONFIRMED;
+		this.isMain = false;
 	}
 
 	public static SpecDocument create(Team team, User createdBy, String title, String content, String sourceMeetingIds) {
@@ -97,11 +108,33 @@ public class SpecDocument {
 		return sourceMeetingIds;
 	}
 
+	public SpecDocumentStatus getStatus() {
+		return status;
+	}
+
+	public boolean isMain() {
+		return isMain;
+	}
+
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
 
 	public LocalDateTime getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public void update(String title, String content, String sourceMeetingIds) {
+		this.title = title;
+		this.content = content;
+		this.sourceMeetingIds = sourceMeetingIds;
+	}
+
+	public void markAsMain() {
+		this.isMain = true;
+	}
+
+	public void unmarkMain() {
+		this.isMain = false;
 	}
 }

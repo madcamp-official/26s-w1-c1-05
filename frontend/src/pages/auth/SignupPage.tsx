@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { CircleAlert } from 'lucide-react';
 import { useAuth } from '../../auth/useAuth';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { Button, Card, Field, FieldInput } from '../../components/ui';
 import { ApiError } from '../../types/api';
 
 export function SignupPage() {
@@ -19,7 +19,7 @@ export function SignupPage() {
     setErrorMessage(null);
 
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setErrorMessage('이름, 이메일, 비밀번호를 모두 입력하세요.');
+      setErrorMessage('Enter your name, email, and password.');
       return;
     }
 
@@ -28,62 +28,58 @@ export function SignupPage() {
       await signup({ name, email, password });
       navigate('/teams', { replace: true });
     } catch (error) {
-      setErrorMessage(
-        error instanceof ApiError
-          ? error.message
-          : '회원가입 중 오류가 발생했습니다.',
-      );
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not create your account.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    <form className="form-stack" onSubmit={handleSubmit}>
-      <div>
-        <h1>회원가입</h1>
-        <p className="muted">이름, 이메일, 비밀번호로 시작합니다.</p>
+    <>
+      <Card className="auth-card">
+        <h1 className="auth-heading">Create your account</h1>
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <Field label="Name">
+            <FieldInput
+              type="text"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              autoComplete="name"
+              placeholder="Your name"
+            />
+          </Field>
+          <Field label="Email">
+            <FieldInput
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              autoComplete="email"
+              placeholder="you@team.com"
+            />
+          </Field>
+          <Field label="Password">
+            <FieldInput
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoComplete="new-password"
+              placeholder="••••••••"
+            />
+          </Field>
+          {errorMessage && (
+            <div className="auth-error">
+              <CircleAlert size={14} aria-hidden="true" />
+              {errorMessage}
+            </div>
+          )}
+          <Button type="submit" size="lg" isLoading={isSubmitting}>
+            Create account
+          </Button>
+        </form>
+      </Card>
+      <div className="auth-switch">
+        Already have an account? <Link className="auth-switch-link" to="/login">Sign in</Link>
       </div>
-
-      <label className="field">
-        <span>이름</span>
-        <input
-          type="text"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          autoComplete="name"
-        />
-      </label>
-
-      <label className="field">
-        <span>이메일</span>
-        <input
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          autoComplete="email"
-        />
-      </label>
-
-      <label className="field">
-        <span>비밀번호</span>
-        <input
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          autoComplete="new-password"
-        />
-      </label>
-
-      <ErrorMessage message={errorMessage} />
-
-      <Button type="submit" isLoading={isSubmitting}>
-        회원가입
-      </Button>
-
-      <p className="muted center-text">
-        이미 계정이 있다면 <Link to="/login">로그인</Link>
-      </p>
-    </form>
+    </>
   );
 }

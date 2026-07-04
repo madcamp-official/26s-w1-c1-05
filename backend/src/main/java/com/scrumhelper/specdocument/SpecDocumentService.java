@@ -7,16 +7,21 @@ import com.scrumhelper.domain.meeting.MeetingRepository;
 import com.scrumhelper.domain.specdocument.SpecDocument;
 import com.scrumhelper.domain.specdocument.SpecDocumentRepository;
 import com.scrumhelper.domain.team.Team;
+import com.scrumhelper.domain.team.TeamMember;
 import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.domain.team.TeamRepository;
+import com.scrumhelper.domain.team.TeamRole;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
 import com.scrumhelper.specdocument.dto.GenerateSpecDraftRequest;
 import com.scrumhelper.specdocument.dto.SaveSpecDocumentRequest;
 import com.scrumhelper.specdocument.dto.SpecDocumentResponse;
 import com.scrumhelper.specdocument.dto.SpecDraftResponse;
+import com.scrumhelper.specdocument.dto.UpdateSpecDocumentRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashSet;
@@ -100,6 +105,58 @@ public class SpecDocumentService {
 		return SpecDocumentResponse.from(document);
 	}
 
+	@Transactional(readOnly = true)
+	public SpecDocumentResponse getSpecDocument(Long currentUserId, Long documentId) {
+		SpecDocument document = findSpecDocument(documentId);
+		requireMembership(document.getTeam().getId(), currentUserId);
+		return SpecDocumentResponse.from(document);
+	}
+
+	@Transactional
+	public SpecDocumentResponse updateSpecDocument(Long currentUserId, Long documentId, UpdateSpecDocumentRequest request) {
+		SpecDocument document = findSpecDocument(documentId);
+		requireAuthorOrLeader(document, currentUserId);
+		List<Long> sourceMeetingIds = normalizeIds(request.sourceMeetingIds());
+		if (!sourceMeetingIds.isEmpty()) {
+			findMeetings(document.getTeam().getId(), sourceMeetingIds);
+		}
+		document.update(request.title().trim(), request.content().trim(), serializeIds(sourceMeetingIds));
+		return SpecDocumentResponse.from(document);
+	}
+
+	@Transactional
+	public void deleteSpecDocument(Long currentUserId, Long documentId) {
+		SpecDocument document = findSpecDocument(documentId);
+		requireAuthorOrLeader(document, currentUserId);
+		specDocumentRepository.delete(document);
+	}
+
+	@Transactional
+	public SpecDocumentResponse setMainSpecDocument(Long currentUserId, Long documentId) {
+		SpecDocument document = findSpecDocument(documentId);
+		Long teamId = document.getTeam().getId();
+		requireMembership(teamId, currentUserId);
+
+		Optional<SpecDocument> currentMain = specDocumentRepository.findByTeamIdAndIsMainTrue(teamId);
+		if (currentMain.isPresent() && !currentMain.get().getId().equals(document.getId())) {
+			currentMain.get().unmarkMain();
+		}
+		document.markAsMain();
+		return SpecDocumentResponse.from(document);
+	}
+
+	private SpecDocument findSpecDocument(Long documentId) {
+		return specDocumentRepository.findById(documentId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.SPEC_DOCUMENT_NOT_FOUND));
+	}
+
+	private void requireAuthorOrLeader(SpecDocument document, Long userId) {
+		TeamMember membership = requireMembership(document.getTeam().getId(), userId);
+		if (!document.getCreatedBy().getId().equals(userId) && membership.getRole() != TeamRole.LEADER) {
+			throw new BusinessException(ErrorCode.SPEC_DOCUMENT_AUTHOR_OR_LEADER_ONLY);
+		}
+	}
+
 	private Team findTeam(Long teamId) {
 		return teamRepository.findById(teamId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.TEAM_NOT_FOUND));
@@ -110,8 +167,8 @@ public class SpecDocumentService {
 				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 	}
 
-	private void requireMembership(Long teamId, Long userId) {
-		teamMemberRepository.findByTeamIdAndUserId(teamId, userId)
+	private TeamMember requireMembership(Long teamId, Long userId) {
+		return teamMemberRepository.findByTeamIdAndUserId(teamId, userId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.NOT_TEAM_MEMBER));
 	}
 

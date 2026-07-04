@@ -21,7 +21,6 @@ export function SpecDocumentNewPage() {
   const [phase, setPhase] = useState<Phase>('pick');
   const [draftTitle, setDraftTitle] = useState('');
   const [draftBody, setDraftBody] = useState('');
-  const [draftGenerated, setDraftGenerated] = useState(false);
   const [draftSourceIds, setDraftSourceIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,7 +62,6 @@ export function SpecDocumentNewPage() {
       const draft = await specDocumentApi.generateSpecDraft(numericTeamId, { meetingIds: selectedMeetingIds });
       setDraftTitle(draft.title);
       setDraftBody(draft.content);
-      setDraftGenerated(true);
       setDraftSourceIds(draft.sourceMeetingIds);
       setPhase('edit');
     } catch (error) {
@@ -75,12 +73,11 @@ export function SpecDocumentNewPage() {
   function handleStartBlank() {
     setDraftTitle('');
     setDraftBody('');
-    setDraftGenerated(false);
     setDraftSourceIds(selectedMeetingIds);
     setPhase('edit');
   }
 
-  async function handleConfirm() {
+  async function handleCreate() {
     if (!draftTitle.trim() || !draftBody.trim()) {
       setErrorMessage('Enter a title and body for the spec.');
       return;
@@ -179,18 +176,18 @@ export function SpecDocumentNewPage() {
 
       {phase === 'edit' && (
         <>
-          {draftGenerated && (
-            <span className="draft-source-tag">
-              <Sparkles size={12} aria-hidden="true" />
-              Draft from {draftSourceIds.length} meeting{draftSourceIds.length === 1 ? '' : 's'}
-            </span>
-          )}
-          <input
-            className="spec-title-input"
-            value={draftTitle}
-            onChange={(event) => setDraftTitle(event.target.value)}
-            placeholder="Spec title"
-          />
+          <div className="detail-title-row spec-editor-title-row">
+            <input
+              className="spec-title-input"
+              value={draftTitle}
+              onChange={(event) => setDraftTitle(event.target.value)}
+              placeholder="Spec title"
+            />
+          </div>
+          <div className="doc-meta-row">
+            <span>New spec · Not saved yet</span>
+            {draftSourceIds.length > 0 && <span>From {draftSourceIds.length} meeting(s)</span>}
+          </div>
           <textarea
             className="doc-textarea"
             style={{ minHeight: 360 }}
@@ -198,12 +195,12 @@ export function SpecDocumentNewPage() {
             onChange={(event) => setDraftBody(event.target.value)}
             placeholder="Write the spec…"
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 18 }}>
-            <Button type="button" size="lg" isLoading={isSubmitting} onClick={() => void handleConfirm()}>
-              Confirm spec
-            </Button>
+          <div className="doc-save-row">
             <Button type="button" variant="ghost" onClick={() => setPhase('pick')}>
               Back
+            </Button>
+            <Button type="button" isLoading={isSubmitting} onClick={() => void handleCreate()}>
+              Create spec
             </Button>
           </div>
         </>

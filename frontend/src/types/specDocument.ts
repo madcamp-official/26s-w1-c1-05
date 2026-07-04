@@ -7,15 +7,12 @@ export type SpecDraft = {
   generatedBy: 'GEMINI' | 'LOCAL_FALLBACK' | string;
 };
 
-export type SpecDocumentStatus = 'DRAFT' | 'CONFIRMED';
-
 export type SpecDocument = {
   id: number;
   teamId: number;
   title: string;
   content: string;
   sourceMeetingIds: number[];
-  status: SpecDocumentStatus;
   isMain: boolean;
   createdBy: UserSummary;
   createdAt: string;

@@ -1,68 +1,86 @@
 import './GrowthTree.css';
 
 type GrowthTreeProps = {
+  backlogCount: number;
+  inProgressCount: number;
   completedCount: number;
   totalCount: number;
 };
 
-const MAX_BRANCHES = 10;
-const CENTER_X = 120;
-const BASE_Y = 196;
-const TOP_Y = 58;
+type TaskStage = 'backlog' | 'progress' | 'done';
 
-export function GrowthTree({ completedCount, totalCount }: GrowthTreeProps) {
-  const branchCount = Math.min(totalCount, MAX_BRANCHES);
-  const completedBranches = Math.min(completedCount, branchCount);
+const MAX_BRANCHES = 12;
+const branches = [
+  { side: -1, y: 169, x: 66, endY: 137 },
+  { side: 1, y: 160, x: 178, endY: 126 },
+  { side: -1, y: 148, x: 50, endY: 107 },
+  { side: 1, y: 137, x: 194, endY: 95 },
+  { side: -1, y: 126, x: 73, endY: 84 },
+  { side: 1, y: 114, x: 169, endY: 72 },
+  { side: -1, y: 103, x: 54, endY: 62 },
+  { side: 1, y: 92, x: 187, endY: 51 },
+  { side: -1, y: 82, x: 82, endY: 43 },
+  { side: 1, y: 72, x: 158, endY: 34 },
+  { side: -1, y: 62, x: 94, endY: 28 },
+  { side: 1, y: 54, x: 145, endY: 22 },
+];
 
-  const groundTicks = Array.from({ length: 5 }, (_, index) => 60 + index * 22);
-  const branches = Array.from({ length: branchCount }, (_, index) => index);
+export function GrowthTree({ backlogCount, inProgressCount, completedCount, totalCount }: GrowthTreeProps) {
+  const visibleCount = Math.min(totalCount, MAX_BRANCHES);
+  const stages = Array.from({ length: visibleCount }, (_, index): TaskStage => {
+    const taskIndex = Math.floor((index * totalCount) / visibleCount);
+    if (taskIndex < backlogCount) return 'backlog';
+    if (taskIndex < backlogCount + inProgressCount) return 'progress';
+    return 'done';
+  });
+  const maturity = totalCount === 0 ? 0 : completedCount / totalCount;
 
   return (
-    <svg width={240} height={210} viewBox="0 0 240 210" className="growth-tree-svg" role="img" aria-label={`${completedCount} of ${totalCount} tasks completed`}>
-      <line x1={44} y1={198} x2={196} y2={198} stroke="var(--gray-300)" strokeWidth={1.5} strokeLinecap="round" />
-      {groundTicks.map((gx) => (
-        <line key={gx} x1={gx} y1={198} x2={gx - 4} y2={191} stroke="var(--gray-200)" strokeWidth={1.5} strokeLinecap="round" />
-      ))}
-      <path d={`M${CENTER_X} ${BASE_Y} C119 158 120 118 120 ${TOP_Y}`} stroke="var(--ink)" strokeWidth={3} fill="none" strokeLinecap="round" />
-      {branches.map((index) => {
-        const side = index % 2 === 0 ? 1 : -1;
-        const attachY = 172 - index * (branchCount > 6 ? 12 : 20);
-        const spread = 30 + (branchCount - index) * 4;
-        const endX = CENTER_X + side * spread;
-        const endY = attachY - 30 - index * 2;
-        const ctrlX = CENTER_X + side * (spread * 0.42);
-        const ctrlY = attachY - 6;
-        const isCompleted = index < completedBranches;
-        const budOffsets: Array<[number, number]> = [
-          [-7, -1],
-          [7, -3],
-          [0, -11],
-        ];
+    <svg viewBox="0 0 240 220" className="growth-tree-svg" role="img" aria-label={`${backlogCount} backlog, ${inProgressCount} in progress, and ${completedCount} done tasks`}>
+      <ellipse className="tree-shadow" cx="120" cy="205" rx="61" ry="7" />
+      <path className="tree-ground" d="M43 202 C75 198 92 204 120 201 C148 198 169 204 198 201" />
 
-        return (
-          <g key={index}>
-            <path
-              d={`M${CENTER_X} ${attachY} Q${ctrlX} ${ctrlY} ${endX} ${endY}`}
-              stroke="var(--ink)"
-              strokeWidth={1.8}
-              fill="none"
-              strokeLinecap="round"
-            />
-            {budOffsets.map(([ox, oy], budIndex) => (
-              <circle
-                key={budIndex}
-                cx={endX + ox * (side > 0 ? 1 : -1)}
-                cy={endY + oy}
-                r={3.2}
-                fill="var(--bg)"
-                stroke="var(--gray-500)"
-                strokeWidth={1.2}
-              />
-            ))}
-            {isCompleted && <circle cx={endX + side * 2} cy={endY + 3} r={4.2} fill="var(--ink)" />}
-          </g>
-        );
-      })}
+      <g className="tree-body">
+        <path className="tree-trunk" d="M108 201 C112 177 108 153 115 129 C119 108 114 87 120 66 C123 52 125 39 124 24 C132 47 128 65 131 82 C135 105 128 125 133 148 C137 170 132 188 137 201 Z" />
+        <path className="tree-trunk-highlight" d="M119 194 C121 165 118 142 124 118 C128 96 124 72 128 48" />
+        {stages.map((stage, index) => {
+          const branch = branches[index];
+          const controlX = 120 + branch.side * (Math.abs(branch.x - 120) * 0.44);
+          const twigX = branch.x - branch.side * 13;
+          const twigY = branch.endY - 12;
+          return (
+            <g className={`tree-branch tree-branch-${stage}`} style={{ animationDelay: `${index * 55}ms` }} key={index}>
+              <path className="tree-limb" d={`M124 ${branch.y} C${controlX} ${branch.y - 5}, ${twigX} ${branch.endY + 8}, ${branch.x} ${branch.endY}`} />
+              <path className="tree-twig" d={`M${twigX} ${branch.endY + 7} Q${twigX - branch.side * 2} ${twigY + 4} ${twigX - branch.side * 8} ${twigY}`} />
+              {stage === 'backlog' && (
+                <g className="tree-sprout" transform={`translate(${branch.x} ${branch.endY}) rotate(${branch.side * 18})`}>
+                  <path d="M0 5 Q0 -2 0 -8" />
+                  <ellipse cx={-4} cy={-7} rx="4.5" ry="2.5" transform="rotate(28 -4 -7)" />
+                  <ellipse cx={4} cy={-10} rx="4.5" ry="2.5" transform="rotate(-28 4 -10)" />
+                </g>
+              )}
+              {stage === 'progress' && (
+                <g className="tree-leaves">
+                  <ellipse cx={branch.x} cy={branch.endY - 4} rx="9" ry="5" transform={`rotate(${branch.side * -24} ${branch.x} ${branch.endY - 4})`} />
+                  <ellipse cx={twigX - branch.side * 8} cy={twigY - 1} rx="7" ry="4" transform={`rotate(${branch.side * 34} ${twigX} ${twigY})`} />
+                </g>
+              )}
+              {stage === 'done' && (
+                <g className="tree-done-crown">
+                  <ellipse className="tree-done-leaf" cx={branch.x - branch.side * 3} cy={branch.endY - 6} rx="9" ry="5" transform={`rotate(${branch.side * -28} ${branch.x} ${branch.endY})`} />
+                  <circle className="tree-fruit" cx={branch.x + branch.side * 5} cy={branch.endY + 3} r="5" />
+                </g>
+              )}
+            </g>
+          );
+        })}
+        <g className={`tree-crown-bud${maturity > 0.65 ? ' is-grown' : ''}`}>
+          <path d="M124 28 Q119 18 113 13" />
+          <ellipse cx="110" cy="11" rx="7" ry="4" transform="rotate(32 110 11)" />
+          <path d="M125 26 Q132 17 138 14" />
+          <ellipse cx="141" cy="12" rx="7" ry="4" transform="rotate(-28 141 12)" />
+        </g>
+      </g>
     </svg>
   );
 }

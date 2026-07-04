@@ -50,6 +50,10 @@ public class Task {
 	@Column(nullable = false)
 	private boolean completed;
 
+	@Enumerated(EnumType.STRING)
+	@Column(length = 20)
+	private TaskStatus status;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -67,6 +71,7 @@ public class Task {
 		this.priority = priority;
 		this.dueDate = dueDate;
 		this.completed = false;
+		this.status = TaskStatus.BACKLOG;
 	}
 
 	public static Task create(Team team, User createdBy, String title, String description, TaskPriority priority, LocalDate dueDate) {
@@ -114,7 +119,11 @@ public class Task {
 	}
 
 	public boolean isCompleted() {
-		return completed;
+		return getStatus() == TaskStatus.DONE;
+	}
+
+	public TaskStatus getStatus() {
+		return status == null ? (completed ? TaskStatus.DONE : TaskStatus.BACKLOG) : status;
 	}
 
 	public LocalDateTime getCreatedAt() {
@@ -132,7 +141,8 @@ public class Task {
 		this.dueDate = dueDate;
 	}
 
-	public void updateCompletion(boolean completed) {
-		this.completed = completed;
+	public void updateStatus(TaskStatus status) {
+		this.status = status;
+		this.completed = status == TaskStatus.DONE;
 	}
 }

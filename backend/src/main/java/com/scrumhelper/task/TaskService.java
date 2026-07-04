@@ -9,14 +9,15 @@ import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskCommentRepository;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskRepository;
+import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.domain.team.Team;
 import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.domain.team.TeamRepository;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
 import com.scrumhelper.task.dto.SaveTaskRequest;
-import com.scrumhelper.task.dto.TaskCompletionRequest;
 import com.scrumhelper.task.dto.TaskResponse;
+import com.scrumhelper.task.dto.TaskStatusRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,14 +54,13 @@ public class TaskService {
 	public List<TaskResponse> getTasks(
 			Long currentUserId,
 			Long teamId,
-			Boolean completed,
 			TaskPriority priority,
 			Long assigneeId,
 			LocalDate dueFrom,
 			LocalDate dueTo
 	) {
 		requireMembership(teamId, currentUserId);
-		return taskRepository.findAll(buildSpecification(teamId, completed, priority, assigneeId, dueFrom, dueTo)).stream()
+		return taskRepository.findAll(buildSpecification(teamId, priority, assigneeId, dueFrom, dueTo)).stream()
 				.filter(task -> assigneeId == null || taskAssigneeRepository.findByTaskId(task.getId()).stream()
 						.anyMatch(assignee -> assignee.getUser().getId().equals(assigneeId)))
 				.map(this::toResponse)
@@ -111,10 +111,10 @@ public class TaskService {
 	}
 
 	@Transactional
-	public TaskResponse updateCompletion(Long currentUserId, Long taskId, TaskCompletionRequest request) {
+	public TaskResponse updateStatus(Long currentUserId, Long taskId, TaskStatusRequest request) {
 		Task task = findTask(taskId);
 		requireMembership(task.getTeam().getId(), currentUserId);
-		task.updateCompletion(request.completed());
+		task.updateStatus(request.status());
 		return toResponse(task);
 	}
 
@@ -129,7 +129,6 @@ public class TaskService {
 
 	private Specification<Task> buildSpecification(
 			Long teamId,
-			Boolean completed,
 			TaskPriority priority,
 			Long assigneeId,
 			LocalDate dueFrom,
@@ -138,9 +137,6 @@ public class TaskService {
 		return (root, query, criteriaBuilder) -> {
 			query.distinct(true);
 			var predicate = criteriaBuilder.equal(root.get("team").get("id"), teamId);
-			if (completed != null) {
-				predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("completed"), completed));
-			}
 			if (priority != null) {
 				predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("priority"), priority));
 			}

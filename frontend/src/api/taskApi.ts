@@ -5,37 +5,50 @@ import type {
   Task,
   TaskComment,
   TaskFilter,
+  TaskStatus,
 } from '../types/task';
 
 export function getTasks(teamId: number, params?: TaskFilter) {
-  return request<Task[]>(`/teams/${teamId}/tasks`, {
+  return request<WireTask[]>(`/teams/${teamId}/tasks`, {
     query: params,
-  });
+  }).then((tasks) => tasks.map(normalizeTask));
 }
 
 export function createTask(teamId: number, data: SaveTaskRequest) {
-  return request<Task>(`/teams/${teamId}/tasks`, {
+  return request<WireTask>(`/teams/${teamId}/tasks`, {
     method: 'POST',
     body: data,
-  });
+  }).then(normalizeTask);
 }
 
 export function getTask(taskId: number) {
-  return request<Task>(`/tasks/${taskId}`);
+  return request<WireTask>(`/tasks/${taskId}`).then(normalizeTask);
 }
 
 export function updateTask(taskId: number, data: SaveTaskRequest) {
-  return request<Task>(`/tasks/${taskId}`, {
+  return request<WireTask>(`/tasks/${taskId}`, {
     method: 'PATCH',
     body: data,
-  });
+  }).then(normalizeTask);
 }
 
-export function updateTaskCompletion(taskId: number, completed: boolean) {
-  return request<Task>(`/tasks/${taskId}/completion`, {
+export function updateTaskStatus(taskId: number, status: TaskStatus) {
+  return request<WireTask>(`/tasks/${taskId}/status`, {
     method: 'PATCH',
-    body: { completed },
-  });
+    body: { status },
+  }).then(normalizeTask);
+}
+
+type WireTask = Omit<Task, 'status'> & {
+  status?: TaskStatus;
+  completed?: boolean;
+};
+
+function normalizeTask(task: WireTask): Task {
+  return {
+    ...task,
+    status: task.status ?? (task.completed ? 'DONE' : 'BACKLOG'),
+  };
 }
 
 export function deleteTask(taskId: number) {

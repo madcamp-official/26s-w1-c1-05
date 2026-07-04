@@ -3,8 +3,8 @@ package com.scrumhelper.task;
 import com.scrumhelper.common.ApiResponse;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.task.dto.SaveTaskRequest;
-import com.scrumhelper.task.dto.TaskCompletionRequest;
 import com.scrumhelper.task.dto.TaskResponse;
+import com.scrumhelper.task.dto.TaskStatusRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +34,6 @@ public class TaskController {
 	@GetMapping("/teams/{teamId}/tasks")
 	public ApiResponse<List<TaskResponse>> getTasks(
 			@PathVariable Long teamId,
-			@RequestParam(required = false) Boolean completed,
 			@RequestParam(required = false) TaskPriority priority,
 			@RequestParam(required = false) Long assigneeId,
 			@RequestParam(required = false) LocalDate dueFrom,
@@ -44,7 +43,6 @@ public class TaskController {
 		return ApiResponse.ok(taskService.getTasks(
 				currentUserId(authentication),
 				teamId,
-				completed,
 				priority,
 				assigneeId,
 				dueFrom,
@@ -80,13 +78,13 @@ public class TaskController {
 		return ApiResponse.ok(taskService.updateTask(currentUserId(authentication), taskId, request));
 	}
 
-	@PatchMapping("/tasks/{taskId}/completion")
-	public ApiResponse<TaskResponse> updateCompletion(
+	@PatchMapping("/tasks/{taskId}/status")
+	public ApiResponse<TaskResponse> updateStatus(
 			@PathVariable Long taskId,
-			@Valid @RequestBody TaskCompletionRequest request,
+			@Valid @RequestBody TaskStatusRequest request,
 			Authentication authentication
 	) {
-		return ApiResponse.ok(taskService.updateCompletion(currentUserId(authentication), taskId, request));
+		return ApiResponse.ok(taskService.updateStatus(currentUserId(authentication), taskId, request));
 	}
 
 	@DeleteMapping("/tasks/{taskId}")

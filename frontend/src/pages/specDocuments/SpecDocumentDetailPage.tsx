@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as specDocumentApi from '../../api/specDocumentApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Badge, Button, LoadingState } from '../../components/ui';
+import { Alert, Badge, Button, LoadingState, useConfirm } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { SpecDocument } from '../../types/specDocument';
@@ -12,6 +12,7 @@ import type { TeamDetail } from '../../types/team';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function SpecDocumentDetailPage() {
+  const confirm = useConfirm();
   const { teamId, documentId } = useParams();
   const numericTeamId = Number(teamId);
   const numericDocumentId = Number(documentId);
@@ -20,6 +21,7 @@ export function SpecDocumentDetailPage() {
   const { user } = useAuth();
   const [specDoc, setSpecDoc] = useState<SpecDocument | null>(null);
   const [team, setTeam] = useState<TeamDetail | null>(null);
+  const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +46,7 @@ export function SpecDocumentDetailPage() {
       ]);
       setSpecDoc(documentData);
       setTeam(teamData);
+      setTitle(documentData.title);
       setBody(documentData.content);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load this spec doc.');
@@ -60,11 +63,12 @@ export function SpecDocumentDetailPage() {
       setIsSubmitting(true);
       setErrorMessage(null);
       const updated = await specDocumentApi.updateSpecDocument(specDoc.id, {
-        title: specDoc.title,
+        title,
         content: body,
         sourceMeetingIds: specDoc.sourceMeetingIds,
       });
       setSpecDoc(updated);
+      setTitle(updated.title);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not save this spec doc.');
     } finally {
@@ -89,7 +93,7 @@ export function SpecDocumentDetailPage() {
   }
 
   async function handleDelete() {
-    if (!specDoc || !window.confirm('Delete this spec doc?')) {
+    if (!specDoc || !await confirm({ title: 'Delete spec?', message: 'This spec document will be permanently deleted.', confirmLabel: 'Delete', tone: 'danger' })) {
       return;
     }
     try {
@@ -119,11 +123,15 @@ export function SpecDocumentDetailPage() {
         All specs
       </button>
 
-      <div className="detail-title-row">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-          <h1 className="detail-title" style={{ marginBottom: 0 }}>
-            {specDoc.title}
-          </h1>
+      <div className="detail-title-row spec-editor-title-row">
+        <div className="spec-editor-title-group">
+          <input
+            className="spec-title-input"
+            value={title}
+            disabled={!canEdit}
+            onChange={(event) => setTitle(event.target.value)}
+            aria-label="Spec title"
+          />
           {specDoc.isMain && <Badge variant="solid">MAIN</Badge>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>

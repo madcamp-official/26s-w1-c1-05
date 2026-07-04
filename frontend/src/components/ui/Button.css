@@ -22,19 +22,19 @@
 .ds-btn-sm {
   height: var(--control-height-sm);
   padding: 0 10px;
-  font-size: 12.5px;
+  font-size: 13.5px;
 }
 
 .ds-btn-md {
   height: var(--control-height);
   padding: 0 14px;
-  font-size: 13.5px;
+  font-size: 14.5px;
 }
 
 .ds-btn-lg {
   height: var(--control-height-lg);
   padding: 0 18px;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .ds-btn-primary {

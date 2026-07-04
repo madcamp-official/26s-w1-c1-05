@@ -93,7 +93,12 @@ export function TeamDashboardPage() {
                 <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
               </div>
               <div className="growth-tree-wrap">
-                <GrowthTree completedCount={dashboard.task.completedCount} totalCount={dashboard.task.totalCount} />
+                <GrowthTree
+                  backlogCount={dashboard.task.backlogCount}
+                  inProgressCount={dashboard.task.inProgressCount}
+                  completedCount={dashboard.task.completedCount}
+                  totalCount={dashboard.task.totalCount}
+                />
               </div>
               <div className="growth-footer">
                 <span className="growth-caption">
@@ -104,11 +109,15 @@ export function TeamDashboardPage() {
                 <div className="growth-legend">
                   <span className="growth-legend-item">
                     <span style={{ width: 9, height: 9, borderRadius: 999, border: '1.5px solid var(--gray-500)', boxSizing: 'border-box' }} />
-                    open
+                    backlog
                   </span>
                   <span className="growth-legend-item">
-                    <span style={{ width: 9, height: 9, borderRadius: 999, background: 'var(--ink)' }} />
-                    completed
+                    <span className="growth-legend-leaf" />
+                    in progress
+                  </span>
+                  <span className="growth-legend-item">
+                    <span className="growth-legend-fruit" />
+                    done
                   </span>
                 </div>
               </div>

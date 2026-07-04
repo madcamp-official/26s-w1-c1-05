@@ -2,11 +2,12 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Copy } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
-import { Alert, Button, Card, Field, FieldInput, FieldTextarea, LoadingState } from '../../components/ui';
+import { Alert, Button, Card, Field, FieldInput, FieldTextarea, LoadingState, useConfirm } from '../../components/ui';
 import { ApiError } from '../../types/api';
 import type { TeamRole } from '../../types/team';
 
 export function TeamSettingsPage() {
+  const confirm = useConfirm();
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
   const [name, setName] = useState('');
@@ -76,7 +77,7 @@ export function TeamSettingsPage() {
   }
 
   async function handleRotateInviteCode() {
-    if (!window.confirm('Expire the current invite code and issue a new one?')) {
+    if (!await confirm({ title: 'Regenerate invite code?', message: 'The current invite code will stop working.', confirmLabel: 'Regenerate' })) {
       return;
     }
     setErrorMessage(null);
@@ -99,7 +100,7 @@ export function TeamSettingsPage() {
   }
 
   async function handleClearPassword() {
-    if (!window.confirm('Make this team public?')) {
+    if (!await confirm({ title: 'Make team public?', message: 'Anyone with access can join without a password.', confirmLabel: 'Make public' })) {
       return;
     }
     await submitPassword(null);

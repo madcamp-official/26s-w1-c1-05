@@ -6,6 +6,7 @@ import type {
   TaskComment,
   TaskFilter,
   TaskStatus,
+  TaskRecommendation,
 } from '../types/task';
 
 export function getTasks(teamId: number, params?: TaskFilter) {
@@ -37,6 +38,12 @@ export function updateTaskStatus(taskId: number, status: TaskStatus) {
     method: 'PATCH',
     body: { status },
   }).then(normalizeTask);
+}
+
+export function getTaskRecommendations(documentId: number) {
+  return request<{ tasks: TaskRecommendation[] }>(`/spec-documents/${documentId}/task-recommendations`, {
+    method: 'POST',
+  }).then((response) => response.tasks);
 }
 
 type WireTask = Omit<Task, 'status'> & {

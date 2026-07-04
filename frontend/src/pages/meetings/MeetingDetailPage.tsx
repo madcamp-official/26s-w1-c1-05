@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, Clock, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock, FileAudio, Sparkles, Trash2 } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import * as teamApi from '../../api/teamApi';
@@ -23,6 +23,9 @@ export function MeetingDetailPage() {
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: '',
@@ -110,6 +113,45 @@ export function MeetingDetailPage() {
     }
   }
 
+  async function handleAudioUpload(file: File | undefined) {
+    if (!file) return;
+    try {
+      setIsTranscribing(true);
+      setErrorMessage(null);
+      setAudioFileName(file.name);
+      const result = await meetingApi.transcribeMeetingAudio(numericTeamId, file);
+      setForm((current) => ({ ...current, rawContent: result.transcript }));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not transcribe the audio file.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
+
+  async function handleGenerateSummary() {
+    if (!form.rawContent.trim()) {
+      setErrorMessage('Upload audio or enter a raw transcript first.');
+      return;
+    }
+    try {
+      setIsGeneratingSummary(true);
+      setErrorMessage(null);
+      await meetingApi.updateMeeting(numericMeetingId, {
+        title: form.title,
+        meetingAt: toApiDateTime(form.meetingAt),
+        rawContent: form.rawContent,
+        summary: form.summary || undefined,
+      });
+      const result = await meetingApi.generateMeetingSummary(numericMeetingId);
+      setMeeting(result.meeting);
+      setForm((current) => ({ ...current, summary: result.summary }));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not generate the meeting summary.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }
+
   if (isLoading) {
     return <div className="page-container-doc">Loading…</div>;
   }
@@ -165,6 +207,12 @@ export function MeetingDetailPage() {
           <span className="detail-section-label" style={{ marginBottom: 0 }}>
             Summary
           </span>
+          {canManage && (
+            <Button type="button" variant="secondary" size="sm" isLoading={isGeneratingSummary} onClick={() => void handleGenerateSummary()}>
+              <Sparkles size={14} aria-hidden="true" />
+              Generate summary
+            </Button>
+          )}
         </div>
         <textarea
           className="doc-textarea"
@@ -177,6 +225,18 @@ export function MeetingDetailPage() {
         <div className="detail-section-label" style={{ margin: '24px 0 10px' }}>
           Raw transcript
         </div>
+        {canManage && (
+          <label className={`meeting-audio-upload${isTranscribing ? ' is-loading' : ''}`}>
+            <FileAudio size={16} aria-hidden="true" />
+            <span>{isTranscribing ? 'Transcribing audio…' : audioFileName ?? 'Upload meeting audio'}</span>
+            <input
+              type="file"
+              accept="audio/*,.mp3,.m4a,.wav,.webm"
+              disabled={isTranscribing}
+              onChange={(event) => void handleAudioUpload(event.target.files?.[0])}
+            />
+          </label>
+        )}
         <textarea
           className="doc-textarea"
           style={{ minHeight: 180 }}

@@ -6,7 +6,7 @@ import * as teamApi from '../../api/teamApi';
 import * as specDocumentApi from '../../api/specDocumentApi';
 import { Alert, Button, Field, FieldInput, FieldSelect, FieldTextarea, LoadingState } from '../../components/ui';
 import { ApiError } from '../../types/api';
-import type { TaskPriority } from '../../types/task';
+import type { TaskPriority, TaskRecommendation } from '../../types/task';
 import type { TeamMember } from '../../types/team';
 import { parseSpecRecommendations } from '../../utils/specRecommendations';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
@@ -17,7 +17,9 @@ export function TaskNewPage() {
   const navigate = useNavigate();
   const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const [members, setMembers] = useState<TeamMember[]>([]);
-  const [recommendations, setRecommendations] = useState<string[]>([]);
+  const [recommendations, setRecommendations] = useState<TaskRecommendation[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
+  const [hasMainSpec, setHasMainSpec] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -50,11 +52,20 @@ export function TaskNewPage() {
 
       const mainSpec = specDocuments.find((doc) => doc.isMain);
       if (mainSpec) {
+        setHasMainSpec(true);
         const existingTitles = new Set(taskData.map((task) => task.title.trim().toLowerCase()));
-        const parsed = parseSpecRecommendations(mainSpec.content).filter(
-          (item) => !existingTitles.has(item.trim().toLowerCase()),
-        );
-        setRecommendations(parsed);
+        setIsLoadingRecommendations(true);
+        try {
+          const generated = await taskApi.getTaskRecommendations(mainSpec.id);
+          setRecommendations(generated.filter((item) => !existingTitles.has(item.title.trim().toLowerCase())));
+        } catch {
+          const fallback = parseSpecRecommendations(mainSpec.content)
+            .filter((item) => !existingTitles.has(item.trim().toLowerCase()))
+            .map((title) => ({ title, description: '', priority: 'MEDIUM' as TaskPriority }));
+          setRecommendations(fallback);
+        } finally {
+          setIsLoadingRecommendations(false);
+        }
       }
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load this page.');
@@ -103,31 +114,13 @@ export function TaskNewPage() {
     }
   }
 
-  async function handleAddRecommendation(title: string) {
-    if (form.assigneeUserIds.length === 0 || !form.dueDate) {
-      handleEditRecommendation(title);
-      return;
-    }
-    try {
-      setIsSubmitting(true);
-      setErrorMessage(null);
-      await taskApi.createTask(numericTeamId, {
-        title,
-        priority: form.priority,
-        dueDate: form.dueDate,
-        assigneeUserIds: form.assigneeUserIds,
-      });
-      setRecommendations((current) => current.filter((item) => item !== title));
-      void refreshTeamChrome();
-    } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the task.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function handleEditRecommendation(title: string) {
-    setForm((current) => ({ ...current, title }));
+  function handleSelectRecommendation(recommendation: TaskRecommendation) {
+    setForm((current) => ({
+      ...current,
+      title: recommendation.title,
+      description: recommendation.description,
+      priority: recommendation.priority,
+    }));
   }
 
   function toggleAssignee(userId: number) {
@@ -219,27 +212,22 @@ export function TaskNewPage() {
           </div>
         </form>
 
-        {recommendations.length > 0 && (
-          <aside className="recommend-panel">
-            <span className="side-card-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Sparkles size={13} aria-hidden="true" />
-              Recommended from spec
-            </span>
-            {recommendations.map((item) => (
-              <div className="recommend-item" key={item}>
-                <span className="recommend-item-title">{item}</span>
-                <div className="recommend-item-actions">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => void handleAddRecommendation(item)}>
-                    Add
-                  </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => handleEditRecommendation(item)}>
-                    Edit first
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </aside>
-        )}
+        <aside className="recommend-panel">
+          <span className="side-card-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={13} aria-hidden="true" />
+            Recommended from main spec
+          </span>
+          {isLoadingRecommendations && <div className="recommend-empty">Generating recommendations…</div>}
+          {!isLoadingRecommendations && !hasMainSpec && <div className="recommend-empty">Set a main spec to generate task recommendations.</div>}
+          {!isLoadingRecommendations && hasMainSpec && recommendations.length === 0 && <div className="recommend-empty">No new tasks to recommend.</div>}
+          {recommendations.map((item) => (
+            <button className="recommend-item" type="button" key={item.title} onClick={() => handleSelectRecommendation(item)}>
+              <span className="recommend-item-title">{item.title}</span>
+              {item.description && <span className="recommend-item-description">{item.description}</span>}
+              <span className="recommend-item-meta">{item.priority}{item.reason ? ` · ${item.reason}` : ''}</span>
+            </button>
+          ))}
+        </aside>
       </div>
     </div>
   );

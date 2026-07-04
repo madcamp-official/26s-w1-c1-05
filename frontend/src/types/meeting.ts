@@ -19,6 +19,11 @@ export type MeetingSummary = {
   meeting: Meeting;
 };
 
+export type MeetingTranscription = {
+  transcript: string;
+  generatedBy: 'GEMINI' | string;
+};
+
 export type SaveMeetingRequest = {
   title: string;
   meetingAt: string;

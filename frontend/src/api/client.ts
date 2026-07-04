@@ -18,7 +18,10 @@ export async function request<T>(
   const method = options.method ?? 'GET';
   const url = buildUrl(path, options.query);
   const headers = new Headers();
-  headers.set('Content-Type', 'application/json');
+  const isFormData = options.body instanceof FormData;
+  if (!isFormData) {
+    headers.set('Content-Type', 'application/json');
+  }
 
   if (options.auth !== false) {
     const token = getStoredToken();
@@ -30,7 +33,11 @@ export async function request<T>(
   const response = await fetch(url, {
     method,
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body: options.body === undefined
+      ? undefined
+      : isFormData
+        ? options.body as FormData
+        : JSON.stringify(options.body),
   }).catch(() => {
     throw new ApiError('서버에 연결할 수 없습니다.', 'NETWORK_ERROR', 0);
   });

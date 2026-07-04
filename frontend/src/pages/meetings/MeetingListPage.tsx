@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { CalendarDays, Plus } from 'lucide-react';
+import { CalendarDays, FileAudio, Plus } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import { Alert, Button, Card, EmptyState, Field, FieldInput, FieldTextarea, LoadingState } from '../../components/ui';
@@ -16,6 +16,8 @@ export function MeetingListPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState({
@@ -72,6 +74,21 @@ export function MeetingListPage() {
     }
   }
 
+  async function handleAudioUpload(file: File | undefined) {
+    if (!file) return;
+    try {
+      setIsTranscribing(true);
+      setErrorMessage(null);
+      setAudioFileName(file.name);
+      const result = await meetingApi.transcribeMeetingAudio(numericTeamId, file);
+      setForm((current) => ({ ...current, rawContent: result.transcript }));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not transcribe the audio file.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  }
+
   if (isLoading) {
     return <LoadingState label="Loading meetings…" />;
   }
@@ -105,6 +122,16 @@ export function MeetingListPage() {
               </Field>
             </div>
             <Field label="Raw transcript">
+              <label className={`meeting-audio-upload${isTranscribing ? ' is-loading' : ''}`}>
+                <FileAudio size={16} aria-hidden="true" />
+                <span>{isTranscribing ? 'Transcribing audio…' : audioFileName ?? 'Upload meeting audio'}</span>
+                <input
+                  type="file"
+                  accept="audio/*,.mp3,.m4a,.wav,.webm"
+                  disabled={isTranscribing}
+                  onChange={(event) => void handleAudioUpload(event.target.files?.[0])}
+                />
+              </label>
               <FieldTextarea
                 value={form.rawContent}
                 onChange={(event) => setForm((current) => ({ ...current, rawContent: event.target.value }))}

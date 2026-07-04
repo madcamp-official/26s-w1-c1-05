@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, Trash2 } from 'lucide-react';
+import { ArrowLeft, Trash2, X } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
+import * as taskDependencyApi from '../../api/taskDependencyApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, LoadingState, StatusDot, useConfirm } from '../../components/ui';
+import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, IconButton, LoadingState, StatusDot, useConfirm } from '../../components/ui';
 import { dueLabel, priorityTone, relativeTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
-import type { Task, TaskComment, TaskPriority, TaskStatus } from '../../types/task';
+import type { Task, TaskComment, TaskDependency, TaskPriority, TaskStatus } from '../../types/task';
 import type { TeamMember } from '../../types/team';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
@@ -22,6 +23,9 @@ export function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [comments, setComments] = useState<TaskComment[]>([]);
+  const [teamTasks, setTeamTasks] = useState<Task[]>([]);
+  const [dependencies, setDependencies] = useState<TaskDependency[]>([]);
+  const [selectedPredecessorId, setSelectedPredecessorId] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -46,14 +50,18 @@ export function TaskDetailPage() {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      const [taskData, memberData, commentData] = await Promise.all([
+      const [taskData, memberData, commentData, teamTaskData, dependencyData] = await Promise.all([
         taskApi.getTask(numericTaskId),
         teamApi.getMembers(numericTeamId),
         taskApi.getComments(numericTaskId),
+        taskApi.getTasks(numericTeamId),
+        taskDependencyApi.getTeamDependencies(numericTeamId),
       ]);
       setTask(taskData);
       setMembers(memberData);
       setComments(commentData);
+      setTeamTasks(teamTaskData);
+      setDependencies(dependencyData);
       setForm({
         title: taskData.title,
         description: taskData.description ?? '',
@@ -121,6 +129,39 @@ export function TaskDetailPage() {
       navigate(`/teams/${numericTeamId}/tasks`);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not delete the task.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleAddDependency() {
+    if (!task || !selectedPredecessorId) {
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      await taskDependencyApi.addDependency(task.id, Number(selectedPredecessorId));
+      setSelectedPredecessorId('');
+      setDependencies(await taskDependencyApi.getTeamDependencies(numericTeamId));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the dependency.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleRemoveDependency(predecessorTaskId: number) {
+    if (!task) {
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      await taskDependencyApi.removeDependency(task.id, predecessorTaskId);
+      setDependencies(await taskDependencyApi.getTeamDependencies(numericTeamId));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not remove the dependency.');
     } finally {
       setIsSubmitting(false);
     }
@@ -202,6 +243,11 @@ export function TaskDetailPage() {
   const due = dueLabel(task.dueDate, task.status === 'DONE');
   const priority = priorityTone(task.priority);
   const statusDotVariant = task.status === 'DONE' ? 'filled' : task.status === 'IN_PROGRESS' ? 'half' : 'outline';
+  const blockedBy = dependencies.filter((dependency) => dependency.successorTaskId === task.id);
+  const blocks = dependencies.filter((dependency) => dependency.predecessorTaskId === task.id);
+  const openBlockerCount = blockedBy.filter((dependency) => !dependency.predecessorCompleted).length;
+  const linkedTaskIds = new Set([task.id, ...blockedBy.map((dependency) => dependency.predecessorTaskId)]);
+  const addCandidates = teamTasks.filter((candidate) => !linkedTaskIds.has(candidate.id));
 
   return (
     <div className="page-container-doc">
@@ -242,6 +288,11 @@ export function TaskDetailPage() {
               <option value="DONE">Done</option>
             </select>
           </label>
+          {openBlockerCount > 0 && (
+            <span className="detail-meta-hint">
+              Blocked by {openBlockerCount} open {openBlockerCount === 1 ? 'task' : 'tasks'}
+            </span>
+          )}
         </div>
         <div className="detail-meta-item">
           <span className="detail-meta-label">Due</span>
@@ -309,6 +360,84 @@ export function TaskDetailPage() {
               <span className="option-row-tag">{member.role}</span>
             </label>
           ))}
+        </div>
+      </div>
+
+      <div className="detail-section">
+        <span className="detail-section-label">Dependencies</span>
+
+        <div className="dependency-group">
+          <span className="dependency-group-label">Blocked by</span>
+          {blockedBy.length === 0 ? (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Nothing blocking this task.
+            </p>
+          ) : (
+            <div className="dependency-chip-list">
+              {blockedBy.map((dependency) => (
+                <span
+                  className={`dependency-chip${dependency.predecessorCompleted ? ' dependency-chip-done' : ''}`}
+                  key={dependency.id}
+                >
+                  <span className="mono" style={{ fontSize: 11 }}>
+                    #{dependency.predecessorTaskId}
+                  </span>
+                  {dependency.predecessorTitle}
+                  <IconButton
+                    title="Remove dependency"
+                    disabled={isSubmitting}
+                    onClick={() => void handleRemoveDependency(dependency.predecessorTaskId)}
+                  >
+                    <X size={12} aria-hidden="true" />
+                  </IconButton>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="dependency-add-row">
+            <FieldSelect
+              value={selectedPredecessorId}
+              disabled={addCandidates.length === 0}
+              onChange={(event) => setSelectedPredecessorId(event.target.value)}
+              aria-label="Add dependency"
+            >
+              <option value="">Add dependency…</option>
+              {addCandidates.map((candidate) => (
+                <option value={candidate.id} key={candidate.id}>
+                  #{candidate.id} {candidate.title}
+                </option>
+              ))}
+            </FieldSelect>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={!selectedPredecessorId || isSubmitting}
+              onClick={() => void handleAddDependency()}
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+
+        <div className="dependency-group">
+          <span className="dependency-group-label">Blocks</span>
+          {blocks.length === 0 ? (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Not blocking any other task.
+            </p>
+          ) : (
+            <div className="dependency-chip-list">
+              {blocks.map((dependency) => (
+                <span className="dependency-chip" key={dependency.id}>
+                  <span className="mono" style={{ fontSize: 11 }}>
+                    #{dependency.successorTaskId}
+                  </span>
+                  {dependency.successorTitle}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

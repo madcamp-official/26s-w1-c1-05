@@ -18,6 +18,17 @@ export type Task = {
   updatedAt: string;
 };
 
+export type TaskDependency = {
+  id: number;
+  predecessorTaskId: number;
+  predecessorTitle: string;
+  predecessorCompleted: boolean;
+  successorTaskId: number;
+  successorTitle: string;
+  successorCompleted: boolean;
+  createdAt: string;
+};
+
 export type TaskComment = {
   id: number;
   taskId: number;
@@ -40,6 +51,13 @@ export type SaveTaskRequest = {
   priority: TaskPriority;
   dueDate: string;
   assigneeUserIds: number[];
+};
+
+export type TaskRecommendation = {
+  title: string;
+  description: string;
+  priority: TaskPriority;
+  reason?: string;
 };
 
 export type SaveCommentRequest = {

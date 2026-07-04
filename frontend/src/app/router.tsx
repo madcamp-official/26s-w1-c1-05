@@ -13,6 +13,7 @@ import { TeamSettingsPage } from '../pages/teams/TeamSettingsPage';
 import { TaskListPage } from '../pages/tasks/TaskListPage';
 import { TaskNewPage } from '../pages/tasks/TaskNewPage';
 import { TaskDetailPage } from '../pages/tasks/TaskDetailPage';
+import { DependencyMapPage } from '../pages/tasks/DependencyMapPage';
 import { MeetingListPage } from '../pages/meetings/MeetingListPage';
 import { MeetingDetailPage } from '../pages/meetings/MeetingDetailPage';
 import { SpecDocumentListPage } from '../pages/specDocuments/SpecDocumentListPage';
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
               { path: 'tasks', element: <TaskListPage /> },
               { path: 'tasks/new', element: <TaskNewPage /> },
               { path: 'tasks/:taskId', element: <TaskDetailPage /> },
+              { path: 'dependencies', element: <DependencyMapPage /> },
               { path: 'retrospectives', element: <RetrospectiveListPage /> },
               {
                 path: 'retrospectives/:retrospectiveId',

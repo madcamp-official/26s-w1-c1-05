@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, ListTodo, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListTodo, Lock, Plus } from 'lucide-react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 import * as taskApi from '../../api/taskApi';
+import * as taskDependencyApi from '../../api/taskDependencyApi';
 import { Alert, Avatar, Badge, Card, EmptyState, IconButton, LoadingState, StatusDot } from '../../components/ui';
 import { dueLabel, priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
@@ -12,6 +13,7 @@ export function TaskListPage() {
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [blockedTaskIds, setBlockedTaskIds] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -27,7 +29,18 @@ export function TaskListPage() {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      setTasks(await taskApi.getTasks(numericTeamId));
+      const [taskData, dependencyData] = await Promise.all([
+        taskApi.getTasks(numericTeamId),
+        taskDependencyApi.getTeamDependencies(numericTeamId),
+      ]);
+      setTasks(taskData);
+      setBlockedTaskIds(
+        new Set(
+          dependencyData
+            .filter((dependency) => !dependency.predecessorCompleted)
+            .map((dependency) => dependency.successorTaskId),
+        ),
+      );
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load the task board.');
     } finally {
@@ -96,6 +109,7 @@ export function TaskListPage() {
             emptyLabel="Nothing in backlog."
             numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
+            blockedTaskIds={blockedTaskIds}
             onStatusChange={handleStatusChange}
           />
           <TaskColumn
@@ -105,6 +119,7 @@ export function TaskListPage() {
             emptyLabel="Nothing due soon."
             numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
+            blockedTaskIds={blockedTaskIds}
             onStatusChange={handleStatusChange}
           />
           <TaskColumn
@@ -114,6 +129,7 @@ export function TaskListPage() {
             emptyLabel="Nothing done yet."
             numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
+            blockedTaskIds={blockedTaskIds}
             onStatusChange={handleStatusChange}
           />
         </div>
@@ -129,10 +145,11 @@ type TaskColumnProps = {
   emptyLabel: string;
   numericTeamId: number;
   isSubmitting: boolean;
+  blockedTaskIds: Set<number>;
   onStatusChange: (task: Task, status: TaskStatus) => Promise<void>;
 };
 
-function TaskColumn({ title, dot, tasks, emptyLabel, numericTeamId, isSubmitting, onStatusChange }: TaskColumnProps) {
+function TaskColumn({ title, dot, tasks, emptyLabel, numericTeamId, isSubmitting, blockedTaskIds, onStatusChange }: TaskColumnProps) {
   return (
     <section className="board-column">
       <div className="board-column-head">
@@ -156,6 +173,12 @@ function TaskColumn({ title, dot, tasks, emptyLabel, numericTeamId, isSubmitting
             <Link to={`/teams/${numericTeamId}/tasks/${task.id}`} style={{ display: 'contents', color: 'inherit' }}>
               <div className="task-card-top">
                 <Badge variant={priority.variant}>{priority.label}</Badge>
+                {blockedTaskIds.has(task.id) && (
+                  <Badge variant="outline">
+                    <Lock size={10} aria-hidden="true" />
+                    Blocked
+                  </Badge>
+                )}
                 <span className="task-card-id mono">#{task.id}</span>
               </div>
               <div className={`task-card-title${isDone ? ' task-card-title-done' : ''}`}>{task.title}</div>

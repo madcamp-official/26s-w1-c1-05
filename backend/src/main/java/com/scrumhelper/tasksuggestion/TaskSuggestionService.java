@@ -54,7 +54,7 @@ public class TaskSuggestionService {
 		SpecDocument specDocument = findSpecDocument(specDocumentId);
 		requireMembership(specDocument.getTeam().getId(), currentUserId);
 
-		List<SuggestionDraft> drafts = geminiSpecDraftClient.generate(buildPrompt(specDocument))
+		List<SuggestionDraft> drafts = geminiSpecDraftClient.generateJson(buildPrompt(specDocument))
 				.flatMap(this::parseDrafts)
 				.filter(parsedDrafts -> !parsedDrafts.isEmpty())
 				.orElseGet(() -> buildLocalDrafts(specDocument));

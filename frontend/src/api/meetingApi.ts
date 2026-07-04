@@ -1,5 +1,5 @@
 import { request } from './client';
-import type { Meeting, SaveMeetingRequest } from '../types/meeting';
+import type { Meeting, MeetingSummary, SaveMeetingRequest } from '../types/meeting';
 
 export function getMeetings(teamId: number) {
   return request<Meeting[]>(`/teams/${teamId}/meetings`);
@@ -20,6 +20,12 @@ export function updateMeeting(meetingId: number, data: SaveMeetingRequest) {
   return request<Meeting>(`/meetings/${meetingId}`, {
     method: 'PATCH',
     body: data,
+  });
+}
+
+export function generateMeetingSummary(meetingId: number) {
+  return request<MeetingSummary>(`/meetings/${meetingId}/summary`, {
+    method: 'POST',
   });
 }
 

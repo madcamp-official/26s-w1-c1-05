@@ -59,8 +59,8 @@ Frontend: http://localhost:5173
 Backend:  http://localhost:8080
 ```
 
-Gemini 기반 스펙 문서 초안 생성을 사용하려면 백엔드 실행 전에 `GEMINI_API_KEY` 환경변수를 설정합니다.
-키가 없거나 호출에 실패하면 로컬 규칙 기반 초안이 생성됩니다.
+Gemini 기반 회의록 요약, 스펙 문서 초안 생성, task 추천 생성을 사용하려면 백엔드 실행 전에 `GEMINI_API_KEY` 또는 `GOOGLE_API_KEY` 환경변수를 설정합니다.
+키가 없거나 호출에 실패하면 로컬 규칙 기반 결과가 생성됩니다.
 
 ## Current Status
 

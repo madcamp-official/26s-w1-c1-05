@@ -232,7 +232,35 @@ Content-Type: application/json
 
 `generatedBy`는 Gemini 호출 성공 시 `GEMINI`, API 키가 없거나 호출 실패 시 `LOCAL_FALLBACK`이다.
 
-### 3.9 SpecDocumentResponse
+### 3.9 MeetingSummaryResponse
+
+```json
+{
+  "meetingId": 300,
+  "summary": "- 결정사항: JWT 기반 로그인 유지\n- 다음 액션: 스펙 초안 생성 API 검증",
+  "generatedBy": "GEMINI",
+  "meeting": {
+    "id": 300,
+    "teamId": 1,
+    "title": "Day 1 회의",
+    "meetingAt": "2026-07-03T14:40:00",
+    "rawContent": "회의 원문 기록",
+    "summary": "- 결정사항: JWT 기반 로그인 유지\n- 다음 액션: 스펙 초안 생성 API 검증",
+    "author": {
+      "id": 1,
+      "name": "안종화",
+      "email": "owner@example.com"
+    },
+    "createdAt": "2026-07-03T14:40:00",
+    "updatedAt": "2026-07-03T14:45:00"
+  }
+}
+```
+
+`generatedBy`는 Gemini 호출 성공 시 `GEMINI`, API 키가 없거나 호출 실패 시 `LOCAL_FALLBACK`이다.
+생성된 요약은 `meetings.summary`에 저장된다.
+
+### 3.10 SpecDocumentResponse
 
 ```json
 {
@@ -251,7 +279,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.10 TaskSuggestionResponse
+### 3.11 TaskSuggestionResponse
 
 ```json
 {
@@ -268,7 +296,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.11 TeamLeaderboardResponse
+### 3.12 TeamLeaderboardResponse
 
 ```json
 {
@@ -292,7 +320,7 @@ Content-Type: application/json
 | `SAPLING` | 완료 task 5개 이상 |
 | `OAK` | 완료 task 10개 이상 |
 
-### 3.12 TaskDependencyResponse
+### 3.13 TaskDependencyResponse
 
 ```json
 {
@@ -307,7 +335,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.13 NotificationEventResponse
+### 3.14 NotificationEventResponse
 
 ```json
 {
@@ -1454,6 +1482,32 @@ Errors:
 | `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
 | `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 작성자 또는 팀장이 아님 |
 
+### 8.6 회의록 요약 생성
+
+```http
+POST /api/meetings/{meetingId}/summary
+```
+
+권한: 회의록 작성자 또는 팀장
+
+Response `200`: `MeetingSummaryResponse`
+
+정책:
+
+- 회의록의 `rawContent`, 기존 `summary`, 제목, 회의 일시를 Gemini prompt에 포함한다.
+- Gemini API 호출에 성공하면 `generatedBy = GEMINI`으로 응답한다.
+- Gemini API 키가 없거나 호출/응답 파싱에 실패하면 로컬 규칙 기반 요약을 생성하고 `generatedBy = LOCAL_FALLBACK`으로 응답한다.
+- 생성된 요약은 `meetings.summary`에 즉시 저장된다.
+- 회의록 내용을 수정할 수 없는 팀원은 요약도 생성할 수 없다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `MEETING_NOT_FOUND` | 404 | 회의록 없음 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+| `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 작성자 또는 팀장이 아님 |
+
 ## 9. Spec Document API
 
 ### 9.1 스펙 문서 목록 조회
@@ -1864,7 +1918,8 @@ Response `200`:
 2. 생성: `POST /api/teams/{teamId}/meetings`
 3. 상세: `GET /api/meetings/{meetingId}`
 4. 수정: `PATCH /api/meetings/{meetingId}`
-5. 삭제: `DELETE /api/meetings/{meetingId}`
+5. 요약 생성: `POST /api/meetings/{meetingId}/summary`
+6. 삭제: `DELETE /api/meetings/{meetingId}`
 
 ### 13.6 스펙 문서 화면
 

@@ -119,4 +119,8 @@ public class Meeting {
 		this.rawContent = rawContent;
 		this.summary = summary;
 	}
+
+	public void updateSummary(String summary) {
+		this.summary = summary;
+	}
 }

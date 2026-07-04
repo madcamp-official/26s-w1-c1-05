@@ -43,4 +43,9 @@ tasks.named('bootRun') {
 	environment 'DB_USERNAME', System.getenv('DB_USERNAME') ?: 'root'
 	environment 'DB_PASSWORD', System.getenv('DB_PASSWORD') ?: 'root'
 	environment 'JWT_SECRET', System.getenv('JWT_SECRET') ?: 'local-development-secret-change-me'
+	environment 'GEMINI_API_KEY', System.getenv('GEMINI_API_KEY') ?: ''
+	environment 'GOOGLE_API_KEY', System.getenv('GOOGLE_API_KEY') ?: ''
+	environment 'GEMINI_MODEL', System.getenv('GEMINI_MODEL') ?: 'gemini-2.5-flash'
+	environment 'GEMINI_FALLBACK_MODELS', System.getenv('GEMINI_FALLBACK_MODELS') ?: 'gemini-2.5-flash,gemini-2.0-flash'
+	environment 'GEMINI_BASE_URL', System.getenv('GEMINI_BASE_URL') ?: 'https://generativelanguage.googleapis.com/v1beta'
 }

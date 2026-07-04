@@ -2,6 +2,7 @@ package com.scrumhelper.meeting;
 
 import com.scrumhelper.common.ApiResponse;
 import com.scrumhelper.meeting.dto.MeetingResponse;
+import com.scrumhelper.meeting.dto.MeetingSummaryResponse;
 import com.scrumhelper.meeting.dto.SaveMeetingRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -61,6 +62,14 @@ public class MeetingController {
 			Authentication authentication
 	) {
 		return ApiResponse.ok(meetingService.updateMeeting(currentUserId(authentication), meetingId, request));
+	}
+
+	@PostMapping("/meetings/{meetingId}/summary")
+	public ApiResponse<MeetingSummaryResponse> generateSummary(
+			@PathVariable Long meetingId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(meetingService.generateSummary(currentUserId(authentication), meetingId));
 	}
 
 	@DeleteMapping("/meetings/{meetingId}")

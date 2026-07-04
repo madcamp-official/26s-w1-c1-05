@@ -12,6 +12,13 @@ export type Meeting = {
   updatedAt: string;
 };
 
+export type MeetingSummary = {
+  meetingId: number;
+  summary: string;
+  generatedBy: 'GEMINI' | 'LOCAL_FALLBACK' | string;
+  meeting: Meeting;
+};
+
 export type SaveMeetingRequest = {
   title: string;
   meetingAt: string;

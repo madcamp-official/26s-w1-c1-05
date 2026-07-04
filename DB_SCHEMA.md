@@ -33,6 +33,7 @@
 | `retrospective_collaborators` | 회고록 공동 작업자 N:M 관계 |
 | `meetings` | 팀 회의록 |
 | `spec_documents` | 회의록 기반 스펙 문서 |
+| `task_suggestions` | 스펙 문서 기반 task 추천 후보 |
 
 ## 4. ERD
 
@@ -56,6 +57,8 @@ erDiagram
 
   TEAMS ||--o{ SPEC_DOCUMENTS : owns
   USERS ||--o{ SPEC_DOCUMENTS : creates
+  SPEC_DOCUMENTS ||--o{ TASK_SUGGESTIONS : suggests
+  TEAMS ||--o{ TASK_SUGGESTIONS : owns
 
   TEAMS ||--o{ RETROSPECTIVES : owns
   USERS ||--o{ RETROSPECTIVES : authors
@@ -159,6 +162,19 @@ erDiagram
     VARCHAR title NN
     TEXT content NN
     TEXT source_meeting_ids
+    DATETIME created_at NN
+    DATETIME updated_at NN
+  }
+
+  TASK_SUGGESTIONS {
+    BIGINT id PK
+    BIGINT team_id FK_NN
+    BIGINT spec_document_id FK_NN
+    VARCHAR title NN
+    TEXT description
+    VARCHAR priority NN
+    DATE due_date NN
+    BOOLEAN accepted NN
     DATETIME created_at NN
     DATETIME updated_at NN
   }
@@ -375,6 +391,30 @@ erDiagram
 - 초안 생성 결과는 곧바로 저장하지 않고 사용자가 검토 후 저장한다.
 - `source_meeting_ids`는 소규모 프로젝트의 단순 구현을 위해 문자열로 저장한다. 회의록별 근거 추적이나 회의록 삭제 영향 분석이 필요해지면 `spec_document_meetings(spec_document_id, meeting_id)` N:M 테이블로 분리한다.
 
+### 5.11 `task_suggestions`
+
+| 컬럼 | 타입 | NN | Key | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | Y | PK | task 추천 ID |
+| `team_id` | `BIGINT` | Y | FK | 팀 ID |
+| `spec_document_id` | `BIGINT` | Y | FK | 추천 근거 스펙 문서 ID |
+| `title` | `VARCHAR(200)` | Y |  | 추천 task 제목 |
+| `description` | `TEXT` | N |  | 추천 task 설명 |
+| `priority` | `VARCHAR(20)` | Y |  | `LOW`, `MEDIUM`, `HIGH` |
+| `due_date` | `DATE` | Y |  | 추천 마감일 |
+| `accepted` | `BOOLEAN` | Y | IDX | 실제 task로 수락했는지 여부 |
+| `created_at` | `DATETIME(6)` | Y |  | 생성 시각 |
+| `updated_at` | `DATETIME(6)` | Y |  | 수정 시각 |
+
+제약:
+
+- 추천 생성자는 현재 팀원이어야 한다.
+- `spec_document_id`는 같은 팀의 스펙 문서여야 한다.
+- Gemini 응답이 없거나 파싱에 실패하면 local fallback 추천을 저장한다.
+- 추천은 생성 즉시 실제 task가 되지 않는다.
+- 수락 시 담당자 1명 이상을 받아 기존 task 생성 정책으로 실제 task를 생성한다.
+- 이미 수락한 추천은 다시 수락할 수 없다.
+
 ## 6. MySQL DDL 초안
 
 ```sql
@@ -567,6 +607,30 @@ CREATE TABLE spec_documents (
   CONSTRAINT fk_spec_documents_created_by_user
     FOREIGN KEY (created_by_user_id) REFERENCES users (id)
     ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE task_suggestions (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  team_id BIGINT NOT NULL,
+  spec_document_id BIGINT NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  description TEXT NULL,
+  priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM',
+  due_date DATE NOT NULL,
+  accepted BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  KEY idx_task_suggestions_spec_document_created_at (spec_document_id, created_at),
+  KEY idx_task_suggestions_team_accepted (team_id, accepted),
+  CONSTRAINT ck_task_suggestions_priority
+    CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH')),
+  CONSTRAINT fk_task_suggestions_team
+    FOREIGN KEY (team_id) REFERENCES teams (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_task_suggestions_spec_document
+    FOREIGN KEY (spec_document_id) REFERENCES spec_documents (id)
+    ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 ```
 

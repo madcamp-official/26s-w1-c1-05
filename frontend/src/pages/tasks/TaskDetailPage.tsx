@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
@@ -33,9 +33,7 @@ export function TaskDetailPage() {
     assigneeUserIds: [] as number[],
   });
 
-  useEffect(() => void loadPage(), [numericTaskId, numericTeamId]);
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTaskId) || !Number.isFinite(numericTeamId)) {
       setErrorMessage('task 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -65,7 +63,9 @@ export function TaskDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericTaskId, numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
 
   async function handleSaveTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

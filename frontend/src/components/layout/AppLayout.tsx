@@ -16,7 +16,8 @@ export function AppLayout() {
     <div className="app-shell">
       <header className="topbar">
         <NavLink className="brand" to="/teams">
-          Scrum Helper
+          <span className="brand-mark">SH</span>
+          <span>Scrum Helper</span>
         </NavLink>
         <div className="topbar-actions">
           <span className="current-user">{user?.name}</span>

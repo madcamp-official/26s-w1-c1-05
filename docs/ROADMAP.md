@@ -149,43 +149,56 @@ API 초안:
 - 이메일 발송은 로컬 개발에서는 mock sender로 처리하고, 실제 SMTP는 배포 단계에서 설정한다.
 - 하위 task 완료와 상위 task 완료를 자동 연동할지 여부는 별도 정책으로 확정한다.
 
-## 7. Phase 5: 시각적 효율성과 UX
+## 7. Phase 5: 백엔드 안정화와 운영 준비
 
 목표:
 
-- 반복 사용 화면의 정보 탐색과 상태 변경을 더 빠르게 만든다.
+- MVP 기능을 회귀 테스트로 보호한다.
+- local과 KCloud 환경을 코드 변경 없이 전환할 수 있게 한다.
+- 새 기능 추가 전에 권한, 트랜잭션, DB 정합성을 명확하게 검증한다.
 
-주요 기능:
+주요 작업:
 
-- 칸반 보드 뷰: 완료/미완료 컬럼 간 drag and drop
-- 캘린더 뷰: 월간/주간 마감 task 표시
-- 다크 모드: 사용자 설정 저장
+- 백엔드 service/controller 테스트 확장
+- 팀장 1명 정책, task 담당자 1명 이상 정책, 회고록 공동 작업자 권한 회귀 테스트
+- 스펙 문서 초안 생성과 저장의 팀 소속 검증 테스트
+- `local`/운영 환경변수 정리
+- `JWT_SECRET`, `GEMINI_API_KEY`, DB 접속 정보 문서화
+- API 오류 코드와 HTTP status 동기화
+- README/RUNBOOK 실행 절차 업데이트
 
 구현 기준:
 
-- 칸반은 현재 2상태 task 정책을 유지한다.
-- 캘린더는 마감일이 있는 task만 표시한다.
-- 다크 모드는 CSS variable 기반으로 구현하고, 사용자 선택은 `localStorage`에 저장한다.
-
-권장 라이브러리:
-
-| 기능 | 후보 |
-|---|---|
-| Drag and drop | `@dnd-kit/core` |
-| Calendar | `react-big-calendar` 또는 자체 월간 그리드 |
-| Dark mode | CSS variables + React context |
+- 디자인, CSS, 화면 레이아웃 개선은 이 로드맵의 실행 범위에서 제외한다.
+- 프론트엔드 변경은 새 백엔드 API 연결에 필요한 최소 API client 추가까지만 포함한다.
+- 모든 신규 기능은 `API_SPEC.md`, `DB_SCHEMA.md`, 테스트 문서와 함께 갱신한다.
 
 ## 8. 우선순위
 
 | 순위 | 기능 | 이유 |
 |---:|---|---|
-| 1 | 스펙 문서 초안 생성 | 과제 산출물과 직접 연결됨 |
-| 2 | task 자동 추천 | Scrum Helper의 핵심 task 흐름과 연결됨 |
-| 3 | 칸반/캘린더 | 데모에서 체감되는 UX 개선 |
-| 4 | 리더보드/명성/업적 | 재미 요소지만 핵심 워크플로우 의존도는 낮음 |
-| 5 | task 의존성/알림/하위 task | DB와 UI 변경 폭이 커서 MVP 이후가 적절함 |
+| 1 | 백엔드 회귀 테스트 확장 | 기존 MVP 기능을 보호해야 새 기능을 안전하게 붙일 수 있음 |
+| 2 | 스펙 문서 기반 task 자동 추천 | 회의록 -> 스펙 문서 -> task로 이어지는 핵심 자동화 |
+| 3 | 리더보드/명성 API | 완료 task 수 기반 게이미피케이션의 서버 기반 |
+| 4 | task 의존성/로드맵 API | task 관리 고도화의 DB/API 기반 |
+| 5 | 알림 mock event | 실제 이메일 연동 전 서버 이벤트 조건 검증 |
 
-## 9. 현재 보류 결정
+## 9. 백엔드 업그레이드 실행 계획
+
+상세 실행 계획은 `docs/BACKEND_UPGRADE_PLAN.md`를 기준으로 한다.
+
+요약:
+
+1. 테스트 profile과 백엔드 회귀 테스트를 먼저 정리한다.
+2. `task_suggestions` 도메인과 API를 추가한다.
+3. 스펙 문서 기반 Gemini/local fallback task 추천을 구현한다.
+4. 추천 task 수락 시 기존 task 생성 정책을 재사용한다.
+5. 팀 단위 leaderboard API를 실시간 집계로 구현한다.
+6. task dependency 저장과 순환 의존성 차단을 구현한다.
+7. 선행 task 완료 시 mock notification event를 남긴다.
+8. 새 API와 DB 변경은 `API_SPEC.md`, `DB_SCHEMA.md`, 테스트 문서에 반영한다.
+
+## 10. 현재 보류 결정
 
 | 항목 | 보류 이유 |
 |---|---|

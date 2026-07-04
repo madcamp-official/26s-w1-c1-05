@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { CalendarDays, Plus } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import { Button } from '../../components/common/Button';
@@ -6,6 +7,7 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { LoadingState } from '../../components/common/LoadingState';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
+import { toMeetingListItemView } from '../../viewModels/meetingViewModel';
 
 export function MeetingListPage() {
   const { teamId } = useParams();
@@ -22,9 +24,7 @@ export function MeetingListPage() {
     summary: '',
   });
 
-  useEffect(() => void loadPage(), [numericTeamId]);
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
       setErrorMessage('팀 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -40,7 +40,11 @@ export function MeetingListPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
+
+  const meetingItems = useMemo(() => meetings.map(toMeetingListItemView), [meetings]);
 
   async function handleCreateMeeting(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -86,10 +90,12 @@ export function MeetingListPage() {
     <section className="page-section">
       <div className="page-header">
         <div>
+          <span className="eyebrow">Meetings</span>
           <h1>회의</h1>
           <p className="muted">회의 내용을 기록하고, 이후 스펙 문서와 task 자동 생성의 입력으로 사용합니다.</p>
         </div>
         <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
+          <Plus size={16} aria-hidden="true" />
           회의록 작성
         </Button>
       </div>
@@ -150,26 +156,27 @@ export function MeetingListPage() {
           <p>회의 내용을 먼저 기록하면 이후 스펙 초안과 task 추천 기능을 붙이기 쉽습니다.</p>
         </div>
       ) : (
-        <div className="retro-grid">
-          {meetings.map((meeting) => (
-            <article className="retro-card" key={meeting.id}>
-              <div className="retro-card-header">
-                <div>
-                  <h2>{meeting.title}</h2>
-                  <p className="muted">
-                    회의 {formatDateTime(meeting.meetingAt)} · 작성 {meeting.author.name}
-                  </p>
-                </div>
-                <span className="badge">회의록</span>
-              </div>
-              <p>{meeting.summary || meeting.rawContent || '기록 내용이 없습니다.'}</p>
-              <Link
-                className="button button-secondary button-link"
-                to={`/teams/${numericTeamId}/meetings/${meeting.id}`}
-              >
-                상세 보기
-              </Link>
-            </article>
+        <div className="document-list">
+          {meetingItems.map((item) => (
+            <Link
+              className="document-list-row"
+              key={item.meeting.id}
+              to={`/teams/${numericTeamId}/meetings/${item.meeting.id}`}
+            >
+              <span className="document-list-icon">
+                <CalendarDays size={16} aria-hidden="true" />
+              </span>
+              <span className="document-list-main">
+                <strong>{item.title}</strong>
+                <small>{item.summaryPreview}</small>
+              </span>
+              <span className="document-list-meta">
+                <strong>{item.displayId}</strong>
+                <small>
+                  {item.dateLabel} · {item.authorLabel}
+                </small>
+              </span>
+            </Link>
           ))}
         </div>
       )}
@@ -184,14 +191,4 @@ function toDatetimeLocalValue(date: Date) {
 
 function toApiDateTime(value: string) {
   return value.length === 16 ? `${value}:00` : value;
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }

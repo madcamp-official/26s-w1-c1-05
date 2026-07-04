@@ -1,4 +1,5 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { BookOpenText, Plus } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
@@ -9,6 +10,7 @@ import { LoadingState } from '../../components/common/LoadingState';
 import { ApiError } from '../../types/api';
 import type { Retrospective } from '../../types/retrospective';
 import type { TeamMember } from '../../types/team';
+import { toRetrospectiveListItemView } from '../../viewModels/retrospectiveViewModel';
 
 export function RetrospectiveListPage() {
   const { teamId } = useParams();
@@ -28,9 +30,7 @@ export function RetrospectiveListPage() {
     collaboratorUserIds: [] as number[],
   });
 
-  useEffect(() => void loadPage(), [numericTeamId]);
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
       setErrorMessage('팀 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -51,7 +51,14 @@ export function RetrospectiveListPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
+
+  const retrospectiveItems = useMemo(
+    () => retrospectives.map(toRetrospectiveListItemView),
+    [retrospectives],
+  );
 
   async function handleCreateRetrospective(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -104,10 +111,12 @@ export function RetrospectiveListPage() {
     <section className="page-section">
       <div className="page-header">
         <div>
+          <span className="eyebrow">Retrospectives</span>
           <h1>회고록 목록</h1>
           <p className="muted">어제 한 일, 오늘 할 일, 궁금한/필요한/알아낸 것을 일지처럼 기록합니다.</p>
         </div>
         <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
+          <Plus size={16} aria-hidden="true" />
           회고록 작성
         </Button>
       </div>
@@ -186,48 +195,30 @@ export function RetrospectiveListPage() {
           <p>오늘의 진행 상황과 필요한 내용을 첫 회고록으로 남겨보세요.</p>
         </div>
       ) : (
-        <div className="retro-grid">
-          {retrospectives.map((retrospective) => (
-            <article className="retro-card" key={retrospective.id}>
-              <div className="retro-card-header">
-                <div>
-                  <h2>{retrospective.title}</h2>
-                  <p className="muted">
-                    작성 {retrospective.author.name} · 수정 {formatDateTime(retrospective.updatedAt)}
-                  </p>
-                </div>
-                <span className="badge">
-                  공동 {retrospective.collaborators.length}
-                </span>
-              </div>
-              <p>{retrospective.todayPlan || retrospective.yesterdayWork || '기록 내용이 없습니다.'}</p>
-              <div className="retro-meta">
-                <span>공동 작업자</span>
-                <strong>
-                  {retrospective.collaborators.length === 0
-                    ? '없음'
-                    : retrospective.collaborators.map((collaborator) => collaborator.name).join(', ')}
-                </strong>
-              </div>
-              <Link
-                className="button button-secondary button-link"
-                to={`/teams/${numericTeamId}/retrospectives/${retrospective.id}`}
-              >
-                상세 보기
-              </Link>
-            </article>
+        <div className="document-list">
+          {retrospectiveItems.map((item) => (
+            <Link
+              className="document-list-row"
+              key={item.retrospective.id}
+              to={`/teams/${numericTeamId}/retrospectives/${item.retrospective.id}`}
+            >
+              <span className="document-list-icon">
+                <BookOpenText size={16} aria-hidden="true" />
+              </span>
+              <span className="document-list-main">
+                <strong>{item.title}</strong>
+                <small>{item.preview}</small>
+              </span>
+              <span className="document-list-meta">
+                <strong>{item.displayId}</strong>
+                <small>
+                  {item.metaLine} · {item.collaboratorLabel}
+                </small>
+              </span>
+            </Link>
           ))}
         </div>
       )}
     </section>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }

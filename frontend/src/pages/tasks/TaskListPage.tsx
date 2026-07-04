@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
 import { Button } from '../../components/common/Button';
 import { ErrorMessage } from '../../components/common/ErrorMessage';
+import { InitialsAvatar } from '../../components/common/InitialsAvatar';
 import { LoadingState } from '../../components/common/LoadingState';
+import { StatusDot } from '../../components/common/StatusDot';
 import { ApiError } from '../../types/api';
 import type { Task, TaskPriority } from '../../types/task';
 import type { TeamMember } from '../../types/team';
+import { toTaskCardView, type TaskCardView } from '../../viewModels/taskViewModel';
 
 export function TaskListPage() {
   const { teamId } = useParams();
@@ -27,23 +30,7 @@ export function TaskListPage() {
     assigneeUserIds: [] as number[],
   });
 
-  useEffect(() => void loadPage(), [numericTeamId]);
-
-  const visibleTasks = useMemo(() => {
-    if (completedFilter === 'OPEN') {
-      return tasks.filter((task) => !task.completed);
-    }
-    if (completedFilter === 'DONE') {
-      return tasks.filter((task) => task.completed);
-    }
-    return tasks;
-  }, [tasks, completedFilter]);
-
-  const backlogTasks = visibleTasks.filter((task) => !task.completed && !isInProgress(task));
-  const inProgressTasks = visibleTasks.filter((task) => !task.completed && isInProgress(task));
-  const completedTasks = visibleTasks.filter((task) => task.completed);
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
       setErrorMessage('팀 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -64,7 +51,24 @@ export function TaskListPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
+
+  const visibleTasks = useMemo(() => {
+    if (completedFilter === 'OPEN') {
+      return tasks.filter((task) => !task.completed);
+    }
+    if (completedFilter === 'DONE') {
+      return tasks.filter((task) => task.completed);
+    }
+    return tasks;
+  }, [tasks, completedFilter]);
+
+  const taskViews = visibleTasks.map(toTaskCardView);
+  const backlogTasks = taskViews.filter((task) => task.column === 'backlog');
+  const inProgressTasks = taskViews.filter((task) => task.column === 'progress');
+  const completedTasks = taskViews.filter((task) => task.column === 'done');
 
   async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -287,18 +291,10 @@ export function TaskListPage() {
   );
 }
 
-function isInProgress(task: Task) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const dueDate = new Date(`${task.dueDate}T00:00:00`);
-  const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / 86_400_000);
-  return diffDays <= 2;
-}
-
 type TaskColumnProps = {
   title: string;
   description: string;
-  tasks: Task[];
+  tasks: TaskCardView[];
   tone: 'neutral' | 'blue' | 'green';
   isSubmitting: boolean;
   onToggle: (task: Task) => Promise<void>;
@@ -311,46 +307,41 @@ function TaskColumn({ title, description, tasks, tone, isSubmitting, onToggle }:
         {title} <span>{tasks.length}</span>
       </h2>
       <p className="column-description">{description}</p>
-      {tasks.map((task) => (
-        <article className="task-card" key={task.id}>
+      {tasks.map((taskView) => (
+        <article className="task-card" key={taskView.task.id}>
           <div className="task-card-top">
-            <h3>{task.title}</h3>
-            <span className={`priority priority-${task.priority.toLowerCase()}`}>
-              {priorityLabel(task.priority)}
+            <div>
+              <span className="task-id">{taskView.displayId}</span>
+              <h3>{taskView.title}</h3>
+            </div>
+            <span className={`priority priority-${taskView.priority.toLowerCase()}`}>
+              {taskView.priorityLabel}
             </span>
           </div>
-          <p className="muted">{task.description || '설명이 없습니다.'}</p>
+          <p className="muted">{taskView.description}</p>
           <div className="task-meta">
-            <span>마감 {task.dueDate}</span>
+            <span className="status-line">
+              <StatusDot status={taskView.status} />
+              {taskView.statusLabel}
+            </span>
+            <span>{taskView.dueLabel}</span>
             <div className="avatar-row" aria-label="담당자">
-              {task.assignees.map((user) => (
-                <span className="avatar" key={user.id} title={user.name}>
-                  {user.name.slice(0, 1)}
-                </span>
+              {taskView.task.assignees.map((user) => (
+                <InitialsAvatar name={user.name} key={user.id} />
               ))}
-              <span>{task.assignees.map((user) => user.name).join(', ')}</span>
+              <span>{taskView.assigneeNames}</span>
             </div>
           </div>
           <Button
             type="button"
-            variant={task.completed ? 'secondary' : 'primary'}
+            variant={taskView.task.completed ? 'secondary' : 'primary'}
             disabled={isSubmitting}
-            onClick={() => void onToggle(task)}
+            onClick={() => void onToggle(taskView.task)}
           >
-            {task.completed ? '미완료로 변경' : '완료'}
+            {taskView.task.completed ? '미완료로 변경' : '완료'}
           </Button>
         </article>
       ))}
     </section>
   );
-}
-
-function priorityLabel(priority: TaskPriority) {
-  if (priority === 'HIGH') {
-    return '높음';
-  }
-  if (priority === 'LOW') {
-    return '낮음';
-  }
-  return '보통';
 }

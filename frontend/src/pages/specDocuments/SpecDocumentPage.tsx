@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { FileText } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import * as specDocumentApi from '../../api/specDocumentApi';
@@ -8,6 +9,8 @@ import { LoadingState } from '../../components/common/LoadingState';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
 import type { SpecDocument, SpecDraft } from '../../types/specDocument';
+import { toMeetingListItemView } from '../../viewModels/meetingViewModel';
+import { toSpecDocumentCardView } from '../../viewModels/specDocumentViewModel';
 
 export function SpecDocumentPage() {
   const { teamId } = useParams();
@@ -48,6 +51,9 @@ export function SpecDocumentPage() {
   }, [numericTeamId]);
 
   useEffect(() => void loadPage(), [loadPage]);
+
+  const meetingItems = useMemo(() => meetings.map(toMeetingListItemView), [meetings]);
+  const documentCards = useMemo(() => documents.map(toSpecDocumentCardView), [documents]);
 
   async function handleGenerateDraft(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -121,6 +127,7 @@ export function SpecDocumentPage() {
     <section className="page-section">
       <div className="page-header">
         <div>
+          <span className="eyebrow">Spec docs</span>
           <h1>스펙 문서</h1>
           <p className="muted">회의록을 선택해 프로젝트 스펙 초안을 만들고 저장합니다.</p>
         </div>
@@ -149,18 +156,17 @@ export function SpecDocumentPage() {
             </div>
           ) : (
             <div className="meeting-choice-list">
-              {meetings.map((meeting) => (
-                <label className="meeting-choice" key={meeting.id}>
+              {meetingItems.map((item) => (
+                <label className="meeting-choice" key={item.meeting.id}>
                   <input
                     type="checkbox"
-                    checked={selectedMeetingIds.includes(meeting.id)}
-                    onChange={() => toggleMeeting(meeting.id)}
+                    checked={selectedMeetingIds.includes(item.meeting.id)}
+                    onChange={() => toggleMeeting(item.meeting.id)}
                   />
                   <span>
-                    <strong>{meeting.title}</strong>
-                    <small>
-                      {formatDateTime(meeting.meetingAt)} · {meeting.author.name}
-                    </small>
+                    <strong>{item.title}</strong>
+                    <small>{item.dateLabel}</small>
+                    <small>{item.summaryPreview}</small>
                   </span>
                 </label>
               ))}
@@ -221,20 +227,22 @@ export function SpecDocumentPage() {
             <p>회의록을 기반으로 초안을 만든 뒤 저장하면 이곳에서 확인할 수 있습니다.</p>
           </div>
         ) : (
-          <div className="retro-grid">
-            {documents.map((document) => (
-              <article className="retro-card" key={document.id}>
-                <div className="retro-card-header">
-                  <div>
-                    <h2>{document.title}</h2>
-                    <p className="muted">
-                      작성 {document.createdBy.name} · 수정 {formatDateTime(document.updatedAt)}
-                    </p>
-                  </div>
-                  <span className="badge">Spec</span>
+          <div className="document-list">
+            {documentCards.map((card) => (
+              <article className="document-list-row" key={card.document.id}>
+                <span className="document-list-icon">
+                  <FileText size={16} aria-hidden="true" />
+                </span>
+                <span className="document-list-main">
+                  <strong>{card.title}</strong>
+                  <small>{card.preview}</small>
+                </span>
+                <div className="document-list-meta">
+                  <strong>{card.displayId}</strong>
+                  <small>
+                    {card.metaLine} · {card.sourceLabel}
+                  </small>
                 </div>
-                <pre className="spec-preview">{document.content}</pre>
-                <p className="muted">근거 회의록 {document.sourceMeetingIds.length}개</p>
               </article>
             ))}
           </div>
@@ -242,14 +250,4 @@ export function SpecDocumentPage() {
       </section>
     </section>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
 }

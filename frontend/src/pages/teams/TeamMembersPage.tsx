@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
 import { Button } from '../../components/common/Button';
@@ -17,9 +17,7 @@ export function TeamMembersPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isLeader = team?.myRole === 'LEADER';
 
-  useEffect(() => void loadPage(), [numericTeamId]);
-
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
       setErrorMessage('팀 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -42,7 +40,9 @@ export function TeamMembersPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
 
   async function handleTransferLeader(member: TeamMember) {
     if (!window.confirm(`${member.user.name}님에게 팀장을 위임할까요?`)) {
@@ -84,10 +84,16 @@ export function TeamMembersPage() {
 
   return (
     <section className="page-section">
-      <h1>팀원 관리</h1>
-      <p className="muted">
-        Team #{teamId}에 가입한 사용자입니다. 팀장만 팀장 변경과 팀원 제거를 할 수 있습니다.
-      </p>
+      <div className="page-header">
+        <div>
+          <span className="eyebrow">Members</span>
+          <h1>팀원 관리</h1>
+          <p className="muted">
+            Team #{teamId}에 가입한 사용자입니다. 팀장만 팀장 변경과 팀원 제거를 할 수 있습니다.
+          </p>
+        </div>
+        <span className="soft-pill">{members.length}명</span>
+      </div>
       <ErrorMessage message={errorMessage} />
       <div className="member-list">
         {members.map((member) => (

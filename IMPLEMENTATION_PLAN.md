@@ -459,10 +459,21 @@ Day 3 이후에는 기능 단위로 교차 검증한다.
 
 ## 11. 다음 단계
 
-Day 1부터 Day 4까지의 MVP 기능은 로컬 빌드 기준으로 구현되었다. 다음 단계는 기능 추가보다 검증과 제출 준비에 집중한다.
+Day 1부터 Day 4까지의 MVP 기능은 로컬 빌드 기준으로 구현되었다. 다음 단계부터는 디자인 적용을 이 계획에서 제외하고, 백엔드 기능 고도화와 검증에 집중한다.
 
-1. 전체 사용자 흐름 수동 테스트: 회원가입, 팀 생성, 공개/비밀번호/초대코드 가입, task 생성/완료/댓글, 회고록 생성/본문 수정/작성자 전용 공동 작업자 변경, 팀장 변경
-2. 테스트 중 발견된 UI/권한/데이터 무결성 이슈 수정
-3. `SPEC.md`, `DB_SCHEMA.md`, `API_SPEC.md`, `IA.md`를 실제 구현과 최종 동기화
-4. KCloud 배포 준비: VM 접속, MySQL 설치/설정, backend 빌드 배포, frontend 정적 파일 배포, DNS 연결
-5. 제출용 실행 방법과 데모 시나리오 정리
+디자인 작업은 팀원 담당 트랙으로 분리한다. 이 문서의 다음 단계는 Spring Boot API, DB 스키마, 권한 정책, 테스트, 운영 준비만 다룬다.
+
+백엔드 다음 단계:
+
+1. 백엔드 회귀 테스트 확장: 인증, 팀 가입, 팀장 변경, task, 댓글, 회의록, 회고록 권한 테스트 작성
+2. 스펙 문서 기반 task 추천 기능 구현: `task_suggestions` 도메인, Gemini/local fallback 추천, 선택 수락 API
+3. 리더보드/명성 기초 API 구현: 팀원별 완료 task 수 집계, rank level 계산, 대시보드용 응답 제공
+4. task 관계 모델 1차 구현: task dependency 저장, 순환 의존성 차단, 선행 task 완료 시 후행 task 조회
+5. 알림 기반 준비: 로컬 mock notification event 기록 테이블 또는 로그 sender 구현
+6. DB 정합성 보강: 인덱스, unique 제약, 팀원 제거/담당자/공동 작업자 edge case 재검증
+7. 설정 분리: local/KCloud profile, `JWT_SECRET`, `GEMINI_API_KEY`, DB 접속 정보 환경변수 문서화
+8. API 문서 동기화: 새 백엔드 API를 `API_SPEC.md`, `DB_SCHEMA.md`, `docs/BACKEND_UPGRADE_PLAN.md`에 반영
+9. 백엔드 테스트 통과 후 프론트에는 최소 API client 연결 지점만 공유
+10. 제출 전 전체 기능 수동 시나리오와 backend test 결과 정리
+
+상세 계획은 `docs/BACKEND_UPGRADE_PLAN.md`를 기준으로 진행한다.

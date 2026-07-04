@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { KeyRound, Lock, Plus, Search, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
@@ -8,6 +8,7 @@ import { ErrorMessage } from '../../components/common/ErrorMessage';
 import { LoadingState } from '../../components/common/LoadingState';
 import { ApiError } from '../../types/api';
 import type { TeamSummary } from '../../types/team';
+import { toTeamCardView, type TeamCardView } from '../../viewModels/teamViewModel';
 
 export function TeamListPage() {
   const { user } = useAuth();
@@ -27,13 +28,7 @@ export function TeamListPage() {
     password: '',
   });
 
-  useEffect(() => {
-    void loadTeams();
-  }, []);
-
-  const filteredTeams = useMemo(() => teams, [teams]);
-
-  async function loadTeams(nextKeyword = keyword) {
+  const loadTeams = useCallback(async (nextKeyword = keyword) => {
     try {
       setIsLoading(true);
       setErrorMessage(null);
@@ -44,7 +39,13 @@ export function TeamListPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [keyword]);
+
+  useEffect(() => {
+    void loadTeams();
+  }, [loadTeams]);
+
+  const teamCards = useMemo(() => teams.map(toTeamCardView), [teams]);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -109,9 +110,7 @@ export function TeamListPage() {
 
     try {
       setIsSubmitting(true);
-      const member = await teamApi.joinTeamByInviteCode({
-        inviteCode,
-      });
+      const member = await teamApi.joinTeamByInviteCode({ inviteCode });
       navigate(`/teams/${member.teamId}`);
     } catch (error) {
       setErrorMessage(toErrorMessage(error, '초대코드로 팀에 가입하지 못했습니다.'));
@@ -135,12 +134,11 @@ export function TeamListPage() {
 
   return (
     <section className="page-section">
-      <div className="page-header">
+      <div className="page-header teams-header">
         <div>
+          <span className="eyebrow">Teams</span>
           <h1>팀 목록</h1>
-          <p className="muted">
-            {user?.name}님, 참여할 팀을 찾거나 새 팀을 만들 수 있습니다.
-          </p>
+          <p className="muted">{user?.name}님, 참여할 팀을 찾거나 새 팀을 만들 수 있습니다.</p>
         </div>
         <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
           <Plus size={16} aria-hidden="true" />
@@ -148,36 +146,33 @@ export function TeamListPage() {
         </Button>
       </div>
 
-      <form className="toolbar" onSubmit={handleSearch}>
-        <label className="search-field">
-          <Search size={16} aria-hidden="true" />
-          <input
-            type="search"
-            placeholder="팀 이름 검색"
-            value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
-          />
-        </label>
-        <Button type="submit" variant="secondary">
-          검색
-        </Button>
-      </form>
-
-      <form className="panel inline-form" onSubmit={handleInviteJoin}>
-        <label className="field">
-          <span>초대코드로 가입</span>
+      <div className="teams-toolbar">
+        <form className="invite-code-box" onSubmit={handleInviteJoin}>
+          <KeyRound size={16} aria-hidden="true" />
           <input
             type="text"
-            placeholder="예: ABCD1234"
+            placeholder="Invite code"
             value={inviteCode}
             onChange={(event) => setInviteCode(event.target.value)}
           />
-        </label>
-        <Button type="submit" variant="secondary" isLoading={isSubmitting}>
-          <KeyRound size={16} aria-hidden="true" />
-          가입
-        </Button>
-      </form>
+          <Button type="submit" isLoading={isSubmitting}>
+            Join
+          </Button>
+        </form>
+
+        <form className="search-field" onSubmit={handleSearch}>
+          <Search size={16} aria-hidden="true" />
+          <input
+            type="search"
+            placeholder="Search teams"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
+          <Button type="submit" variant="secondary">
+            검색
+          </Button>
+        </form>
+      </div>
 
       {createOpen && (
         <form className="panel form-grid" onSubmit={handleCreate}>
@@ -187,9 +182,7 @@ export function TeamListPage() {
             <input
               type="text"
               value={createForm.name}
-              onChange={(event) =>
-                setCreateForm((form) => ({ ...form, name: event.target.value }))
-              }
+              onChange={(event) => setCreateForm((form) => ({ ...form, name: event.target.value }))}
             />
           </label>
           <label className="field">
@@ -198,10 +191,7 @@ export function TeamListPage() {
               type="text"
               value={createForm.description}
               onChange={(event) =>
-                setCreateForm((form) => ({
-                  ...form,
-                  description: event.target.value,
-                }))
+                setCreateForm((form) => ({ ...form, description: event.target.value }))
               }
             />
           </label>
@@ -231,77 +221,106 @@ export function TeamListPage() {
 
       {isLoading ? (
         <LoadingState label="팀 목록을 불러오고 있습니다." />
-      ) : filteredTeams.length === 0 ? (
+      ) : teamCards.length === 0 ? (
         <div className="empty-panel">
           <h2>생성된 팀이 없습니다.</h2>
           <p>첫 팀을 만들어 스크럼을 시작하세요.</p>
         </div>
       ) : (
         <div className="team-grid">
-          {filteredTeams.map((team) => (
-            <article className="team-card" key={team.id}>
-              <div className="team-card-header">
-                <div>
-                  <h2>{team.name}</h2>
-                  <p className="muted">{team.description || '팀 설명이 없습니다.'}</p>
-                </div>
-                <span className={team.hasPassword ? 'badge badge-warning' : 'badge'}>
-                  {team.hasPassword ? (
-                    <>
-                      <Lock size={14} aria-hidden="true" />
-                      비밀번호
-                    </>
-                  ) : (
-                    '공개'
-                  )}
-                </span>
-              </div>
-
-              <dl className="team-meta">
-                <div>
-                  <dt>팀장</dt>
-                  <dd>{team.leader.name}</dd>
-                </div>
-                <div>
-                  <dt>팀원</dt>
-                  <dd>
-                    <Users size={14} aria-hidden="true" />
-                    {team.memberCount}명
-                  </dd>
-                </div>
-                <div>
-                  <dt>내 상태</dt>
-                  <dd>{team.joined ? team.myRole : '미가입'}</dd>
-                </div>
-              </dl>
-
-              {joinPasswordTeamId === team.id && (
-                <form className="inline-form" onSubmit={handlePasswordJoin}>
-                  <input
-                    type="password"
-                    placeholder="팀 비밀번호"
-                    value={joinPassword}
-                    onChange={(event) => setJoinPassword(event.target.value)}
-                  />
-                  <Button type="submit" isLoading={isSubmitting}>
-                    가입
-                  </Button>
-                </form>
-              )}
-
-              <Button
-                type="button"
-                variant={team.joined ? 'secondary' : 'primary'}
-                onClick={() => void handleJoin(team)}
-                disabled={isSubmitting}
-              >
-                {team.joined ? '입장' : team.hasPassword ? '비밀번호 입력' : '가입'}
-              </Button>
-            </article>
+          {teamCards.map((teamView) => (
+            <TeamCard
+              key={teamView.team.id}
+              teamView={teamView}
+              isPasswordOpen={joinPasswordTeamId === teamView.team.id}
+              joinPassword={joinPassword}
+              isSubmitting={isSubmitting}
+              onJoinPasswordChange={setJoinPassword}
+              onPasswordJoin={handlePasswordJoin}
+              onAction={handleJoin}
+            />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+type TeamCardProps = {
+  teamView: TeamCardView;
+  isPasswordOpen: boolean;
+  joinPassword: string;
+  isSubmitting: boolean;
+  onJoinPasswordChange: (value: string) => void;
+  onPasswordJoin: (event: FormEvent<HTMLFormElement>) => Promise<void>;
+  onAction: (team: TeamSummary) => Promise<void>;
+};
+
+function TeamCard({
+  teamView,
+  isPasswordOpen,
+  joinPassword,
+  isSubmitting,
+  onJoinPasswordChange,
+  onPasswordJoin,
+  onAction,
+}: TeamCardProps) {
+  const team = teamView.team;
+
+  return (
+    <article className="team-card">
+      <div className="team-card-header">
+        <span className="team-card-badge">{teamView.badge}</span>
+        <div>
+          <h2>{team.name}</h2>
+          <p className="muted">{team.description || '팀 설명이 없습니다.'}</p>
+        </div>
+        <span className={`badge access-${teamView.accessTone}`}>
+          {team.hasPassword ? (
+            <>
+              <Lock size={14} aria-hidden="true" />
+              {teamView.accessLabel}
+            </>
+          ) : (
+            teamView.accessLabel
+          )}
+        </span>
+      </div>
+
+      <div className="team-card-meta-row">
+        <span>
+          <Users size={14} aria-hidden="true" />
+          {teamView.leaderLabel}
+        </span>
+        <span>{teamView.memberLabel}</span>
+      </div>
+
+      {isPasswordOpen && (
+        <form className="inline-form" onSubmit={onPasswordJoin}>
+          <input
+            type="password"
+            placeholder="Team password"
+            value={joinPassword}
+            onChange={(event) => onJoinPasswordChange(event.target.value)}
+          />
+          <Button type="submit" isLoading={isSubmitting}>
+            Join
+          </Button>
+        </form>
+      )}
+
+      <div className="team-card-footer">
+        <span className="soft-pill">{teamView.statusLabel}</span>
+        <Button
+          type="button"
+          variant={team.joined ? 'secondary' : 'primary'}
+          onClick={() => void onAction(team)}
+          disabled={isSubmitting}
+        >
+          {teamView.actionLabel}
+        </Button>
+      </div>
+    </article>
   );
 }
 

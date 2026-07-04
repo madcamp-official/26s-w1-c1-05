@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import * as teamApi from '../../api/teamApi';
@@ -28,13 +28,11 @@ export function MeetingDetailPage() {
     summary: '',
   });
 
-  useEffect(() => void loadPage(), [numericMeetingId, numericTeamId]);
-
   const canManage =
     meeting != null &&
     (meeting.author.id === user?.id || team?.myRole === 'LEADER');
 
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId) || !Number.isFinite(numericMeetingId)) {
       setErrorMessage('회의록 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -61,7 +59,9 @@ export function MeetingDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericMeetingId, numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
 
   async function handleSaveMeeting(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -122,7 +122,8 @@ export function MeetingDetailPage() {
     <section className="page-section">
       <div className="page-header">
         <div>
-          <h1>회의록 상세</h1>
+          <span className="eyebrow">Meeting detail</span>
+          <h1>{meeting?.title ?? '회의록 상세'}</h1>
           {meeting && (
             <p className="muted">
               작성 {meeting.author.name} · 회의 {formatDateTime(meeting.meetingAt)}

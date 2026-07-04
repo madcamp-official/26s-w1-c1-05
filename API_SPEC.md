@@ -251,6 +251,23 @@ Content-Type: application/json
 }
 ```
 
+### 3.10 TaskSuggestionResponse
+
+```json
+{
+  "id": 500,
+  "teamId": 1,
+  "specDocumentId": 400,
+  "title": "팀 가입 API 예외 처리 보강",
+  "description": "비밀번호 팀, 초대코드 팀, 중복 가입 케이스를 정리한다.",
+  "priority": "MEDIUM",
+  "dueDate": "2026-07-06",
+  "accepted": false,
+  "createdAt": "2026-07-04T12:00:00",
+  "updatedAt": "2026-07-04T12:00:00"
+}
+```
+
 ## 4. Auth API
 
 ### 4.1 회원가입
@@ -1329,6 +1346,74 @@ Validation:
 - `content`: required, blank 불가
 - `sourceMeetingIds`: optional. 값이 있으면 모두 같은 팀의 회의록이어야 한다.
 
+### 9.4 스펙 문서 기반 task 추천 생성
+
+```http
+POST /api/spec-documents/{specDocumentId}/task-suggestions
+```
+
+권한: 스펙 문서가 속한 팀의 팀원
+
+Response `201`: `TaskSuggestionResponse[]`
+
+정책:
+
+- 스펙 문서는 요청자가 속한 팀의 문서여야 한다.
+- Gemini API 키가 설정되어 있으면 JSON task 후보 생성을 시도한다.
+- Gemini 호출 또는 JSON 파싱에 실패하면 local fallback 추천 5개를 생성한다.
+- 생성된 추천은 바로 실제 task가 되지 않는다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `SPEC_DOCUMENT_NOT_FOUND` | 404 | 스펙 문서 없음 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+
+### 9.5 task 추천 목록 조회
+
+```http
+GET /api/spec-documents/{specDocumentId}/task-suggestions
+```
+
+권한: 스펙 문서가 속한 팀의 팀원
+
+Response `200`: `TaskSuggestionResponse[]`
+
+### 9.6 task 추천 수락
+
+```http
+POST /api/task-suggestions/{suggestionId}/accept
+```
+
+권한: 추천이 속한 팀의 팀원
+
+Request:
+
+```json
+{
+  "assigneeUserIds": [1, 2]
+}
+```
+
+Response `201`: `TaskResponse`
+
+정책:
+
+- 수락 시 기존 task 생성 정책을 그대로 적용한다.
+- 담당자는 1명 이상이어야 한다.
+- 담당자는 같은 팀의 팀원이어야 한다.
+- 이미 수락한 추천은 다시 수락할 수 없다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `TASK_SUGGESTION_NOT_FOUND` | 404 | task 추천 없음 |
+| `TASK_SUGGESTION_ALREADY_ACCEPTED` | 409 | 이미 수락한 추천 |
+| `ASSIGNEE_REQUIRED` | 400 | 담당자 0명 |
+| `ASSIGNEE_NOT_TEAM_MEMBER` | 400 | 담당자가 팀원이 아님 |
+
 ## 10. Retrospective API
 
 ### 10.1 회고록 목록 조회
@@ -1545,6 +1630,9 @@ Response `200`:
 | `AUTHOR_CANNOT_BE_COLLABORATOR` | 400 | 작성자를 공동 작업자로 포함 |
 | `MEETING_NOT_FOUND` | 404 | 회의록 없음 |
 | `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 회의록 작성자 또는 팀장만 가능 |
+| `SPEC_DOCUMENT_NOT_FOUND` | 404 | 스펙 문서 없음 |
+| `TASK_SUGGESTION_NOT_FOUND` | 404 | task 추천 없음 |
+| `TASK_SUGGESTION_ALREADY_ACCEPTED` | 409 | 이미 수락한 task 추천 |
 
 ## 13. 화면별 API 호출 흐름
 
@@ -1593,6 +1681,9 @@ Response `200`:
 2. `GET /api/teams/{teamId}/spec-documents`
 3. 초안 생성: `POST /api/teams/{teamId}/spec-documents/draft`
 4. 저장: `POST /api/teams/{teamId}/spec-documents`
+5. task 추천 생성: `POST /api/spec-documents/{specDocumentId}/task-suggestions`
+6. task 추천 조회: `GET /api/spec-documents/{specDocumentId}/task-suggestions`
+7. task 추천 수락: `POST /api/task-suggestions/{suggestionId}/accept`
 
 ### 13.7 회고록 화면
 
@@ -1629,6 +1720,7 @@ Response `200`:
 | task 생성/수정 | task와 담당자 목록 동시 저장 |
 | 회의록 생성/수정/삭제 | 작성자 또는 팀장 권한 확인 후 저장 |
 | 스펙 문서 저장 | 원본 회의록 팀 소속 검증 후 저장 |
+| task 추천 생성/수락 | 스펙 문서 팀 소속 검증, 수락 시 task 생성과 accepted 변경 |
 | 회고록 생성/수정 | 회고록과 공동 작업자 목록 동시 저장 |
 
 ### 14.3 노출 금지 필드

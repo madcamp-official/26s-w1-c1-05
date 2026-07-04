@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
@@ -29,8 +29,6 @@ export function RetrospectiveDetailPage() {
     collaboratorUserIds: [] as number[],
   });
 
-  useEffect(() => void loadPage(), [numericRetrospectiveId, numericTeamId]);
-
   const canEdit =
     retrospective != null &&
     (retrospective.author.id === user?.id ||
@@ -38,7 +36,7 @@ export function RetrospectiveDetailPage() {
   const canManageCollaborators =
     retrospective != null && retrospective.author.id === user?.id;
 
-  async function loadPage() {
+  const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId) || !Number.isFinite(numericRetrospectiveId)) {
       setErrorMessage('회고록 정보가 올바르지 않습니다.');
       setIsLoading(false);
@@ -66,7 +64,9 @@ export function RetrospectiveDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [numericRetrospectiveId, numericTeamId]);
+
+  useEffect(() => void loadPage(), [loadPage]);
 
   async function handleSaveRetrospective(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -137,7 +137,8 @@ export function RetrospectiveDetailPage() {
     <section className="page-section">
       <div className="page-header">
         <div>
-          <h1>회고록 상세</h1>
+          <span className="eyebrow">Retrospective detail</span>
+          <h1>{retrospective?.title ?? '회고록 상세'}</h1>
           {retrospective && (
             <p className="muted">
               작성 {retrospective.author.name} · 수정 {formatDateTime(retrospective.updatedAt)}

@@ -1,0 +1,54 @@
+/* ScrumMate color system — strictly monochrome.
+   One ink, one paper, a disciplined gray ramp. Color is the exception:
+   a single muted red reserved for destructive/blocked states only. */
+:root {
+  /* Base ramp */
+  --gray-0: #ffffff;
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f4;
+  --gray-150: #ececec;
+  --gray-200: #e4e4e4;
+  --gray-300: #d4d4d4;
+  --gray-400: #a3a3a3;
+  --gray-500: #737373;
+  --gray-600: #525252;
+  --gray-700: #3f3f3f;
+  --gray-800: #262626;
+  --gray-900: #171717;
+  --gray-950: #0a0a0a;
+
+  /* Ink & paper */
+  --ink: var(--gray-950);
+  --paper: var(--gray-0);
+
+  /* Text */
+  --text-primary: var(--gray-950);
+  --text-secondary: var(--gray-600);
+  --text-tertiary: var(--gray-400);
+  --text-inverse: var(--gray-0);
+  --text-disabled: var(--gray-400);
+
+  /* Surfaces */
+  --surface-page: var(--gray-0);
+  --surface-sunken: var(--gray-50);
+  --surface-card: var(--gray-0);
+  --surface-raised: var(--gray-0);
+  --surface-inverse: var(--gray-950);
+  --surface-hover: var(--gray-100);
+  --surface-active: var(--gray-150);
+  --surface-selected: var(--gray-950);
+
+  /* Borders */
+  --border-default: var(--gray-200);
+  --border-strong: var(--gray-950);
+  --border-muted: var(--gray-150);
+  --border-focus: var(--gray-950);
+
+  /* Status — monochrome first; dots and labels, never washes */
+  --status-done: var(--gray-950);
+  --status-progress: var(--gray-500);
+  --status-todo: var(--gray-300);
+  --status-blocked: #b42318; /* the one permitted color */
+  --danger: #b42318;
+  --danger-hover: #912018;
+}

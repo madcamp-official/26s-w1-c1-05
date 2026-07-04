@@ -1,0 +1,1824 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  ::selection { background: #0a0a0a; color: #fff; }
+  .sh-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .sh-scroll::-webkit-scrollbar-thumb { background: #e4e4e4; border-radius: 999px; border: 3px solid #fff; }
+  textarea, input, select, button { font-family: inherit; }
+  @keyframes shFade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  @keyframes shPulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  @keyframes shSpin { to { transform: rotate(360deg); } }
+</style>
+</helmet>
+
+<!-- ============ AUTH ============ -->
+<sc-if value="{{ isAuth }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh;width:100%;background:#fafafa;display:flex;align-items:center;justify-content:center;font-family:'Instrument Sans',sans-serif;color:#0a0a0a;padding:24px;box-sizing:border-box">
+    <div style="width:100%;max-width:380px">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:24px">
+        <span style="font-weight:600;font-size:22px;letter-spacing:-0.02em">Scrum Helper</span>
+        <span style="font-size:13px;color:#737373">{{ authTagline }}</span>
+      </div>
+      <div style="background:#fff;border:1px solid #e4e4e4;border-radius:12px;padding:28px 26px">
+        <h1 style="margin:0 0 20px;font-size:18px;font-weight:600;letter-spacing:-0.02em">{{ authHeading }}</h1>
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <label style="font-size:12.5px;font-weight:500;color:#3f3f3f">Name</label>
+              <input value="{{ authName }}" onInput="{{ onAuthName }}" placeholder="Your name" style="{{ authInputStyle }}"/>
+            </div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:12.5px;font-weight:500;color:#3f3f3f">Email</label>
+            <input value="{{ authEmail }}" onInput="{{ onAuthEmail }}" placeholder="you@team.com" style="{{ authInputStyle }}"/>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label style="font-size:12.5px;font-weight:500;color:#3f3f3f">Password</label>
+            <input type="password" value="{{ authPassword }}" onInput="{{ onAuthPassword }}" placeholder="••••••••" style="{{ authInputStyle }}"/>
+          </div>
+          <sc-if value="{{ authError }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:#b42318">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+              {{ authError }}
+            </div>
+          </sc-if>
+          <button onClick="{{ onAuthSubmit }}" style="{{ authSubmitStyle }}">{{ authSubmitLabel }}</button>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:18px;font-size:13px;color:#737373">
+        {{ authSwitchText }} <span onClick="{{ onAuthSwitch }}" style="color:#0a0a0a;font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:2px">{{ authSwitchCta }}</span>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ TEAM LIST ============ -->
+<sc-if value="{{ isTeams }}" hint-placeholder-val="{{ false }}">
+  <div style="min-height:100vh;width:100%;background:#fff;display:flex;flex-direction:column;font-family:'Instrument Sans',sans-serif;color:#0a0a0a;font-size:14px;line-height:1.5">
+    <header style="height:52px;flex:none;border-bottom:1px solid #e4e4e4;display:flex;align-items:center;padding:0 24px;gap:12px">
+      <span style="font-weight:600;font-size:15px;letter-spacing:-0.02em">Scrum Helper</span>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:26px;height:26px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px">Y</span>
+          <span style="font-size:13px;font-weight:500">You</span>
+        </div>
+        <button onClick="{{ onLogout }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;background:transparent;border:none;border-radius:5px;color:#525252;cursor:pointer;font-size:13px" style-hover="background:#f4f4f4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          Log out
+        </button>
+      </div>
+    </header>
+    <div style="flex:1;overflow-y:auto" class="sh-scroll">
+      <div style="max-width:1120px;margin:0 auto;padding:28px 24px 56px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+          <div>
+            <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em">Teams</h1>
+            <p style="margin:5px 0 0;color:#525252;font-size:13px">Join a team or start a new one.</p>
+          </div>
+          <button onClick="{{ onCreateTeam }}" style="display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 15px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;flex:none" style-hover="opacity:.88">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            Create team
+          </button>
+        </div>
+
+        <!-- invite code + search row -->
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px">
+          <div style="display:flex;align-items:center;gap:8px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:6px 6px 6px 12px;flex:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+            <input value="{{ joinCode }}" onInput="{{ onJoinCodeInput }}" placeholder="Invite code" style="border:none;outline:none;background:transparent;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:0.06em;width:130px"/>
+            <button onClick="{{ onJoinByCode }}" style="height:30px;padding:0 12px;background:#0a0a0a;color:#fff;border:none;border-radius:5px;font-size:12.5px;font-weight:500;cursor:pointer">Join</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:0 12px">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <input value="{{ teamSearch }}" onInput="{{ onTeamSearch }}" placeholder="Search teams" style="border:none;outline:none;background:transparent;font-family:inherit;font-size:13.5px;height:38px;flex:1"/>
+          </div>
+        </div>
+
+        <!-- team cards -->
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+          <sc-for list="{{ teamCards }}" as="t" hint-placeholder-count="3">
+            <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:18px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;align-items:flex-start;gap:12px">
+                <span style="width:38px;height:38px;flex:none;border-radius:8px;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px">{{ t.badge }}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600;font-size:15px">{{ t.name }}</div>
+                  <div style="font-size:12.5px;color:#737373;margin-top:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ t.description }}</div>
+                </div>
+                <span style="{{ t.accessStyle }}">{{ t.accessLabel }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;font-size:12.5px;color:#525252">
+                <span style="display:inline-flex;align-items:center;gap:6px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{{ t.leader }}</span>
+                <span style="font-family:'IBM Plex Mono',monospace;color:#737373">{{ t.memberLabel }}</span>
+              </div>
+              <sc-if value="{{ t.showPasswordInput }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;gap:8px;align-items:center;animation:shFade .15s ease-out">
+                  <input type="password" value="{{ t.passwordValue }}" onInput="{{ t.onPasswordInput }}" placeholder="Team password" style="flex:1;font-family:inherit;font-size:13px;border:1px solid #0a0a0a;border-radius:5px;padding:8px 10px;outline:none;box-sizing:border-box"/>
+                  <button onClick="{{ t.onConfirmPassword }}" style="height:34px;padding:0 12px;background:#0a0a0a;color:#fff;border:none;border-radius:5px;font-size:12.5px;font-weight:500;cursor:pointer">Join</button>
+                </div>
+              </sc-if>
+              <div style="border-top:1px solid #f4f4f4;padding-top:12px;display:flex;align-items:center;justify-content:space-between">
+                <span style="{{ t.statusStyle }}">{{ t.statusLabel }}</span>
+                <button onClick="{{ t.onAction }}" style="{{ t.actionStyle }}">{{ t.actionLabel }}</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ teamsListEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="border:1px solid #e4e4e4;border-radius:8px;padding:48px 24px;text-align:center;color:#737373;font-size:13px">No teams match "{{ teamSearch }}".</div>
+        </sc-if>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<!-- ============ TEAM APP SHELL ============ -->
+<sc-if value="{{ inApp }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;height:100vh;width:100%;overflow:hidden;font-family:'Instrument Sans',sans-serif;color:#0a0a0a;background:#fff;font-size:14px;line-height:1.5">
+
+  <!-- SIDEBAR -->
+  <aside style="width:232px;flex:none;background:#fafafa;border-right:1px solid #e4e4e4;display:flex;flex-direction:column;padding:14px 12px;gap:14px">
+    <div style="display:flex;align-items:center;gap:8px;padding:2px 6px 8px">
+      <span style="font-weight:600;font-size:15px;letter-spacing:-0.02em">Scrum Helper</span>
+    </div>
+
+    <button onClick="{{ onOpenTeam }}" style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:8px 9px;cursor:pointer">
+      <span style="width:26px;height:26px;flex:none;border-radius:6px;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px">OW</span>
+      <span style="display:flex;flex-direction:column;min-width:0">
+        <span style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Orbit Web Team</span>
+        <span style="font-size:11px;color:#737373">Sprint 14</span>
+      </span>
+      <svg style="margin-left:auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></svg>
+    </button>
+
+    <nav style="display:flex;flex-direction:column;gap:2px">
+      <div style="{{ navDashStyle }}" onClick="{{ goDashboard }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+        <span>Dashboard</span>
+      </div>
+      <div style="{{ navTaskStyle }}" onClick="{{ goBoard }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+        <span>Task</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#737373">{{ openCount }}</span>
+      </div>
+      <div style="{{ navMeetingsStyle }}" onClick="{{ goMeetings }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+        <span>Meetings</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#737373">{{ meetingCount }}</span>
+      </div>
+      <div style="{{ navSpecStyle }}" onClick="{{ goSpecs }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+        <span>Spec</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#737373">{{ specCount }}</span>
+      </div>
+      <div style="{{ navRetroStyle }}" onClick="{{ goRetros }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+        <span>Retro</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#737373">{{ retroCount }}</span>
+      </div>
+      <div style="{{ navMembersStyle }}" onClick="{{ goMembers }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>Members</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#737373">{{ memberNavCount }}</span>
+      </div>
+      <div style="{{ navSettingsStyle }}" onClick="{{ goSettings }}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+        <span>Settings</span>
+      </div>
+    </nav>
+
+    <div style="margin-top:auto;border-top:1px solid #e4e4e4;padding-top:12px">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;padding:0 6px 8px">Viewing as</div>
+      <div style="display:flex;background:#fff;border:1px solid #e4e4e4;border-radius:7px;padding:2px;gap:2px">
+        <button onClick="{{ setLeader }}" style="{{ roleStyleLeader }}">Leader</button>
+        <button onClick="{{ setMember }}" style="{{ roleStyleMember }}">Member</button>
+        <button onClick="{{ setViewer }}" style="{{ roleStyleViewer }}">Viewer</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- RIGHT -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <!-- TOP BAR -->
+    <header style="height:52px;flex:none;border-bottom:1px solid #e4e4e4;display:flex;align-items:center;padding:0 22px;gap:12px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#737373;min-width:0">
+        <span style="cursor:pointer" onClick="{{ goDashboard }}">Orbit Web Team</span>
+        <span style="color:#d4d4d4">/</span>
+        <span style="color:#0a0a0a;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ crumb }}</span>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="width:26px;height:26px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px">Y</span>
+          <span style="font-size:13px;font-weight:500">You</span>
+        </div>
+        <button onClick="{{ onLogout }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 10px;background:transparent;border:none;border-radius:5px;color:#525252;cursor:pointer;font-size:13px" style-hover="background:#f4f4f4">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+          Log out
+        </button>
+      </div>
+    </header>
+
+    <!-- VIEWER BANNER -->
+    <sc-if value="{{ isViewer }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:9px;padding:9px 22px;background:#fafafa;border-bottom:1px solid #e4e4e4;font-size:13px;color:#525252">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        You have view-only access to this team. Editing, commenting and status changes are disabled.
+      </div>
+    </sc-if>
+
+    <main class="sh-scroll" style="flex:1;overflow-y:auto;background:#fff">
+
+      <!-- ============ DASHBOARD ============ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="max-width:1120px;margin:0 auto;padding:28px 22px 48px">
+
+          <sc-if value="{{ booting }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:20px">
+              <div style="height:34px;width:280px;background:#f4f4f4;border-radius:6px;animation:shPulse 1.1s ease-in-out infinite"></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px">
+                <div style="height:96px;background:#f4f4f4;border-radius:8px;animation:shPulse 1.1s ease-in-out infinite"></div>
+                <div style="height:96px;background:#f4f4f4;border-radius:8px;animation:shPulse 1.1s ease-in-out infinite"></div>
+                <div style="height:96px;background:#f4f4f4;border-radius:8px;animation:shPulse 1.1s ease-in-out infinite"></div>
+                <div style="height:96px;background:#f4f4f4;border-radius:8px;animation:shPulse 1.1s ease-in-out infinite"></div>
+              </div>
+              <div style="height:280px;background:#f4f4f4;border-radius:8px;animation:shPulse 1.1s ease-in-out infinite"></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ dashReady }}" hint-placeholder-val="{{ true }}">
+          <div style="animation:shFade .2s ease-out">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px">
+              <div>
+                <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:6px">{{ todayLabel }}</div>
+                <h1 style="margin:0;font-size:26px;font-weight:600;letter-spacing:-0.02em">Good afternoon, You</h1>
+                <p style="margin:6px 0 0;color:#525252">{{ greetingLine }}</p>
+              </div>
+              <button onClick="{{ goBoard }}" style="display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;flex:none" style-hover="opacity:.88">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add task
+              </button>
+            </div>
+
+            <!-- KPI ROW -->
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">
+              <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Active tasks</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:500;line-height:1">{{ kpiActive }}</span>
+                <span style="font-size:12px;color:#737373">{{ kpiActiveSub }}</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Completed</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:500;line-height:1">{{ kpiDone }}</span>
+                <span style="font-size:12px;color:#737373">{{ kpiDoneSub }}</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Upcoming deadlines</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:500;line-height:1;color:{{ kpiDueColor }}">{{ kpiDue }}</span>
+                <span style="font-size:12px;color:#737373">{{ kpiDueSub }}</span>
+              </div>
+              <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Members</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:500;line-height:1">{{ kpiMembers }}</span>
+                <span style="font-size:12px;color:#737373">2 online now</span>
+              </div>
+            </div>
+
+            <!-- TREE + SIDE -->
+            <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px">
+              <!-- GROWTH TREE -->
+              <div style="background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:18px 20px;display:flex;flex-direction:column">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+                  <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Growth tree</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#525252">Sprint 14</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:center;flex:1;min-height:240px">{{ growthTree }}</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid #e4e4e4;padding-top:12px;margin-top:4px">
+                  <span style="font-size:13px;color:#525252">{{ treeCaption }}</span>
+                  <div style="display:flex;align-items:center;gap:14px;font-size:12px;color:#737373">
+                    <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:999px;border:1.5px solid #737373;box-sizing:border-box"></span>defined</span>
+                    <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:999px;background:#0a0a0a"></span>completed</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT COLUMN: progress + quick actions -->
+              <div style="display:flex;flex-direction:column;gap:16px">
+                <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Sprint progress</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500">{{ progressPct }}%</span>
+                  </div>
+                  <div style="height:8px;background:#f4f4f4;border-radius:999px;overflow:hidden">
+                    <div style="height:100%;width:{{ progressWidth }};background:#0a0a0a;border-radius:999px;transition:width .3s cubic-bezier(0.2,0,0,1)"></div>
+                  </div>
+                  <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:#737373">
+                    <span>{{ kpiDone }} done</span>
+                    <span>{{ kpiActive }} to go</span>
+                  </div>
+                </div>
+
+                <div style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px;flex:1">
+                  <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Quick actions</span>
+                  <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+                    <button onClick="{{ goBoard }}" style="{{ quickActionStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>Add a task</button>
+                    <button style="{{ quickActionStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Log a meeting</button>
+                    <button style="{{ quickActionStyle }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/></svg>Write a retro</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ BOARD ============ -->
+      <sc-if value="{{ isBoard }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1120px;margin:0 auto;padding:24px 22px 48px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+            <div>
+              <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em">Task board</h1>
+              <p style="margin:5px 0 0;color:#525252;font-size:13px">{{ boardSubtitle }}</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button onClick="{{ toggleSampleData }}" style="height:34px;padding:0 12px;background:transparent;border:1px solid #e4e4e4;border-radius:5px;color:#525252;font-size:13px;cursor:pointer" style-hover="background:#f4f4f4">{{ sampleToggleLabel }}</button>
+              <button onClick="{{ openComposer }}" style="{{ addTaskBtnStyle }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add task
+              </button>
+            </div>
+          </div>
+
+          <!-- EMPTY BOARD -->
+          <sc-if value="{{ boardEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #e4e4e4;border-radius:8px;padding:64px 24px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+              <div style="width:44px;height:44px;border-radius:8px;background:#fafafa;border:1px solid #e4e4e4;display:flex;align-items:center;justify-content:center">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+              </div>
+              <div style="font-weight:600;font-size:15px">No tasks in this sprint yet.</div>
+              <div style="color:#737373;font-size:13px;max-width:320px">Create the first task and it will grow a branch on the team's tree.</div>
+              <button onClick="{{ openComposer }}" style="{{ addTaskBtnStyle }}">Add task</button>
+            </div>
+          </sc-if>
+
+          <!-- COLUMNS -->
+          <sc-if value="{{ boardHasTasks }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start">
+
+            <!-- BACKLOG -->
+            <section style="background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px">
+                <span style="display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#525252"><span style="width:8px;height:8px;border-radius:999px;border:1.5px solid #d4d4d4;box-sizing:border-box"></span>Backlog</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#737373">{{ backlogCount }}</span>
+              </div>
+              <sc-if value="{{ composerOpen }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fff;border:1px solid #0a0a0a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:10px;animation:shFade .15s ease-out">
+                  <input value="{{ composerTitle }}" onInput="{{ onComposerInput }}" placeholder="Task title" autofocus="{{ true }}" style="border:none;outline:none;font-size:14px;font-weight:500;font-family:inherit;padding:0"/>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <button onClick="{{ submitComposer }}" disabled="{{ composerSaving }}" style="{{ composerSubmitStyle }}">{{ composerSubmitLabel }}</button>
+                    <button onClick="{{ closeComposer }}" style="height:30px;padding:0 10px;background:transparent;border:none;border-radius:5px;color:#737373;font-size:13px;cursor:pointer">Cancel</button>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-for list="{{ backlogTasks }}" as="t" hint-placeholder-count="2">
+                <div onClick="{{ t.onOpen }}" style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:border-color .12s" style-hover="border-color:#a3a3a3">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="{{ t.prioStyle }}">{{ t.priority }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a3a3a3">{{ t.id }}</span>
+                  </div>
+                  <div style="font-weight:500;font-size:14px;line-height:1.35">{{ t.title }}</div>
+                  <div style="font-size:12.5px;color:#737373;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ t.desc }}</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                    <span style="{{ t.dueStyle }}">{{ t.dueLabel }}</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="width:22px;height:22px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px" title="{{ t.assignee }}">{{ t.initials }}</span>
+                      <button onClick="{{ t.onToggle }}" title="Mark complete" style="{{ t.toggleStyle }}">{{ t.toggleIcon }}</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ backlogEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:16px 8px;text-align:center;color:#a3a3a3;font-size:12.5px">Nothing in backlog.</div>
+              </sc-if>
+            </section>
+
+            <!-- IN PROGRESS -->
+            <section style="background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px">
+                <span style="display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#525252"><span style="width:8px;height:8px;border-radius:999px;background:#737373"></span>In progress</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#737373">{{ progressCount }}</span>
+              </div>
+              <sc-for list="{{ progressTasks }}" as="t" hint-placeholder-count="1">
+                <div onClick="{{ t.onOpen }}" style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:border-color .12s" style-hover="border-color:#a3a3a3">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="{{ t.prioStyle }}">{{ t.priority }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a3a3a3">{{ t.id }}</span>
+                  </div>
+                  <div style="font-weight:500;font-size:14px;line-height:1.35">{{ t.title }}</div>
+                  <div style="font-size:12.5px;color:#737373;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ t.desc }}</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                    <span style="{{ t.dueStyle }}">{{ t.dueLabel }}</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="width:22px;height:22px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px" title="{{ t.assignee }}">{{ t.initials }}</span>
+                      <button onClick="{{ t.onToggle }}" title="Mark complete" style="{{ t.toggleStyle }}">{{ t.toggleIcon }}</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ progressEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:16px 8px;text-align:center;color:#a3a3a3;font-size:12.5px">Nothing due soon.</div>
+              </sc-if>
+            </section>
+
+            <!-- COMPLETED -->
+            <section style="background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:9px">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:2px 4px">
+                <span style="display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#525252"><span style="width:8px;height:8px;border-radius:999px;background:#0a0a0a"></span>Completed</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#737373">{{ doneCount }}</span>
+              </div>
+              <sc-for list="{{ doneTasks }}" as="t" hint-placeholder-count="2">
+                <div onClick="{{ t.onOpen }}" style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:border-color .12s;opacity:.72" style-hover="border-color:#a3a3a3;opacity:1">
+                  <div style="display:flex;align-items:center;justify-content:space-between">
+                    <span style="{{ t.prioStyle }}">{{ t.priority }}</span>
+                    <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a3a3a3">{{ t.id }}</span>
+                  </div>
+                  <div style="font-weight:500;font-size:14px;line-height:1.35;text-decoration:line-through;text-decoration-color:#a3a3a3">{{ t.title }}</div>
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                    <span style="{{ t.dueStyle }}">{{ t.dueLabel }}</span>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="width:22px;height:22px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px" title="{{ t.assignee }}">{{ t.initials }}</span>
+                      <button onClick="{{ t.onToggle }}" title="Reopen task" style="{{ t.toggleStyle }}">{{ t.toggleIcon }}</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ doneEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:16px 8px;text-align:center;color:#a3a3a3;font-size:12.5px">Nothing done yet.</div>
+              </sc-if>
+            </section>
+
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ TASK DETAIL ============ -->
+      <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:760px;margin:0 auto;padding:22px 22px 64px">
+          <button onClick="{{ goBoard }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 6px;background:transparent;border:none;border-radius:5px;color:#525252;font-size:13px;cursor:pointer;margin-bottom:16px" style-hover="background:#f4f4f4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            Back to board
+          </button>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#737373">{{ detailId }}</span>
+            <span style="{{ detailPrioStyle }}">{{ detailPriority }}</span>
+          </div>
+          <h1 style="margin:0 0 14px;font-size:26px;font-weight:600;letter-spacing:-0.02em;line-height:1.2">{{ detailTitle }}</h1>
+
+          <!-- META ROW -->
+          <div style="display:flex;flex-wrap:wrap;gap:22px;padding:14px 0;border-top:1px solid #e4e4e4;border-bottom:1px solid #e4e4e4;margin-bottom:22px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#a3a3a3">Status</span>
+              <span style="display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:500">{{ detailStatusDot }}{{ detailStatusLabel }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#a3a3a3">Due</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:{{ detailDueColor }}">{{ detailDue }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#a3a3a3">Assignees</span>
+              <span style="font-size:13px;font-weight:500">{{ detailAssigneeNames }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#a3a3a3">Comments</span>
+              <span style="font-family:'IBM Plex Mono',monospace;font-size:13px">{{ detailCommentCount }}</span>
+            </div>
+          </div>
+
+          <!-- DESCRIPTION -->
+          <div style="margin-bottom:24px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Description</span>
+            <textarea value="{{ detailDesc }}" onInput="{{ onDescInput }}" disabled="{{ readOnly }}" placeholder="Add a description..." style="{{ descStyle }}"></textarea>
+          </div>
+
+          <!-- FIELDS -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px">
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Priority</span>
+              <select value="{{ detailPriority }}" onChange="{{ onPriorityChange }}" disabled="{{ readOnly }}" style="{{ selectStyle }}">
+                <option value="LOW">Low</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="HIGH">High</option>
+              </select>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Due date</span>
+              <input type="date" value="{{ detailDueDate }}" onChange="{{ onDueChange }}" disabled="{{ readOnly }}" style="{{ selectStyle }}"/>
+            </div>
+          </div>
+
+          <!-- ASSIGNEES -->
+          <div style="margin-bottom:28px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Assignees</span>
+            <div style="display:flex;flex-direction:column;gap:2px;margin-top:8px;border:1px solid #e4e4e4;border-radius:8px;overflow:hidden">
+              <sc-for list="{{ assigneeOptions }}" as="a" hint-placeholder-count="4">
+                <label style="{{ a.rowStyle }}">
+                  <input type="checkbox" checked="{{ a.checked }}" disabled="{{ readOnly }}" onChange="{{ a.onToggle }}" style="width:16px;height:16px;accent-color:#0a0a0a;cursor:pointer"/>
+                  <span style="width:24px;height:24px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px">{{ a.initials }}</span>
+                  <span style="font-size:13px;font-weight:500">{{ a.name }}</span>
+                  <span style="margin-left:auto;font-size:12px;color:#a3a3a3">{{ a.roleLabel }}</span>
+                </label>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- ACTION BAR -->
+          <div style="display:flex;align-items:center;gap:10px;padding:16px 0;border-top:1px solid #e4e4e4;margin-bottom:28px">
+            <button onClick="{{ onToggleDetail }}" disabled="{{ readOnly }}" style="{{ detailCompleteStyle }}">{{ detailCompleteLabel }}</button>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:10px">
+              <sc-if value="{{ deleteBlocked }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;color:#a3a3a3;max-width:220px;text-align:right">{{ deleteBlockedNote }}</span>
+              </sc-if>
+              <button onClick="{{ onDelete }}" disabled="{{ deleteDisabled }}" style="{{ deleteBtnStyle }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- COMMENTS -->
+          <div>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:14px">Comments · {{ detailCommentCount }}</div>
+            <div style="display:flex;flex-direction:column;gap:16px;margin-bottom:18px">
+              <sc-for list="{{ detailComments }}" as="c" hint-placeholder-count="1">
+                <div style="display:flex;gap:11px;animation:shFade .2s ease-out">
+                  <span style="width:28px;height:28px;flex:none;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px">{{ c.initials }}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:baseline;gap:8px">
+                      <span style="font-size:13px;font-weight:600">{{ c.author }}</span>
+                      <span style="font-size:12px;color:#a3a3a3">{{ c.when }}</span>
+                    </div>
+                    <div style="font-size:13.5px;color:#3f3f3f;margin-top:3px">{{ c.body }}</div>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ noComments }}" hint-placeholder-val="{{ false }}">
+                <div style="color:#a3a3a3;font-size:13px">No comments yet. Start the thread.</div>
+              </sc-if>
+            </div>
+            <div style="display:flex;gap:11px;align-items:flex-start">
+              <span style="width:28px;height:28px;flex:none;border-radius:999px;background:#0a0a0a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:11px">Y</span>
+              <div style="flex:1">
+                <textarea value="{{ commentDraft }}" onInput="{{ onCommentInput }}" disabled="{{ readOnly }}" placeholder="{{ commentPlaceholder }}" style="{{ commentInputStyle }}"></textarea>
+                <div style="display:flex;justify-content:flex-end;margin-top:8px">
+                  <button onClick="{{ onPostComment }}" disabled="{{ postDisabled }}" style="{{ postBtnStyle }}">{{ postLabel }}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ MEETINGS LIST ============ -->
+      <sc-if value="{{ isMeetings }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1120px;margin:0 auto;padding:24px 22px 48px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+            <div>
+              <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em">Meetings</h1>
+              <p style="margin:5px 0 0;color:#525252;font-size:13px">{{ meetingSubtitle }}</p>
+            </div>
+            <button onClick="{{ onNewMeeting }}" style="{{ addTaskBtnStyle }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              New meeting
+            </button>
+          </div>
+          <sc-if value="{{ meetingsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #e4e4e4;border-radius:8px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+              <div style="font-weight:600;font-size:15px">No meetings logged yet.</div>
+              <div style="color:#737373;font-size:13px;max-width:340px">Record a meeting to build the raw material for auto-generated spec docs.</div>
+              <button onClick="{{ onNewMeeting }}" style="{{ addTaskBtnStyle }}">New meeting</button>
+            </div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ meetingList }}" as="m" hint-placeholder-count="2">
+              <div onClick="{{ m.onOpen }}" style="display:flex;align-items:center;gap:16px;background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:14px 16px;cursor:pointer;transition:border-color .12s" style-hover="border-color:#a3a3a3">
+                <div style="width:34px;height:34px;flex:none;border-radius:8px;background:#fafafa;border:1px solid #e4e4e4;display:flex;align-items:center;justify-content:center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600;font-size:14px">{{ m.title }}</div>
+                  <div style="font-size:12.5px;color:#737373;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px">{{ m.summaryPreview }}</div>
+                </div>
+                <div style="text-align:right;flex:none">
+                  <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#3f3f3f">{{ m.dateLabel }}</div>
+                  <div style="font-size:12px;color:#a3a3a3;margin-top:3px">{{ m.author }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ MEETING DETAIL ============ -->
+      <sc-if value="{{ isMeeting }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:820px;margin:0 auto;padding:22px 22px 64px">
+          <button onClick="{{ goMeetings }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 6px;background:transparent;border:none;border-radius:5px;color:#525252;font-size:13px;cursor:pointer;margin-bottom:16px" style-hover="background:#f4f4f4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            All meetings
+          </button>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:6px">
+            <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.2">{{ mTitle }}</h1>
+            <sc-if value="{{ mCanEdit }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ onDeleteMeeting }}" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#b42318;font-size:13px;font-weight:500;cursor:pointer;flex:none" style-hover="background:#f4f4f4">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Delete
+              </button>
+            </sc-if>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:#737373;padding-bottom:16px;border-bottom:1px solid #e4e4e4;margin-bottom:22px">
+            <span style="display:inline-flex;align-items:center;gap:6px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span style="font-family:'IBM Plex Mono',monospace;color:#3f3f3f">{{ mWhen }}</span></span>
+            <span style="display:inline-flex;align-items:center;gap:6px">Logged by {{ mAuthor }}</span>
+          </div>
+
+          <sc-if value="{{ mReadOnlyNote }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;font-size:12.5px;color:#525252;margin-bottom:22px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Only {{ mAuthor }} or a team leader can edit this meeting. You're viewing it read-only.
+            </div>
+          </sc-if>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Summary</span>
+            <button style="display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;background:#fff;border:1px dashed #d4d4d4;border-radius:5px;color:#737373;font-size:12px;cursor:default">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2 11 7l5 1.5L11 10l-1.5 5L8 10l-5-1.5L8 7z"/></svg>
+              Generate spec (soon)
+            </button>
+          </div>
+          <textarea value="{{ mSummary }}" onInput="{{ onMSummaryInput }}" disabled="{{ mReadOnly }}" style="{{ mSummaryStyle }}"></textarea>
+
+          <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin:24px 0 10px">Raw transcript</div>
+          <textarea value="{{ mRaw }}" onInput="{{ onMRawInput }}" disabled="{{ mReadOnly }}" style="{{ mRawStyle }}"></textarea>
+
+          <sc-if value="{{ mCanEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:flex-end;margin-top:18px">
+              <button onClick="{{ onSaveMeeting }}" style="{{ mSaveStyle }}">{{ mSaveLabel }}</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ SPEC LIST ============ -->
+      <sc-if value="{{ isSpecs }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1120px;margin:0 auto;padding:24px 22px 48px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+            <div>
+              <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em">Spec docs</h1>
+              <p style="margin:5px 0 0;color:#525252;font-size:13px">{{ specSubtitle }}</p>
+            </div>
+            <button onClick="{{ onNewSpec }}" style="{{ specNewBtnStyle }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              New spec
+            </button>
+          </div>
+          <sc-if value="{{ specsEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #e4e4e4;border-radius:8px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+              <div style="font-weight:600;font-size:15px">No spec docs yet.</div>
+              <div style="color:#737373;font-size:13px;max-width:360px">Generate one from your meeting notes, or start from a blank document.</div>
+              <button onClick="{{ onNewSpec }}" style="{{ specNewBtnStyle }}">New spec</button>
+            </div>
+          </sc-if>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ specList }}" as="s" hint-placeholder-count="2">
+              <div onClick="{{ s.onOpen }}" style="display:flex;align-items:center;gap:16px;background:#fff;border:1px solid {{ s.borderColor }};border-radius:8px;padding:14px 16px;cursor:pointer;transition:border-color .12s" style-hover="border-color:#a3a3a3">
+                <div style="width:34px;height:34px;flex:none;border-radius:8px;background:#fafafa;border:1px solid #e4e4e4;display:flex;align-items:center;justify-content:center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#525252" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v5h5"/><path d="M9 13h6"/><path d="M9 17h6"/></svg>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-weight:600;font-size:14px">{{ s.title }}</span>
+                    <sc-if value="{{ s.isMain }}" hint-placeholder-val="{{ false }}">
+                      <span style="display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 8px;border-radius:999px;background:#0a0a0a;color:#fff;font-size:10px;font-weight:600;letter-spacing:0.04em">MAIN</span>
+                    </sc-if>
+                  </div>
+                  <div style="font-size:12.5px;color:#737373;margin-top:2px">{{ s.metaLine }}</div>
+                </div>
+                <span style="{{ s.statusStyle }}">{{ s.statusLabel }}</span>
+                <button onClick="{{ s.onSetMain }}" style="{{ s.setMainStyle }}">{{ s.setMainLabel }}</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SPEC NEW (generate / blank) ============ -->
+      <sc-if value="{{ isSpecNew }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:820px;margin:0 auto;padding:22px 22px 64px">
+          <button onClick="{{ goSpecs }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 6px;background:transparent;border:none;border-radius:5px;color:#525252;font-size:13px;cursor:pointer;margin-bottom:16px" style-hover="background:#f4f4f4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            All specs
+          </button>
+
+          <!-- PHASE: pick -->
+          <sc-if value="{{ specPickPhase }}" hint-placeholder-val="{{ true }}">
+            <h1 style="margin:0 0 6px;font-size:24px;font-weight:600;letter-spacing:-0.02em">New spec doc</h1>
+            <p style="margin:0 0 22px;color:#525252;font-size:13.5px">Select the meetings to generate from, or start with a blank document.</p>
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:10px">Source meetings</div>
+            <div style="display:flex;flex-direction:column;gap:2px;border:1px solid #e4e4e4;border-radius:8px;overflow:hidden;margin-bottom:22px">
+              <sc-for list="{{ specMeetingOptions }}" as="m" hint-placeholder-count="2">
+                <label style="{{ m.rowStyle }}">
+                  <input type="checkbox" checked="{{ m.checked }}" onChange="{{ m.onToggle }}" style="width:16px;height:16px;accent-color:#0a0a0a;cursor:pointer"/>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:13.5px;font-weight:500">{{ m.title }}</div>
+                    <div style="font-size:12px;color:#737373;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">{{ m.summaryPreview }}</div>
+                  </div>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#a3a3a3;flex:none">{{ m.dateLabel }}</span>
+                </label>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onClick="{{ onGenerateSpec }}" style="{{ generateBtnStyle }}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2 11 7l5 1.5L11 10l-1.5 5L8 10l-5-1.5L8 7z"/></svg>
+                {{ generateBtnLabel }}
+              </button>
+              <button onClick="{{ onStartBlank }}" style="height:38px;padding:0 15px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#3f3f3f;font-size:13.5px;font-weight:500;cursor:pointer" style-hover="background:#f4f4f4">Start from blank</button>
+              <span style="font-size:12.5px;color:#a3a3a3;margin-left:auto">{{ specPickCountLabel }}</span>
+            </div>
+          </sc-if>
+
+          <!-- PHASE: generating -->
+          <sc-if value="{{ specGenPhase }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #e4e4e4;border-radius:8px;padding:64px 24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center">
+              <div style="width:26px;height:26px;border:2.5px solid #e4e4e4;border-top-color:#0a0a0a;border-radius:999px;animation:shSpin .7s linear infinite"></div>
+              <div style="font-weight:600;font-size:15px">Generating spec…</div>
+              <div style="color:#737373;font-size:13px;max-width:340px">Reading {{ specGenCount }} and drafting a structured document.</div>
+            </div>
+          </sc-if>
+
+          <!-- PHASE: edit draft -->
+          <sc-if value="{{ specEditPhase }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">
+              <sc-if value="{{ specDraftGenerated }}" hint-placeholder-val="{{ false }}">
+                <span style="display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 10px;border-radius:999px;background:#fafafa;border:1px solid #e4e4e4;font-size:12px;color:#525252">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2 11 7l5 1.5L11 10l-1.5 5L8 10l-5-1.5L8 7z"/></svg>
+                  Draft from {{ specDraftSourceLabel }}
+                </span>
+              </sc-if>
+            </div>
+            <input value="{{ specDraftTitle }}" onInput="{{ onSpecDraftTitle }}" placeholder="Spec title" style="width:100%;border:none;outline:none;font-family:inherit;font-size:24px;font-weight:600;letter-spacing:-0.02em;padding:0;margin-bottom:16px;box-sizing:border-box"/>
+            <textarea value="{{ specDraftBody }}" onInput="{{ onSpecDraftBody }}" placeholder="Write the spec…" style="width:100%;min-height:360px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.7;color:#0a0a0a;border:1px solid #e4e4e4;border-radius:8px;padding:16px 18px;outline:none;box-sizing:border-box;background:#fff"></textarea>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:18px">
+              <button onClick="{{ onConfirmSpec }}" style="height:38px;padding:0 18px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer">Confirm spec</button>
+              <button onClick="{{ onBackToPick }}" style="height:38px;padding:0 14px;background:transparent;border:none;border-radius:5px;color:#737373;font-size:13.5px;cursor:pointer" style-hover="background:#f4f4f4">Back</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ SPEC DETAIL ============ -->
+      <sc-if value="{{ isSpec }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:820px;margin:0 auto;padding:22px 22px 64px">
+          <button onClick="{{ goSpecs }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 6px;background:transparent;border:none;border-radius:5px;color:#525252;font-size:13px;cursor:pointer;margin-bottom:16px" style-hover="background:#f4f4f4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            All specs
+          </button>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.2">{{ sTitle }}</h1>
+              <sc-if value="{{ sIsMain }}" hint-placeholder-val="{{ false }}">
+                <span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;background:#0a0a0a;color:#fff;font-size:10px;font-weight:600;letter-spacing:0.04em">MAIN</span>
+              </sc-if>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex:none">
+              <button onClick="{{ onToggleMain }}" style="{{ sMainBtnStyle }}">{{ sMainBtnLabel }}</button>
+              <sc-if value="{{ sCanEdit }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ onDeleteSpec }}" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#b42318;font-size:13px;font-weight:500;cursor:pointer" style-hover="background:#f4f4f4">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  Delete
+                </button>
+              </sc-if>
+            </div>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:#737373;padding-bottom:16px;border-bottom:1px solid #e4e4e4;margin-bottom:22px">
+            <span>{{ sMetaLine }}</span>
+            <sc-if value="{{ sHasSources }}" hint-placeholder-val="{{ false }}">
+              <span style="display:inline-flex;align-items:center;gap:6px">From {{ sSourceLabel }}</span>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ sReadOnlyNote }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;font-size:12.5px;color:#525252;margin-bottom:22px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              You have view-only access to this team.
+            </div>
+          </sc-if>
+
+          <textarea value="{{ sBody }}" onInput="{{ onSpecBodyInput }}" disabled="{{ sReadOnly }}" style="{{ sBodyStyle }}"></textarea>
+          <sc-if value="{{ sCanEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;justify-content:flex-end;margin-top:18px">
+              <button onClick="{{ onSaveSpec }}" style="height:34px;padding:0 16px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer">Save changes</button>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <!-- ============ RETRO LIST ============ -->
+      <sc-if value="{{ isRetros }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:1120px;margin:0 auto;padding:24px 22px 48px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px">
+            <div>
+              <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em">Retro</h1>
+              <p style="margin:5px 0 0;color:#525252;font-size:13px">{{ retroSubtitle }}</p>
+            </div>
+            <button onClick="{{ onNewRetro }}" style="{{ addTaskBtnStyle }}">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+              New entry
+            </button>
+          </div>
+          <sc-if value="{{ retrosEmpty }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px solid #e4e4e4;border-radius:8px;padding:56px 24px;display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center">
+              <div style="font-weight:600;font-size:15px">No retro entries yet.</div>
+              <div style="color:#737373;font-size:13px;max-width:340px">Log what you did, what's next, and what you need — one short entry a day.</div>
+              <button onClick="{{ onNewRetro }}" style="{{ addTaskBtnStyle }}">New entry</button>
+            </div>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px">
+            <sc-for list="{{ retroList }}" as="r" hint-placeholder-count="2">
+              <div onClick="{{ r.onOpen }}" style="background:#fff;border:1px solid #e4e4e4;border-radius:8px;padding:16px;cursor:pointer;transition:border-color .12s;display:flex;flex-direction:column;gap:10px" style-hover="border-color:#a3a3a3">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font-weight:600;font-size:14px">{{ r.title }}</span>
+                  <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a3a3a3">{{ r.dateLabel }}</span>
+                </div>
+                <div style="font-size:12.5px;color:#737373;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.preview }}</div>
+                <div style="display:flex;align-items:center;gap:8px;margin-top:2px">
+                  <span style="width:22px;height:22px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px">{{ r.authorInitials }}</span>
+                  <span style="font-size:12px;color:#525252">{{ r.author }}</span>
+                  <sc-if value="{{ r.hasCollab }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12px;color:#a3a3a3;margin-left:auto">+{{ r.collabCount }} collaborating</span>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ RETRO DETAIL ============ -->
+      <sc-if value="{{ isRetro }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:760px;margin:0 auto;padding:22px 22px 64px">
+          <button onClick="{{ goRetros }}" style="display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 8px 0 6px;background:transparent;border:none;border-radius:5px;color:#525252;font-size:13px;cursor:pointer;margin-bottom:16px" style-hover="background:#f4f4f4">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            All entries
+          </button>
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:6px">
+            <h1 style="margin:0;font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.2">{{ rTitle }}</h1>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#a3a3a3;flex:none;margin-top:8px">{{ rWhen }}</span>
+          </div>
+          <div style="font-size:13px;color:#737373;padding-bottom:16px;border-bottom:1px solid #e4e4e4;margin-bottom:22px">By {{ rAuthor }}</div>
+
+          <sc-if value="{{ rReadOnlyNote }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;font-size:12.5px;color:#525252;margin-bottom:22px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              {{ rReadOnlyNote }}
+            </div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:22px">
+            <div>
+              <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:8px">Yesterday</div>
+              <textarea value="{{ rYesterday }}" onInput="{{ onRField1 }}" disabled="{{ rReadOnly }}" style="{{ rFieldStyle }}"></textarea>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:8px">Today</div>
+              <textarea value="{{ rToday }}" onInput="{{ onRField2 }}" disabled="{{ rReadOnly }}" style="{{ rFieldStyle }}"></textarea>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:8px">Questions, needs &amp; findings</div>
+              <textarea value="{{ rNotes }}" onInput="{{ onRField3 }}" disabled="{{ rReadOnly }}" style="{{ rFieldStyle }}"></textarea>
+            </div>
+          </div>
+
+          <!-- COLLABORATORS -->
+          <div style="margin-top:28px;padding-top:22px;border-top:1px solid #e4e4e4">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <span style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373">Collaborators</span>
+              <sc-if value="{{ rCollabLocked }}" hint-placeholder-val="{{ false }}">
+                <span style="font-size:12px;color:#a3a3a3">Only {{ rAuthor }} can change this list</span>
+              </sc-if>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;border:1px solid #e4e4e4;border-radius:8px;overflow:hidden">
+              <sc-for list="{{ collabOptions }}" as="c" hint-placeholder-count="4">
+                <label style="{{ c.rowStyle }}">
+                  <input type="checkbox" checked="{{ c.checked }}" disabled="{{ c.disabled }}" onChange="{{ c.onToggle }}" style="width:16px;height:16px;accent-color:#0a0a0a;cursor:pointer"/>
+                  <span style="width:24px;height:24px;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:10px">{{ c.initials }}</span>
+                  <span style="font-size:13px;font-weight:500">{{ c.name }}</span>
+                  <span style="margin-left:auto;font-size:12px;color:#a3a3a3">{{ c.tag }}</span>
+                </label>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ MEMBERS ============ -->
+      <sc-if value="{{ isMembers }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:900px;margin:0 auto;padding:24px 22px 48px">
+          <div style="margin-bottom:20px">
+            <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em">Members</h1>
+            <p style="margin:5px 0 0;color:#525252;font-size:13px">{{ membersSubtitle }}</p>
+          </div>
+          <sc-if value="{{ membersReadOnlyNote }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;font-size:12.5px;color:#525252;margin-bottom:16px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Only the team leader can reassign leadership or remove members.
+            </div>
+          </sc-if>
+          <div style="border:1px solid #e4e4e4;border-radius:8px;overflow:hidden">
+            <sc-for list="{{ memberRows }}" as="m" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #f4f4f4;background:#fff">
+                <span style="width:34px;height:34px;flex:none;border-radius:999px;background:#ececec;color:#525252;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12px">{{ m.initials }}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:600;font-size:14px">{{ m.name }}</div>
+                  <div style="font-size:12.5px;color:#737373">{{ m.email }}</div>
+                </div>
+                <span style="{{ m.roleStyle }}">{{ m.role }}</span>
+                <div style="display:flex;align-items:center;gap:8px;width:220px;justify-content:flex-end">
+                  <sc-if value="{{ m.showActions }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ m.onPromote }}" style="height:30px;padding:0 11px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#3f3f3f;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:#f4f4f4">Make leader</button>
+                    <button onClick="{{ m.onRemove }}" style="height:30px;padding:0 11px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#b42318;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:#f4f4f4">Remove</button>
+                  </sc-if>
+                  <sc-if value="{{ m.isYou }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size:12px;color:#a3a3a3">You</span>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- ============ SETTINGS ============ -->
+      <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:720px;margin:0 auto;padding:24px 22px 64px">
+          <div style="margin-bottom:20px">
+            <h1 style="margin:0;font-size:22px;font-weight:600;letter-spacing:-0.02em">Team settings</h1>
+            <p style="margin:5px 0 0;color:#525252;font-size:13px">Manage team info, the join password, and the invite code.</p>
+          </div>
+
+          <sc-if value="{{ settingsLocked }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;font-size:12.5px;color:#525252;margin-bottom:22px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Only the team leader can change these settings. You have read-only access.
+            </div>
+          </sc-if>
+
+          <!-- Team info -->
+          <section style="border:1px solid #e4e4e4;border-radius:8px;padding:20px;margin-bottom:16px">
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:16px">Team info</div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <label style="font-size:13px;font-weight:500">Team name</label>
+                <input value="{{ setName }}" onInput="{{ onSetName }}" disabled="{{ settingsLocked }}" style="{{ setInputStyle }}"/>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <label style="font-size:13px;font-weight:500">Description</label>
+                <textarea value="{{ setDesc }}" onInput="{{ onSetDesc }}" disabled="{{ settingsLocked }}" style="{{ setTextareaStyle }}"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <!-- Join password -->
+          <section style="border:1px solid #e4e4e4;border-radius:8px;padding:20px;margin-bottom:16px">
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:6px">Join password</div>
+            <p style="margin:0 0 16px;font-size:13px;color:#737373">{{ passwordStatus }}</p>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input type="password" value="{{ setPassword }}" onInput="{{ onSetPassword }}" disabled="{{ settingsLocked }}" placeholder="New password" style="{{ setInputStyle }}"/>
+              <button onClick="{{ onSavePassword }}" disabled="{{ settingsLocked }}" style="{{ setBtnStyle }}">Update</button>
+              <sc-if value="{{ hasPassword }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ onRemovePassword }}" disabled="{{ settingsLocked }}" style="{{ setDangerBtnStyle }}">Remove</button>
+              </sc-if>
+            </div>
+          </section>
+
+          <!-- Invite code -->
+          <section style="border:1px solid #e4e4e4;border-radius:8px;padding:20px">
+            <div style="font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#737373;margin-bottom:6px">Invite code</div>
+            <p style="margin:0 0 16px;font-size:13px;color:#737373">Share this code so teammates can join instantly from the teams page.</p>
+            <div style="display:flex;gap:10px;align-items:center">
+              <div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:10px;background:#fafafa;border:1px solid #e4e4e4;border-radius:8px;padding:0 6px 0 14px;height:44px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:500;letter-spacing:0.12em">{{ inviteCode }}</span>
+                <button onClick="{{ onCopyCode }}" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#3f3f3f;font-size:12.5px;font-weight:500;cursor:pointer" style-hover="background:#f4f4f4">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  {{ copyLabel }}
+                </button>
+              </div>
+              <button onClick="{{ onRegenCode }}" disabled="{{ settingsLocked }}" style="{{ setBtnStyle }}">Regenerate</button>
+            </div>
+          </section>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+</div>
+</sc-if>
+
+  <!-- TOAST -->
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0a0a0a;color:#fff;font-size:13px;padding:10px 16px;border-radius:8px;box-shadow:0 4px 16px rgba(10,10,10,.16);animation:shFade .18s ease-out;z-index:50">{{ toast }}</div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:840}}">
+class Component extends DCLogic {
+  state = {
+    stage: 'auth',
+    authMode: 'login',
+    authName: '',
+    authEmail: '',
+    authPassword: '',
+    authError: '',
+    joinCode: '',
+    teamSearch: '',
+    teamPwId: null,
+    teamPwValue: '',
+    teamList: [
+      { id: 'orbit', name: 'Orbit Web Team', description: 'A small product team shipping the ScrumMate web app.', leader: 'Mina Cho', members: 4, access: 'password', joined: true },
+      { id: 'atlas', name: 'Atlas Mobile', description: 'iOS and Android client for the field-ops platform.', leader: 'Dana Lee', members: 6, access: 'public', joined: false },
+      { id: 'delta', name: 'Delta Data', description: 'Analytics pipeline and reporting squad.', leader: 'Sam Okoro', members: 3, access: 'public', joined: false },
+      { id: 'nova', name: 'Nova Infra', description: 'Cloud and platform reliability.', leader: 'Priya Nair', members: 5, access: 'password', joined: false },
+    ],
+    screen: 'dashboard',
+    role: 'leader',
+    selectedTaskId: 'SM-142',
+    booting: true,
+    saving: null,
+    composerOpen: false,
+    composerTitle: '',
+    composerSaving: false,
+    commentDraft: '',
+    posting: false,
+    toast: null,
+    seq: 143,
+    tasks: [
+      { id: 'SM-142', title: 'Wire up invite-code join flow', desc: 'Members should be able to paste a code on the teams page and join instantly, no leader approval needed.', priority: 'HIGH', due: 1, completed: false, assignees: ['Mina Cho'] },
+      { id: 'SM-138', title: 'Draft sprint 14 retro template', desc: 'Three sections: yesterday, today, and blockers. Reuse across the team.', priority: 'MEDIUM', due: 5, completed: false, assignees: ['Ravi Patel'] },
+      { id: 'SM-131', title: 'Fix board column drag placeholder', desc: 'Placeholder height jumps when dragging tall cards between columns.', priority: 'LOW', due: 9, completed: false, assignees: ['Mina Cho'] },
+      { id: 'SM-127', title: 'Ship dashboard KPI cards', desc: 'Active, completed, upcoming deadlines and members.', priority: 'HIGH', due: -2, completed: true, assignees: ['Jae Kim'] },
+      { id: 'SM-120', title: 'Set up CI for API tests', desc: 'Run the JUnit suite on every pull request.', priority: 'MEDIUM', due: -4, completed: true, assignees: ['Ravi Patel'] },
+    ],
+    backup: null,
+    comments: {
+      'SM-142': [{ author: 'Jae Kim', when: '2 days ago', body: 'Backend endpoint is ready — you can hit POST /teams/join.' }],
+    },
+    members: ['Mina Cho', 'Ravi Patel', 'Jae Kim', 'You'],
+    memberDetails: [
+      { name: 'Mina Cho', email: 'mina@orbitweb.io', role: 'LEADER' },
+      { name: 'Ravi Patel', email: 'ravi@orbitweb.io', role: 'MEMBER' },
+      { name: 'Jae Kim', email: 'jae@orbitweb.io', role: 'MEMBER' },
+      { name: 'You', email: 'you@orbitweb.io', role: 'MEMBER' },
+    ],
+    selectedMeetingId: 'MTG-08',
+    meetings: [
+      { id: 'MTG-08', title: 'Sprint 14 planning', meetingAt: '2026-07-01T10:00', author: 'Mina Cho', summary: 'Committed to the invite-code flow and dashboard KPIs for sprint 14. Ravi takes CI, Jae owns the board fixes.', rawContent: 'Mina: Let\u2019s lock scope. Invite-code join is the headline.\nRavi: I\u2019ll pick up CI for the API tests.\nJae: Board drag placeholder is flaky, I\u2019ll take that.\nMina: Good. Dashboard KPI cards should ship this sprint too.' },
+      { id: 'MTG-07', title: 'Weekly sync', meetingAt: '2026-06-24T10:00', author: 'Jae Kim', summary: 'Reviewed last sprint velocity. Two carry-over tasks. Agreed to trim retro ceremony to 10 minutes.', rawContent: 'Jae: Velocity dipped slightly, two carry-overs.\nMina: Let\u2019s keep retros to 10 minutes.\nRavi: Agreed.' },
+    ],
+    selectedRetroId: 'RET-21',
+    retros: [
+      { id: 'RET-21', title: 'Wednesday standup', createdAt: '2026-07-02', author: 'Ravi Patel', collaborators: ['Jae Kim'], yesterdayWork: 'Set up the CI pipeline skeleton and got the JUnit suite running locally.', todayWork: 'Wire CI into pull requests and fix the two flaky tests.', notes: 'Need someone to review the invite-code endpoint before I can integrate.' },
+      { id: 'RET-20', title: 'Tuesday standup', createdAt: '2026-07-01', author: 'Mina Cho', collaborators: [], yesterdayWork: 'Scoped the invite-code join flow with the team.', todayWork: 'Start on the teams-page paste-to-join UI.', notes: 'Deciding whether leader approval is ever required — leaning no.' },
+    ],
+    team: { name: 'Orbit Web Team', description: 'A small product team shipping the ScrumMate web app.', hasPassword: true, inviteCode: 'ORBIT-4K9X' },
+    setPassword: '',
+    copied: false,
+    selectedSpecId: 'SPEC-2',
+    specSeq: 3,
+    specPhase: 'pick',
+    specPick: [],
+    specDraftTitle: '',
+    specDraftBody: '',
+    specDraftSources: [],
+    specGenerating: false,
+    specs: [
+      { id: 'SPEC-2', title: 'Invite-code join flow — spec', createdAt: '2026-07-02', status: 'confirmed', isMain: true, sources: ['MTG-08'], body: 'OVERVIEW\nLet teammates join a team by pasting an invite code on the teams page, with no leader approval step.\n\nGOALS\n- Reduce time-to-join to a single paste-and-confirm.\n- Keep password teams and public teams working unchanged.\n\nSCOPE\n- Teams page: invite-code input with a Join action.\n- Backend: POST /teams/join validates the code and adds the member.\n\nOPEN QUESTIONS\n- Do we ever require leader approval? Current decision: no.' },
+      { id: 'SPEC-1', title: 'Sprint 14 dashboard — spec', createdAt: '2026-06-25', status: 'confirmed', isMain: false, sources: [], body: 'OVERVIEW\nA team dashboard summarising sprint state at a glance.\n\nGOALS\n- Surface active tasks, completed count, upcoming deadlines and member count.\n- Show sprint progress and the growth tree.\n\nSCOPE\n- KPI row, growth-tree widget, progress bar, quick actions.' },
+    ],
+  };
+
+  componentDidMount() {
+  }
+  componentWillUnmount() { clearTimeout(this._t); if (this._toastT) clearTimeout(this._toastT); }
+
+  enterApp() {
+    this.setState({ stage: 'app', screen: 'dashboard', booting: true });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ booting: false }), 750);
+  }
+
+  initials(name) {
+    return name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  }
+  flash(msg) {
+    this.setState({ toast: msg });
+    if (this._toastT) clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => this.setState({ toast: null }), 2200);
+  }
+  colOf(t) {
+    if (t.completed) return 'done';
+    if (t.due <= 2) return 'progress';
+    return 'backlog';
+  }
+  dueLabel(t) {
+    if (t.completed) return 'Completed';
+    const d = t.due;
+    if (d < 0) return (-d) + 'd overdue';
+    if (d === 0) return 'Due today';
+    if (d === 1) return 'Due tomorrow';
+    return 'In ' + d + ' days';
+  }
+  dueDateISO(t) {
+    const base = new Date(2026, 6, 3);
+    base.setDate(base.getDate() + t.due);
+    const m = String(base.getMonth() + 1).padStart(2, '0');
+    const d = String(base.getDate()).padStart(2, '0');
+    return base.getFullYear() + '-' + m + '-' + d;
+  }
+  prioStyle(p) {
+    const base = 'display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:3px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;font-weight:600;letter-spacing:0.04em;';
+    if (p === 'HIGH') return base + 'background:#0a0a0a;color:#fff;';
+    if (p === 'MEDIUM') return base + 'background:#f4f4f4;color:#3f3f3f;border:1px solid #e4e4e4;';
+    return base + 'background:#fff;color:#737373;border:1px solid #e4e4e4;';
+  }
+  dueStyle(t) {
+    const base = 'font-family:\'IBM Plex Mono\',monospace;font-size:11px;';
+    if (!t.completed && t.due < 0) return base + 'color:#b42318;font-weight:500;';
+    if (!t.completed && t.due <= 2) return base + 'color:#3f3f3f;';
+    return base + 'color:#737373;';
+  }
+  toggleStyle(completed) {
+    const base = 'width:24px;height:24px;flex:none;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;cursor:pointer;transition:background .12s,border-color .12s;';
+    if (completed) return base + 'background:#0a0a0a;border:1px solid #0a0a0a;color:#fff;';
+    return base + 'background:#fff;border:1px solid #d4d4d4;color:#a3a3a3;';
+  }
+  checkSVG(on) {
+    return React.createElement('svg', { width: 13, height: 13, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' },
+      React.createElement('path', { d: on ? 'M20 6 9 17l-5-5' : 'M20 6 9 17l-5-5' }));
+  }
+
+  buildTree(tasks) {
+    const total = tasks.length;
+    const cx = 120, baseY = 196, topY = 58;
+    const els = [];
+    // ground
+    els.push(React.createElement('line', { key: 'g', x1: 44, y1: 198, x2: 196, y2: 198, stroke: '#d4d4d4', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    for (let i = 0; i < 5; i++) {
+      const gx = 60 + i * 22;
+      els.push(React.createElement('line', { key: 'gt' + i, x1: gx, y1: 198, x2: gx - 4, y2: 191, stroke: '#e4e4e4', strokeWidth: 1.5, strokeLinecap: 'round' }));
+    }
+    // trunk
+    els.push(React.createElement('path', { key: 'trunk', d: 'M120 196 C119 158 120 118 120 ' + topY, stroke: '#0a0a0a', strokeWidth: 3, fill: 'none', strokeLinecap: 'round' }));
+    // branches — one per task (defined). fruit when completed.
+    tasks.forEach((t, i) => {
+      const side = i % 2 === 0 ? 1 : -1;
+      const attachY = 172 - i * 20;
+      const spread = 30 + (total - i) * 4;
+      const endX = cx + side * spread;
+      const endY = attachY - 30 - i * 2;
+      const ctrlX = cx + side * (spread * 0.42);
+      const ctrlY = attachY - 6;
+      els.push(React.createElement('path', {
+        key: 'b' + i,
+        d: 'M' + cx + ' ' + attachY + ' Q' + ctrlX + ' ' + ctrlY + ' ' + endX + ' ' + endY,
+        stroke: '#0a0a0a', strokeWidth: 1.8, fill: 'none', strokeLinecap: 'round',
+      }));
+      // leaves (task defined) — small outlined circles at the tip
+      const offs = [[-7, -1], [7, -3], [0, -11]];
+      offs.forEach((o, j) => {
+        els.push(React.createElement('circle', {
+          key: 'l' + i + '-' + j, cx: endX + o[0] * (side > 0 ? 1 : -1), cy: endY + o[1], r: 3.2,
+          fill: '#fafafa', stroke: '#737373', strokeWidth: 1.2,
+        }));
+      });
+      // fruit (completed)
+      if (t.completed) {
+        els.push(React.createElement('circle', {
+          key: 'f' + i, cx: endX + side * 2, cy: endY + 3, r: 4.2, fill: '#0a0a0a',
+        }));
+      }
+    });
+    return React.createElement('svg', { width: 240, height: 210, viewBox: '0 0 240 210', style: { display: 'block' } }, els);
+  }
+
+  setScreen(s, id) { this.setState(st => ({ screen: s, selectedTaskId: id || st.selectedTaskId })); }
+
+  toggleComplete(id) {
+    if (this.state.role === 'viewer') return;
+    this.setState({ saving: id });
+    setTimeout(() => {
+      this.setState(st => {
+        const tasks = st.tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+        const now = tasks.find(t => t.id === id);
+        return { tasks, saving: null };
+      }, () => {
+        const t = this.state.tasks.find(x => x.id === id);
+        this.flash(t.completed ? t.id + ' moved to done. A fruit appears on the tree.' : t.id + ' reopened.');
+      });
+    }, 550);
+  }
+
+  renderVals() {
+    const st = this.state;
+    const role = st.role;
+    const isViewer = role === 'viewer';
+    const readOnly = isViewer;
+    const tasks = st.tasks;
+
+    const total = tasks.length;
+    const doneList = tasks.filter(t => t.completed);
+    const activeList = tasks.filter(t => !t.completed);
+    const dueSoon = activeList.filter(t => t.due <= 2);
+    const progPct = total ? Math.round((doneList.length / total) * 100) : 0;
+
+    const mkView = (t) => ({
+      id: t.id, title: t.title, desc: t.desc, priority: t.priority,
+      initials: this.initials(t.assignees[0] || '?'), assignee: t.assignees.join(', '),
+      dueLabel: this.dueLabel(t), prioStyle: this.prioStyle(t.priority), dueStyle: this.dueStyle(t),
+      toggleStyle: this.toggleStyle(t.completed),
+      toggleIcon: this.checkSVG(t.completed),
+      onOpen: () => this.setScreen('detail', t.id),
+      onToggle: (e) => { if (e && e.stopPropagation) e.stopPropagation(); this.toggleComplete(t.id); },
+    });
+
+    const backlogTasks = tasks.filter(t => this.colOf(t) === 'backlog').map(mkView);
+    const progressTasks = tasks.filter(t => this.colOf(t) === 'progress').map(mkView);
+    const doneTasks = tasks.filter(t => this.colOf(t) === 'done').map(mkView);
+
+    // ---- detail ----
+    const dt = tasks.find(t => t.id === st.selectedTaskId) || tasks[0] || null;
+    let detail = {};
+    if (dt) {
+      const col = this.colOf(dt);
+      const statusMap = { backlog: 'Backlog', progress: 'In progress', done: 'Completed' };
+      const dotColor = dt.completed ? '#0a0a0a' : (col === 'progress' ? '#737373' : 'transparent');
+      const dotBorder = (!dt.completed && col === 'backlog') ? '1.5px solid #d4d4d4' : 'none';
+      const canDelete = role === 'leader' || dt.assignees.includes('You');
+      const deleteBlocked = !isViewer && !canDelete;
+      detail = {
+        detailId: dt.id, detailTitle: dt.title, detailPriority: dt.priority,
+        detailPrioStyle: this.prioStyle(dt.priority),
+        detailDesc: dt.desc, detailDue: this.dueLabel(dt), detailDueDate: this.dueDateISO(dt),
+        detailDueColor: (!dt.completed && dt.due < 0) ? '#b42318' : '#0a0a0a',
+        detailStatusLabel: statusMap[col],
+        detailStatusDot: React.createElement('span', { style: { width: 8, height: 8, borderRadius: 999, background: dotColor, border: dotBorder, boxSizing: 'border-box', display: 'inline-block' } }),
+        detailAssigneeNames: dt.assignees.join(', ') || 'Unassigned',
+        detailCommentCount: (st.comments[dt.id] || []).length,
+        detailComments: (st.comments[dt.id] || []).map(c => ({ ...c, initials: this.initials(c.author) })),
+        noComments: (st.comments[dt.id] || []).length === 0,
+        assigneeOptions: st.members.map(m => ({
+          name: m, initials: this.initials(m), checked: dt.assignees.includes(m),
+          roleLabel: m === 'You' ? 'you' : '',
+          rowStyle: 'display:flex;align-items:center;gap:11px;padding:10px 12px;background:#fff;border-bottom:1px solid #f4f4f4;cursor:' + (readOnly ? 'default' : 'pointer') + ';',
+          onToggle: () => {
+            if (readOnly) return;
+            this.setState(s => ({
+              tasks: s.tasks.map(x => x.id === dt.id ? { ...x, assignees: x.assignees.includes(m) ? x.assignees.filter(a => a !== m) : [...x.assignees, m] } : x),
+            }));
+          },
+        })),
+        detailCompleteLabel: st.saving === dt.id ? 'Saving…' : (dt.completed ? 'Mark as not done' : 'Mark complete'),
+        detailCompleteStyle: (dt.completed
+          ? 'display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;background:#fff;border:1px solid #e4e4e4;border-radius:5px;color:#3f3f3f;font-weight:500;'
+          : 'display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 16px;background:#0a0a0a;border:1px solid #0a0a0a;border-radius:5px;color:#fff;font-weight:500;')
+          + (readOnly ? 'opacity:.45;cursor:default;pointer-events:none;' : 'cursor:pointer;'),
+        onToggleDetail: () => this.toggleComplete(dt.id),
+        deleteBlocked,
+        deleteDisabled: deleteBlocked || isViewer,
+        deleteBlockedNote: 'Only the assignee or a team leader can delete this task.',
+        deleteBtnStyle: 'display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 14px;background:#fff;border:1px solid ' + ((deleteBlocked || isViewer) ? '#e4e4e4' : '#e4e4e4') + ';border-radius:5px;color:' + ((deleteBlocked || isViewer) ? '#d4d4d4' : '#b42318') + ';font-weight:500;cursor:' + ((deleteBlocked || isViewer) ? 'default' : 'pointer') + ';',
+        onDelete: () => {
+          if (deleteBlocked || isViewer) return;
+          this.setState(s => {
+            const tasks = s.tasks.filter(t => t.id !== dt.id);
+            return { tasks, screen: 'board' };
+          }, () => this.flash(dt.id + ' deleted.'));
+        },
+        onDescInput: (e) => { const v = e.target.value; this.setState(s => ({ tasks: s.tasks.map(t => t.id === dt.id ? { ...t, desc: v } : t) })); },
+        onPriorityChange: (e) => { const v = e.target.value; this.setState(s => ({ tasks: s.tasks.map(t => t.id === dt.id ? { ...t, priority: v } : t) })); },
+        onDueChange: () => {},
+        commentPlaceholder: isViewer ? 'View-only access' : 'Write a comment...',
+        postLabel: st.posting ? 'Posting…' : 'Comment',
+        postDisabled: isViewer || st.posting || !st.commentDraft.trim(),
+        postBtnStyle: 'height:32px;padding:0 14px;border-radius:5px;font-weight:500;font-size:13px;border:1px solid #0a0a0a;background:#0a0a0a;color:#fff;cursor:pointer;' + ((isViewer || st.posting || !st.commentDraft.trim()) ? 'opacity:.4;pointer-events:none;' : ''),
+        onCommentInput: (e) => { const v = e.target.value; this.setState({ commentDraft: v }); },
+        onPostComment: () => {
+          if (isViewer || !st.commentDraft.trim()) return;
+          this.setState({ posting: true });
+          setTimeout(() => {
+            this.setState(s => {
+              const list = (s.comments[dt.id] || []).concat([{ author: 'You', when: 'just now', body: s.commentDraft.trim() }]);
+              return { comments: { ...s.comments, [dt.id]: list }, commentDraft: '', posting: false };
+            });
+          }, 500);
+        },
+      };
+    }
+
+    const inputBase = 'width:100%;font-family:inherit;font-size:14px;color:#0a0a0a;background:#fff;border:1px solid #e4e4e4;border-radius:5px;padding:9px 11px;outline:none;box-sizing:border-box;';
+    const descStyle = 'width:100%;min-height:96px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.6;color:#0a0a0a;background:' + (readOnly ? '#fafafa' : '#fff') + ';border:1px solid #e4e4e4;border-radius:8px;padding:12px 14px;outline:none;margin-top:8px;box-sizing:border-box;' + (readOnly ? 'color:#525252;' : '');
+
+    return {
+      // stage
+      isAuth: st.stage === 'auth',
+      isTeams: st.stage === 'teams',
+      inApp: st.stage === 'app',
+      // nav / chrome
+      isDashboard: st.screen === 'dashboard',
+      isBoard: st.screen === 'board',
+      isDetail: st.screen === 'detail',
+      isMeetings: st.screen === 'meetings',
+      isMeeting: st.screen === 'meeting',
+      isSpecs: st.screen === 'specs',
+      isSpecNew: st.screen === 'specNew',
+      isSpec: st.screen === 'spec',
+      isRetros: st.screen === 'retros',
+      isRetro: st.screen === 'retro',
+      isMembers: st.screen === 'members',
+      isSettings: st.screen === 'settings',
+      booting: st.booting && st.screen === 'dashboard',
+      dashReady: !(st.booting && st.screen === 'dashboard'),
+      isViewer,
+      readOnly,
+      crumb: this.crumbFor(st, dt),
+      openCount: activeList.length,
+      meetingCount: st.meetings.length,
+      retroCount: st.retros.length,
+      specCount: st.specs.length,
+      memberNavCount: st.memberDetails.length,
+      goDashboard: () => this.setScreen('dashboard'),
+      goBoard: () => this.setState({ screen: 'board' }),
+      goMeetings: () => this.setState({ screen: 'meetings' }),
+      goSpecs: () => this.setState({ screen: 'specs' }),
+      goRetros: () => this.setState({ screen: 'retros' }),
+      goMembers: () => this.setState({ screen: 'members' }),
+      goSettings: () => this.setState({ screen: 'settings' }),
+      onOpenTeam: () => this.setState({ stage: 'teams' }),
+      onLogout: () => this.setState({ stage: 'auth', authMode: 'login', authPassword: '', authError: '' }),
+      navDashStyle: this.navStyle(st.screen === 'dashboard'),
+      navTaskStyle: this.navStyle(st.screen === 'board' || st.screen === 'detail'),
+      navMeetingsStyle: this.navStyle(st.screen === 'meetings' || st.screen === 'meeting'),
+      navSpecStyle: this.navStyle(st.screen === 'specs' || st.screen === 'specNew' || st.screen === 'spec'),
+      navRetroStyle: this.navStyle(st.screen === 'retros' || st.screen === 'retro'),
+      navMembersStyle: this.navStyle(st.screen === 'members'),
+      navSettingsStyle: this.navStyle(st.screen === 'settings'),
+      // role switch
+      setLeader: () => this.setState({ role: 'leader' }),
+      setMember: () => this.setState({ role: 'member' }),
+      setViewer: () => this.setState({ role: 'viewer' }),
+      roleStyleLeader: this.roleBtn(role === 'leader'),
+      roleStyleMember: this.roleBtn(role === 'member'),
+      roleStyleViewer: this.roleBtn(role === 'viewer'),
+
+      // dashboard
+      todayLabel: 'Friday, July 3',
+      greetingLine: activeList.length + ' active ' + (activeList.length === 1 ? 'task' : 'tasks') + ', ' + dueSoon.length + ' due soon.',
+      kpiActive: activeList.length,
+      kpiActiveSub: dueSoon.length + ' due within 2 days',
+      kpiDone: doneList.length,
+      kpiDoneSub: progPct + '% of sprint',
+      kpiDue: dueSoon.length,
+      kpiDueColor: dueSoon.some(t => t.due < 0) ? '#b42318' : '#0a0a0a',
+      kpiDueSub: dueSoon.some(t => t.due < 0) ? 'includes overdue' : 'next 48 hours',
+      kpiMembers: st.members.length,
+      growthTree: this.buildTree(tasks),
+      treeCaption: doneList.length + ' of ' + total + ' tasks bearing fruit',
+      progressPct: progPct,
+      progressWidth: progPct + '%',
+      quickActionStyle: 'display:inline-flex;align-items:center;gap:9px;width:100%;height:36px;padding:0 12px;background:#fff;border:1px solid #e4e4e4;border-radius:6px;color:#0a0a0a;font-size:13px;font-weight:500;cursor:pointer;text-align:left;',
+
+      // board
+      boardSubtitle: total + ' tasks · ' + doneList.length + ' done · ' + dueSoon.length + ' due soon',
+      boardEmpty: total === 0,
+      boardHasTasks: total > 0,
+      backlogTasks, progressTasks, doneTasks,
+      backlogCount: backlogTasks.length, progressCount: progressTasks.length, doneCount: doneTasks.length,
+      backlogEmpty: backlogTasks.length === 0 && !st.composerOpen,
+      progressEmpty: progressTasks.length === 0,
+      doneEmpty: doneTasks.length === 0,
+      sampleToggleLabel: total === 0 ? 'Restore sample data' : 'Empty sprint',
+      toggleSampleData: () => {
+        if (this.state.tasks.length === 0) {
+          this.setState(s => ({ tasks: s.backup || [], backup: null }));
+          this.flash('Sample tasks restored.');
+        } else {
+          this.setState(s => ({ backup: s.tasks, tasks: [], composerOpen: false }));
+          this.flash('Sprint emptied — showing the empty state.');
+        }
+      },
+      addTaskBtnStyle: 'display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;' + (isViewer ? 'opacity:.4;pointer-events:none;' : ''),
+      openComposer: () => { if (isViewer) return; this.setState({ screen: 'board', composerOpen: true, composerTitle: '' }); },
+      closeComposer: () => this.setState({ composerOpen: false, composerTitle: '' }),
+      composerOpen: st.composerOpen,
+      composerTitle: st.composerTitle,
+      composerSaving: st.composerSaving,
+      composerSubmitLabel: st.composerSaving ? 'Adding…' : 'Add task',
+      composerSubmitStyle: 'height:30px;padding:0 12px;border-radius:5px;font-weight:500;font-size:13px;border:1px solid #0a0a0a;background:#0a0a0a;color:#fff;cursor:pointer;' + ((st.composerSaving || !st.composerTitle.trim()) ? 'opacity:.4;pointer-events:none;' : ''),
+      onComposerInput: (e) => { const v = e.target.value; this.setState({ composerTitle: v }); },
+      submitComposer: () => {
+        if (!st.composerTitle.trim()) return;
+        this.setState({ composerSaving: true });
+        setTimeout(() => {
+          this.setState(s => {
+            const id = 'SM-' + s.seq;
+            const nt = { id, title: s.composerTitle.trim(), desc: '', priority: 'MEDIUM', due: 6, completed: false, assignees: ['You'] };
+            return { tasks: [nt, ...s.tasks], seq: s.seq + 1, composerSaving: false, composerOpen: false, composerTitle: '' };
+          }, () => this.flash('Task added. A new branch grows on the tree.'));
+        }, 600);
+      },
+
+      // detail
+      descStyle, selectStyle: inputBase,
+      commentDraft: st.commentDraft,
+      commentInputStyle: 'width:100%;min-height:60px;resize:vertical;font-family:inherit;font-size:13.5px;line-height:1.5;color:#0a0a0a;background:' + (isViewer ? '#fafafa' : '#fff') + ';border:1px solid #e4e4e4;border-radius:8px;padding:10px 12px;outline:none;box-sizing:border-box;',
+      ...detail,
+      ...this.buildMeetings(st, role, isViewer),
+      ...this.buildSpecs(st, role, isViewer),
+      ...this.buildRetros(st, role, isViewer),
+      ...this.buildMembers(st, role, isViewer),
+      ...this.buildSettings(st, role, isViewer),
+      ...this.buildAuth(st),
+      ...this.buildTeams(st),
+
+      toast: st.toast,
+    };
+  }
+
+  roleBtn(active) {
+    return 'flex:1;height:26px;border:none;border-radius:5px;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;' + (active ? 'background:#0a0a0a;color:#fff;' : 'background:transparent;color:#525252;');
+  }
+
+  navStyle(active) {
+    return 'display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:6px;cursor:pointer;font-weight:500;' + (active ? 'background:#0a0a0a;color:#fff;' : 'color:#3f3f3f;');
+  }
+
+  crumbFor(st, dt) {
+    switch (st.screen) {
+      case 'dashboard': return 'Dashboard';
+      case 'board': return 'Task board';
+      case 'detail': return dt ? dt.id : 'Task';
+      case 'meetings': return 'Meetings';
+      case 'meeting': { const m = st.meetings.find(x => x.id === st.selectedMeetingId); return m ? m.id : 'Meeting'; }
+      case 'specs': return 'Spec docs';
+      case 'specNew': return 'New spec';
+      case 'spec': { const s = st.specs.find(x => x.id === st.selectedSpecId); return s ? s.title : 'Spec'; }
+      case 'retros': return 'Retro';
+      case 'retro': { const r = st.retros.find(x => x.id === st.selectedRetroId); return r ? r.id : 'Retro'; }
+      case 'members': return 'Members';
+      case 'settings': return 'Settings';
+      default: return '';
+    }
+  }
+
+  fmtDateTime(iso) {
+    const d = new Date(iso);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return months[d.getMonth()] + ' ' + d.getDate() + ', ' + hh + ':' + mm;
+  }
+  fmtDate(iso) {
+    const d = new Date(iso);
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[d.getMonth()] + ' ' + d.getDate();
+  }
+
+  buildMeetings(st, role, isViewer) {
+    const inputRO = 'background:#fafafa;color:#525252;';
+    const m = st.meetings.find(x => x.id === st.selectedMeetingId) || st.meetings[0] || null;
+    const canEdit = m ? (!isViewer && (role === 'leader' || m.author === 'You')) : false;
+    const readOnly = !canEdit;
+    const summaryStyle = 'width:100%;min-height:90px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.6;color:#0a0a0a;border:1px solid #e4e4e4;border-radius:8px;padding:12px 14px;outline:none;box-sizing:border-box;' + (readOnly ? inputRO : 'background:#fff;');
+    const rawStyle = 'width:100%;min-height:160px;resize:vertical;font-family:\'IBM Plex Mono\',monospace;font-size:12.5px;line-height:1.7;color:#3f3f3f;border:1px solid #e4e4e4;border-radius:8px;padding:12px 14px;outline:none;box-sizing:border-box;background:' + (readOnly ? '#fafafa' : '#fafafa') + ';';
+    return {
+      meetingSubtitle: st.meetings.length + ' logged',
+      meetingsEmpty: st.meetings.length === 0,
+      addTaskBtnStyle: 'display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;' + (isViewer ? 'opacity:.4;pointer-events:none;' : ''),
+      onNewMeeting: () => { if (isViewer) return; this.flash('New-meeting composer is out of scope for this prototype.'); },
+      meetingList: st.meetings.map(x => ({
+        title: x.title, author: x.author, dateLabel: this.fmtDate(x.meetingAt),
+        summaryPreview: x.summary,
+        onOpen: () => this.setState({ screen: 'meeting', selectedMeetingId: x.id }),
+      })),
+      // detail
+      mTitle: m ? m.title : '', mAuthor: m ? m.author : '', mWhen: m ? this.fmtDateTime(m.meetingAt) : '',
+      mSummary: m ? m.summary : '', mRaw: m ? m.rawContent : '',
+      mCanEdit: canEdit, mReadOnly: readOnly,
+      mReadOnlyNote: m ? readOnly && !isViewer : false,
+      mSummaryStyle: summaryStyle, mRawStyle: rawStyle,
+      mSaveLabel: 'Save changes', mSaveStyle: 'height:34px;padding:0 16px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;',
+      onMSummaryInput: (e) => { const v = e.target.value; this.setState(s => ({ meetings: s.meetings.map(x => x.id === m.id ? { ...x, summary: v } : x) })); },
+      onMRawInput: (e) => { const v = e.target.value; this.setState(s => ({ meetings: s.meetings.map(x => x.id === m.id ? { ...x, rawContent: v } : x) })); },
+      onSaveMeeting: () => this.flash(m.id + ' saved.'),
+      onDeleteMeeting: () => { if (m) this.setState(s => ({ meetings: s.meetings.filter(x => x.id !== m.id), screen: 'meetings' }), () => this.flash(m.id + ' deleted.')); },
+    };
+  }
+
+  genSpecBody(meetings) {
+    const titles = meetings.map(m => m.title).join(', ');
+    const summaries = meetings.map(m => '- ' + m.summary).join('\n');
+    const raw = meetings.map(m => m.rawContent).join('\n');
+    const decisions = [];
+    const questions = [];
+    raw.split('\n').forEach(line => {
+      const l = line.toLowerCase();
+      if (l.includes('let\u2019s') || l.includes('agreed') || l.includes('will') || l.includes('i\u2019ll') || l.includes('should')) decisions.push('- ' + line.trim());
+      if (line.trim().endsWith('?')) questions.push('- ' + line.trim());
+    });
+    let body = 'OVERVIEW\nDrafted from ' + meetings.length + ' meeting' + (meetings.length === 1 ? '' : 's') + ' (' + titles + ').\n\n';
+    body += 'SUMMARY\n' + summaries + '\n\n';
+    body += 'DECISIONS & COMMITMENTS\n' + (decisions.length ? decisions.join('\n') : '- (none captured)') + '\n\n';
+    body += 'SCOPE\n- Describe the work implied by the decisions above.\n\n';
+    body += 'OPEN QUESTIONS\n' + (questions.length ? questions.join('\n') : '- (none captured)') + '\n';
+    return body;
+  }
+
+  buildSpecs(st, role, isViewer) {
+    const spec = st.specs.find(x => x.id === st.selectedSpecId) || st.specs[0] || null;
+    const canEdit = !isViewer;
+    const specNewBtnStyle = 'display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;' + (isViewer ? 'opacity:.4;pointer-events:none;' : '');
+    const pickCount = st.specPick.length;
+    // spec detail read-only note
+    const sReadOnly = isViewer;
+    return {
+      specSubtitle: st.specs.length + ' docs · ' + (st.specs.some(s => s.isMain) ? '1 main' : 'no main set'),
+      specsEmpty: st.specs.length === 0,
+      specNewBtnStyle,
+      onNewSpec: () => { if (isViewer) return; this.setState({ screen: 'specNew', specPhase: 'pick', specPick: [], specDraftTitle: '', specDraftBody: '', specDraftSources: [], specGenerating: false }); },
+      specList: st.specs.map(s => ({
+        title: s.title, isMain: s.isMain,
+        borderColor: s.isMain ? '#0a0a0a' : '#e4e4e4',
+        metaLine: (s.sources.length ? s.sources.length + ' source meeting' + (s.sources.length === 1 ? '' : 's') : 'Written from blank') + ' · ' + this.fmtDate(s.createdAt),
+        statusLabel: s.status === 'confirmed' ? 'Confirmed' : 'Draft',
+        statusStyle: 'font-size:12px;font-weight:500;flex:none;color:' + (s.status === 'confirmed' ? '#525252' : '#a3a3a3') + ';',
+        setMainLabel: s.isMain ? 'Main' : 'Set as main',
+        setMainStyle: 'height:30px;padding:0 11px;border-radius:5px;font-size:12.5px;font-weight:500;flex:none;' + (s.isMain ? 'background:#f4f4f4;color:#a3a3a3;border:1px solid #e4e4e4;cursor:default;pointer-events:none;' : 'background:#fff;color:#3f3f3f;border:1px solid #e4e4e4;cursor:pointer;') + (isViewer ? 'opacity:.5;pointer-events:none;' : ''),
+        onOpen: () => this.setState({ screen: 'spec', selectedSpecId: s.id }),
+        onSetMain: (e) => { if (e && e.stopPropagation) e.stopPropagation(); if (isViewer || s.isMain) return; this.setState(st2 => ({ specs: st2.specs.map(x => ({ ...x, isMain: x.id === s.id })) }), () => this.flash('"' + s.title + '" is now the main spec.')); },
+      })),
+      // NEW flow phases
+      specPickPhase: st.specPhase === 'pick',
+      specGenPhase: st.specPhase === 'generating',
+      specEditPhase: st.specPhase === 'edit',
+      specPickCountLabel: pickCount === 0 ? 'No meetings selected' : pickCount + ' selected',
+      specGenCount: st.specPick.length + ' meeting' + (st.specPick.length === 1 ? '' : 's'),
+      specMeetingOptions: st.meetings.map(m => ({
+        title: m.title, summaryPreview: m.summary, dateLabel: this.fmtDate(m.meetingAt),
+        checked: st.specPick.includes(m.id),
+        rowStyle: 'display:flex;align-items:center;gap:11px;padding:12px 14px;background:#fff;border-bottom:1px solid #f4f4f4;cursor:pointer;',
+        onToggle: () => this.setState(st2 => ({ specPick: st2.specPick.includes(m.id) ? st2.specPick.filter(x => x !== m.id) : [...st2.specPick, m.id] })),
+      })),
+      generateBtnLabel: pickCount > 0 ? 'Generate from ' + pickCount + ' meeting' + (pickCount === 1 ? '' : 's') : 'Generate spec',
+      generateBtnStyle: 'display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 16px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;' + (pickCount === 0 ? 'opacity:.4;pointer-events:none;' : ''),
+      onGenerateSpec: () => {
+        if (st.specPick.length === 0) return;
+        this.setState({ specPhase: 'generating', specGenerating: true });
+        setTimeout(() => {
+          this.setState(st2 => {
+            const chosen = st2.meetings.filter(m => st2.specPick.includes(m.id));
+            const title = (chosen[0] ? chosen[0].title : 'New') + ' — spec';
+            return { specPhase: 'edit', specGenerating: false, specDraftTitle: title, specDraftBody: this.genSpecBody(chosen), specDraftSources: st2.specPick.slice() };
+          });
+        }, 1100);
+      },
+      onStartBlank: () => this.setState({ specPhase: 'edit', specDraftTitle: 'Untitled spec', specDraftBody: '', specDraftSources: [] }),
+      specDraftTitle: st.specDraftTitle,
+      specDraftBody: st.specDraftBody,
+      specDraftGenerated: st.specDraftSources.length > 0,
+      specDraftSourceLabel: st.specDraftSources.map(id => { const m = st.meetings.find(x => x.id === id); return m ? m.title : id; }).join(', '),
+      onSpecDraftTitle: (e) => { const v = e.target.value; this.setState({ specDraftTitle: v }); },
+      onSpecDraftBody: (e) => { const v = e.target.value; this.setState({ specDraftBody: v }); },
+      onBackToPick: () => this.setState({ specPhase: 'pick' }),
+      onConfirmSpec: () => {
+        this.setState(st2 => {
+          const id = 'SPEC-' + st2.specSeq;
+          const nt = { id, title: st2.specDraftTitle.trim() || 'Untitled spec', body: st2.specDraftBody, sources: st2.specDraftSources.slice(), status: 'confirmed', isMain: st2.specs.length === 0, createdAt: '2026-07-03' };
+          return { specs: [nt, ...st2.specs], specSeq: st2.specSeq + 1, screen: 'specs', selectedSpecId: id };
+        }, () => this.flash('Spec confirmed and saved.'));
+      },
+      // DETAIL
+      sTitle: spec ? spec.title : '', sIsMain: spec ? spec.isMain : false,
+      sBody: spec ? spec.body : '', sCanEdit: canEdit, sReadOnly,
+      sReadOnlyNote: sReadOnly,
+      sHasSources: spec ? spec.sources.length > 0 : false,
+      sSourceLabel: spec ? spec.sources.map(id => { const m = st.meetings.find(x => x.id === id); return m ? m.title : id; }).join(', ') : '',
+      sMetaLine: spec ? ((spec.sources.length ? spec.sources.length + ' source meeting' + (spec.sources.length === 1 ? '' : 's') : 'Written from blank') + ' · ' + this.fmtDate(spec.createdAt)) : '',
+      sBodyStyle: 'width:100%;min-height:380px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.7;color:#0a0a0a;border:1px solid #e4e4e4;border-radius:8px;padding:16px 18px;outline:none;box-sizing:border-box;background:' + (sReadOnly ? '#fafafa' : '#fff') + ';',
+      sMainBtnLabel: spec && spec.isMain ? 'Main spec' : 'Set as main',
+      sMainBtnStyle: 'height:32px;padding:0 12px;border-radius:5px;font-size:13px;font-weight:500;flex:none;' + (spec && spec.isMain ? 'background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;cursor:default;pointer-events:none;' : 'background:#fff;color:#3f3f3f;border:1px solid #e4e4e4;cursor:pointer;') + (isViewer ? 'opacity:.4;pointer-events:none;' : ''),
+      onToggleMain: () => { if (isViewer || !spec || spec.isMain) return; this.setState(st2 => ({ specs: st2.specs.map(x => ({ ...x, isMain: x.id === spec.id })) }), () => this.flash('"' + spec.title + '" is now the main spec.')); },
+      onSpecBodyInput: (e) => { const v = e.target.value; if (!spec) return; this.setState(st2 => ({ specs: st2.specs.map(x => x.id === spec.id ? { ...x, body: v } : x) })); },
+      onSaveSpec: () => { if (spec) this.flash(spec.title + ' saved.'); },
+      onDeleteSpec: () => { if (isViewer || !spec) return; this.setState(st2 => ({ specs: st2.specs.filter(x => x.id !== spec.id), screen: 'specs' }), () => this.flash('Spec deleted.')); },
+    };
+  }
+
+  buildRetros(st, role, isViewer) {
+    const r = st.retros.find(x => x.id === st.selectedRetroId) || st.retros[0] || null;
+    const isAuthor = r ? r.author === 'You' : false;
+    const isCollab = r ? r.collaborators.includes('You') : false;
+    const canEditBody = !isViewer && (isAuthor || isCollab);
+    const readOnly = !canEditBody;
+    const collabLocked = !isAuthor || isViewer;
+    let readOnlyNote = '';
+    if (isViewer) readOnlyNote = 'You have view-only access to this team.';
+    else if (readOnly) readOnlyNote = 'Only ' + (r ? r.author : 'the author') + ' and their collaborators can edit this entry.';
+    const fieldStyle = 'width:100%;min-height:70px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.6;color:#0a0a0a;border:1px solid #e4e4e4;border-radius:8px;padding:11px 13px;outline:none;box-sizing:border-box;background:' + (readOnly ? '#fafafa' : '#fff') + ';' + (readOnly ? 'color:#525252;' : '');
+    return {
+      retroSubtitle: st.retros.length + ' entries',
+      retrosEmpty: st.retros.length === 0,
+      onNewRetro: () => { if (isViewer) return; this.flash('New-entry composer is out of scope for this prototype.'); },
+      retroList: st.retros.map(x => ({
+        title: x.title, author: x.author, authorInitials: this.initials(x.author),
+        dateLabel: this.fmtDate(x.createdAt), preview: x.yesterdayWork,
+        hasCollab: x.collaborators.length > 0, collabCount: x.collaborators.length,
+        onOpen: () => this.setState({ screen: 'retro', selectedRetroId: x.id }),
+      })),
+      // detail
+      rTitle: r ? r.title : '', rAuthor: r ? r.author : '', rWhen: r ? this.fmtDate(r.createdAt) : '',
+      rYesterday: r ? r.yesterdayWork : '', rToday: r ? r.todayWork : '', rNotes: r ? r.notes : '',
+      rReadOnly: readOnly, rReadOnlyNote: readOnlyNote,
+      rCollabLocked: collabLocked, rFieldStyle: fieldStyle,
+      onRField1: (e) => { const v = e.target.value; this.setState(s => ({ retros: s.retros.map(x => x.id === r.id ? { ...x, yesterdayWork: v } : x) })); },
+      onRField2: (e) => { const v = e.target.value; this.setState(s => ({ retros: s.retros.map(x => x.id === r.id ? { ...x, todayWork: v } : x) })); },
+      onRField3: (e) => { const v = e.target.value; this.setState(s => ({ retros: s.retros.map(x => x.id === r.id ? { ...x, notes: v } : x) })); },
+      collabOptions: r ? st.members.filter(mm => mm !== r.author).map(mm => ({
+        name: mm, initials: this.initials(mm), checked: r.collaborators.includes(mm),
+        disabled: collabLocked, tag: r.collaborators.includes(mm) ? 'collaborator' : '',
+        rowStyle: 'display:flex;align-items:center;gap:11px;padding:10px 12px;background:#fff;border-bottom:1px solid #f4f4f4;cursor:' + (collabLocked ? 'default' : 'pointer') + ';',
+        onToggle: () => {
+          if (collabLocked) return;
+          this.setState(s => ({ retros: s.retros.map(x => x.id === r.id ? { ...x, collaborators: x.collaborators.includes(mm) ? x.collaborators.filter(a => a !== mm) : [...x.collaborators, mm] } : x) }));
+        },
+      })) : [],
+    };
+  }
+
+  buildMembers(st, role, isViewer) {
+    const isLeaderView = role === 'leader';
+    return {
+      membersSubtitle: st.memberDetails.length + ' members · 1 leader',
+      membersReadOnlyNote: !isLeaderView,
+      memberRows: st.memberDetails.map(m => {
+        const isLeader = m.role === 'LEADER';
+        const isYou = m.name === 'You';
+        const roleStyle = 'display:inline-flex;align-items:center;height:22px;padding:0 9px;border-radius:999px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;font-weight:600;letter-spacing:0.04em;flex:none;' + (isLeader ? 'background:#0a0a0a;color:#fff;' : 'background:#f4f4f4;color:#525252;border:1px solid #e4e4e4;');
+        return {
+          name: m.name, email: m.email, role: m.role, initials: this.initials(m.name),
+          roleStyle, isYou,
+          showActions: isLeaderView && !isLeader && !isYou,
+          onPromote: () => this.setState(s => ({ memberDetails: s.memberDetails.map(x => ({ ...x, role: x.name === m.name ? 'LEADER' : (x.role === 'LEADER' ? 'MEMBER' : x.role) })) }), () => this.flash(m.name + ' is now the team leader.')),
+          onRemove: () => this.setState(s => ({ memberDetails: s.memberDetails.filter(x => x.name !== m.name), members: s.members.filter(n => n !== m.name) }), () => this.flash(m.name + ' removed from the team.')),
+        };
+      }),
+    };
+  }
+
+  buildSettings(st, role, isViewer) {
+    const locked = role !== 'leader';
+    const inputStyle = 'flex:1;width:100%;font-family:inherit;font-size:14px;color:#0a0a0a;background:' + (locked ? '#fafafa' : '#fff') + ';border:1px solid #e4e4e4;border-radius:5px;padding:9px 11px;outline:none;box-sizing:border-box;' + (locked ? 'color:#525252;' : '');
+    return {
+      settingsLocked: locked,
+      setName: st.team.name, setDesc: st.team.description,
+      setInputStyle: inputStyle,
+      setTextareaStyle: 'width:100%;min-height:70px;resize:vertical;font-family:inherit;font-size:14px;line-height:1.6;color:#0a0a0a;background:' + (locked ? '#fafafa' : '#fff') + ';border:1px solid #e4e4e4;border-radius:8px;padding:11px 13px;outline:none;box-sizing:border-box;',
+      onSetName: (e) => { const v = e.target.value; this.setState(s => ({ team: { ...s.team, name: v } })); },
+      onSetDesc: (e) => { const v = e.target.value; this.setState(s => ({ team: { ...s.team, description: v } })); },
+      hasPassword: st.team.hasPassword,
+      passwordStatus: st.team.hasPassword ? 'This team requires a password to join.' : 'This team is open — anyone can join without a password.',
+      setPassword: st.setPassword,
+      onSetPassword: (e) => { const v = e.target.value; this.setState({ setPassword: v }); },
+      onSavePassword: () => { if (locked) return; this.setState(s => ({ team: { ...s.team, hasPassword: true }, setPassword: '' }), () => this.flash('Join password updated.')); },
+      onRemovePassword: () => { if (locked) return; this.setState(s => ({ team: { ...s.team, hasPassword: false }, setPassword: '' }), () => this.flash('Join password removed. The team is now open.')); },
+      setBtnStyle: 'height:44px;padding:0 16px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;cursor:pointer;flex:none;' + (locked ? 'opacity:.4;pointer-events:none;' : ''),
+      setDangerBtnStyle: 'height:44px;padding:0 14px;background:#fff;color:#b42318;border:1px solid #e4e4e4;border-radius:5px;font-weight:500;cursor:pointer;flex:none;' + (locked ? 'opacity:.4;pointer-events:none;' : ''),
+      inviteCode: st.team.inviteCode,
+      copyLabel: st.copied ? 'Copied' : 'Copy',
+      onCopyCode: () => {
+        try { navigator.clipboard && navigator.clipboard.writeText(st.team.inviteCode); } catch (e) {}
+        this.setState({ copied: true });
+        setTimeout(() => this.setState({ copied: false }), 1600);
+      },
+      onRegenCode: () => {
+        if (locked) return;
+        const code = 'ORBIT-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+        this.setState(s => ({ team: { ...s.team, inviteCode: code } }), () => this.flash('New invite code generated.'));
+      },
+    };
+  }
+
+  buildAuth(st) {
+    const isSignup = st.authMode === 'signup';
+    const authInputStyle = 'width:100%;font-family:inherit;font-size:14px;color:#0a0a0a;background:#fff;border:1px solid #e4e4e4;border-radius:5px;padding:10px 12px;outline:none;box-sizing:border-box;';
+    return {
+      isSignup,
+      authTagline: isSignup ? 'Structure for small teams, without the ceremony.' : 'Welcome back.',
+      authHeading: isSignup ? 'Create your account' : 'Log in',
+      authName: st.authName, authEmail: st.authEmail, authPassword: st.authPassword,
+      authError: st.authError,
+      authInputStyle,
+      authSubmitLabel: isSignup ? 'Create account' : 'Log in',
+      authSubmitStyle: 'width:100%;height:40px;background:#0a0a0a;color:#fff;border:1px solid #0a0a0a;border-radius:5px;font-weight:500;font-size:14px;cursor:pointer;margin-top:4px;',
+      authSwitchText: isSignup ? 'Already have an account?' : 'New to Scrum Helper?',
+      authSwitchCta: isSignup ? 'Log in' : 'Create an account',
+      onAuthName: (e) => { const v = e.target.value; this.setState({ authName: v, authError: '' }); },
+      onAuthEmail: (e) => { const v = e.target.value; this.setState({ authEmail: v, authError: '' }); },
+      onAuthPassword: (e) => { const v = e.target.value; this.setState({ authPassword: v, authError: '' }); },
+      onAuthSwitch: () => this.setState(s => ({ authMode: s.authMode === 'login' ? 'signup' : 'login', authError: '' })),
+      onAuthSubmit: () => {
+        const s = this.state;
+        if (s.authMode === 'signup' && !s.authName.trim()) { this.setState({ authError: 'Enter your name to continue.' }); return; }
+        if (!s.authEmail.trim()) { this.setState({ authError: 'Enter your email address.' }); return; }
+        if (!s.authPassword.trim()) { this.setState({ authError: 'Enter your password.' }); return; }
+        this.setState({ stage: 'teams', authError: '', authPassword: '' });
+      },
+    };
+  }
+
+  buildTeams(st) {
+    const q = st.teamSearch.trim().toLowerCase();
+    const filtered = st.teamList.filter(t => !q || t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+    const accessStyleBase = 'display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:500;flex:none;border:1px solid #e4e4e4;';
+    return {
+      joinCode: st.joinCode, teamSearch: st.teamSearch,
+      teamsListEmpty: filtered.length === 0,
+      onJoinCodeInput: (e) => { const v = e.target.value; this.setState({ joinCode: v }); },
+      onTeamSearch: (e) => { const v = e.target.value; this.setState({ teamSearch: v }); },
+      onJoinByCode: () => {
+        const code = st.joinCode.trim().toUpperCase();
+        if (!code) { this.flash('Enter an invite code to join.'); return; }
+        if (code === st.team.inviteCode.toUpperCase()) {
+          this.setState(s => ({ teamList: s.teamList.map(t => t.id === 'orbit' ? { ...t, joined: true } : t), joinCode: '' }), () => this.enterApp());
+        } else {
+          this.flash('No team matches that invite code.');
+        }
+      },
+      onCreateTeam: () => this.flash('Team creation composer is out of scope for this prototype.'),
+      onLogout: () => this.setState({ stage: 'auth', authMode: 'login', authPassword: '', authError: '' }),
+      teamCards: filtered.map(t => {
+        const isOrbit = t.id === 'orbit';
+        const showPw = st.teamPwId === t.id;
+        const access = t.access === 'password'
+          ? { accessLabel: 'Password', accessStyle: accessStyleBase + 'background:#fafafa;color:#525252;' }
+          : { accessLabel: 'Public', accessStyle: accessStyleBase + 'background:#fff;color:#737373;' };
+        let statusLabel, statusStyle, actionLabel, actionStyle, onAction;
+        const statusBase = 'font-size:12px;font-weight:500;';
+        if (t.joined) {
+          statusLabel = 'Joined';
+          statusStyle = statusBase + 'color:#0a0a0a;display:inline-flex;align-items:center;gap:6px;';
+          actionLabel = 'Open';
+          actionStyle = 'height:32px;padding:0 14px;background:#0a0a0a;color:#fff;border:none;border-radius:5px;font-size:12.5px;font-weight:500;cursor:pointer;';
+          onAction = () => { if (isOrbit) this.enterApp(); else this.flash('Only the Orbit Web Team is wired up in this prototype.'); };
+        } else {
+          statusLabel = 'Not a member';
+          statusStyle = statusBase + 'color:#a3a3a3;';
+          actionLabel = t.access === 'password' ? (showPw ? 'Enter password above' : 'Join with password') : 'Join';
+          actionStyle = 'height:32px;padding:0 14px;background:#fff;color:#0a0a0a;border:1px solid #0a0a0a;border-radius:5px;font-size:12.5px;font-weight:500;cursor:pointer;' + (showPw ? 'opacity:.4;pointer-events:none;' : '');
+          onAction = () => {
+            if (t.access === 'password') {
+              this.setState({ teamPwId: t.id, teamPwValue: '' });
+            } else {
+              this.setState(s => ({ teamList: s.teamList.map(x => x.id === t.id ? { ...x, joined: true, members: x.members + 1 } : x) }), () => this.flash('Joined ' + t.name + '.'));
+            }
+          };
+        }
+        return {
+          badge: this.initials(t.name), name: t.name, description: t.description, leader: t.leader,
+          memberLabel: t.members + (t.members === 1 ? ' member' : ' members'),
+          accessLabel: access.accessLabel, accessStyle: access.accessStyle,
+          statusLabel, statusStyle, actionLabel, actionStyle, onAction,
+          showPasswordInput: showPw,
+          passwordValue: st.teamPwValue,
+          onPasswordInput: (e) => { const v = e.target.value; this.setState({ teamPwValue: v }); },
+          onConfirmPassword: () => {
+            this.setState(s => ({ teamList: s.teamList.map(x => x.id === t.id ? { ...x, joined: true, members: x.members + 1 } : x), teamPwId: null, teamPwValue: '' }), () => this.flash('Joined ' + t.name + '.'));
+          },
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>

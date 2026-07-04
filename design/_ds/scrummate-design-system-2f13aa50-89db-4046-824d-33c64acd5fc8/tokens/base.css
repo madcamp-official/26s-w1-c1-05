@@ -1,0 +1,11 @@
+/* Minimal base — consumers get sane defaults without a framework. */
+:root {
+  color-scheme: light;
+}
+body {
+  margin: 0;
+  font: var(--type-body);
+  color: var(--text-primary);
+  background: var(--surface-page);
+  -webkit-font-smoothing: antialiased;
+}

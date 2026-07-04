@@ -18,6 +18,29 @@
 | 프론트 빌드 | PASS | `npm run build` 성공 |
 | 프론트 린트 | PASS | `npm run lint` 성공, 기존 Fast Refresh/useEffect 경고만 출력 |
 
+### 2.1 2026-07-04 머지 후 재검증
+
+프론트 merge 후 충돌 정리와 `bootRun` 로컬 실행 설정 보강 이후 다시 확인했다.
+
+| 항목 | 결과 | 메모 |
+|---|---|---|
+| 충돌 marker 검사 | PASS | `backend/src/main/java`, `frontend/src` 기준 marker 없음 |
+| 백엔드 테스트 | PASS | `./gradlew test` 성공 |
+| 프론트 빌드 | PASS | `npm run build` 성공 |
+| 프론트 린트 | PASS | `npm run lint` 성공, 기존 warning만 존재 |
+| 백엔드 로컬 실행 | PASS | 환경변수 없이 `./gradlew bootRun` 성공 |
+| 백엔드 헬스 체크 | PASS | `GET /api/health` 응답 정상 |
+| 브라우저 smoke | PASS | 회원가입, 팀 생성, task 생성 성공 |
+
+머지 후 발견해 수정한 항목:
+
+| ID | 우선순위 | 문제 | 조치 | 최종 결과 |
+|---|---|---|---|---|
+| MERGE-01 | P1 | 프론트 여러 파일과 `ErrorCode.java`에 conflict marker 잔존 | 백엔드는 현재 구현 유지, 프론트는 팀원 구현 우선으로 정리 | PASS |
+| MERGE-02 | P1 | 프론트 build 시 충돌 잔재 import/viewModel 코드로 타입 오류 발생 | 미사용 import와 중복 컴포넌트/변환 함수 제거 | PASS |
+| MERGE-03 | P1 | Task 생성 폼에서 date input 값이 submit 검증에 반영되지 않는 케이스 | `name` 속성 추가, FormData fallback, date `onInput` 보강 | PASS |
+| RUN-01 | P2 | `./gradlew bootRun` 기본 실행 시 MySQL `root` 빈 비밀번호로 접속 실패 | `bootRun` 작업에 로컬 기본 `DB_PASSWORD=root` 주입 | PASS |
+
 ## 3. 검증 중 발견해 수정한 이슈
 
 | ID | 우선순위 | 문제 | 조치 | 최종 결과 |

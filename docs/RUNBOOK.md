@@ -145,11 +145,19 @@ VITE_API_BASE_URL=http://localhost:8080/api
 - 회고록 작성자/공동 작업자 권한 검증
 - 회고록 공동 작업자 목록 작성자 전용 변경 제한
 - 팀 대시보드 회고록 집계
+- 회의록 작성/목록/상세/수정/삭제
+- 회의록 다중 선택 기반 스펙 문서 초안 생성
+- 스펙 문서 저장/목록/상세/수정/삭제/메인 지정
+- 스펙 문서 기반 task 추천/수락 API
+- 팀 리더보드/명성 API
+- task dependency API
+- dependency 기반 mock notification event API
 
 다음 구현 대상:
 
-- 전체 사용자 흐름 수동 테스트
-- `docs/ROADMAP.md` 기준 Post-MVP 기능 확장
+- 새 백엔드 API의 프론트 client/type 연결
+- MySQL 기반 전체 사용자 흐름 수동 테스트
+- 제출용 산출물 최종 동기화
 - KCloud 배포 준비 문서화
 
 ## 6. 검증 명령

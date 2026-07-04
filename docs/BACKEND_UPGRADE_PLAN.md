@@ -24,20 +24,23 @@
 | task | 생성, 목록, 상세, 수정, 완료 변경, 삭제 |
 | task 댓글 | 목록, 작성, 수정, 삭제 |
 | 회의록 | 생성, 목록, 상세, 수정, 삭제 |
-| 스펙 문서 | 회의록 기반 초안 생성, 저장, 목록 |
+| 스펙 문서 | 회의록 기반 초안 생성, 저장, 목록, 상세, 수정, 삭제, 메인 지정 |
+| task 추천 | 스펙 문서 기반 추천 생성, 조회, 수락 |
+| 리더보드/명성 | 팀원별 완료 task 수 집계, rank, reputation level |
+| task dependency | 관계 조회, 선행 task 추가/삭제, 순환 차단 |
+| notification mock event | 선행 task 완료 시 후행 task 담당자별 event 생성 |
 | 회고록 | 생성, 목록, 상세, 수정, 삭제, 공동 작업자 권한 |
 | AI fallback | Gemini 키가 없거나 실패하면 local draft 생성 |
+| 로컬 실행 설정 | `bootRun` 기본 `root/root` MySQL 연결 |
 
 현재 보강 필요:
 
 | 항목 | 이유 |
 |---|---|
-| 백엔드 테스트 범위 | 현재 스펙 문서 테스트 외 핵심 권한/트랜잭션 테스트가 부족함 |
-| task 자동 추천 | 스펙 문서 생성 이후 실제 task 흐름으로 이어지는 핵심 기능 |
-| 리더보드/명성 | 완료 task 수 기반 게이미피케이션의 백엔드 기반 |
-| task dependency | task 로드맵과 알림 기능의 기반 |
-| 설정 분리 | local, KCloud, 데모 환경에서 같은 코드로 실행하기 위함 |
-| DB 정합성 | 팀원 제거, 담당자 1명 이상, 팀장 1명 정책을 회귀 테스트로 보장해야 함 |
+| 새 API 프론트 연결 지점 | 구현된 백엔드 API를 화면에서 사용할 수 있게 해야 함 |
+| MySQL 기반 통합 smoke test | 제출 데모 기준의 실제 실행 안정성을 확인해야 함 |
+| 제출 문서 동기화 | API/DB/테스트/실행 문서가 현재 코드와 일치해야 함 |
+| KCloud 설정 분리 | 로컬, KCloud, 데모 환경에서 같은 코드로 실행하기 위함 |
 
 ## 3. 제외 범위
 
@@ -57,12 +60,10 @@
 
 | 순위 | 작업 | 목표 |
 |---:|---|---|
-| 1 | 백엔드 회귀 테스트 확장 | 기존 기능을 깨지 않고 다음 기능을 붙일 수 있게 함 |
-| 2 | 스펙 문서 기반 task 추천 | 회의록 -> 스펙 문서 -> task 흐름 완성 |
-| 3 | 리더보드/명성 API | 완료 task 기반 동기부여 기능의 서버 데이터 제공 |
-| 4 | task dependency API | task 전후 관계와 로드맵 기능의 서버 기반 제공 |
-| 5 | 알림 mock event | 실제 이메일 전에 알림 발생 조건 검증 |
-| 6 | 운영 설정 정리 | local/KCloud 전환 비용 감소 |
+| 1 | 새 API 프론트 연결 지점 정리 | 팀원 프론트와 충돌을 줄이고 API 사용 경로를 명확히 함 |
+| 2 | MySQL 기반 통합 smoke test | 제출 데모 기준으로 실제 실행 확인 |
+| 3 | 제출 문서 동기화 | 코드와 산출물 불일치 제거 |
+| 4 | KCloud 운영 설정 정리 | local/KCloud 전환 비용 감소 |
 
 ## 5. Phase A: 백엔드 테스트와 안정화
 
@@ -374,6 +375,33 @@ API 후보:
 
 다음 작업:
 
-1. local/KCloud 실행 설정과 환경변수 문서 정리
-2. 새 API 프론트 연결 지점 목록 정리
-3. 전체 백엔드 테스트 결과와 제출용 실행 문서 업데이트
+1. 새 API 프론트 연결 지점 목록 정리
+2. 전체 백엔드 테스트 결과와 제출용 실행 문서 업데이트
+3. KCloud 실행 설정과 환경변수 문서 정리
+
+추가 완료:
+
+- 프론트 merge 후 충돌 marker 제거
+- 백엔드 `ErrorCode` 충돌 정리
+- 팀원 프론트 구현 우선으로 중복 UI/viewModel 잔재 제거
+- `TaskNewPage` date input 제출 보강
+- `bootRun` 전용 로컬 기본값 추가: `DB_USERNAME=root`, `DB_PASSWORD=root`, `JWT_SECRET=local-development-secret-change-me`
+- `RUNBOOK.md` 로컬 실행 절차 갱신
+- `docs/CURRENT_WORK_PLAN.md` 생성
+
+검증:
+
+- 환경변수 없이 `./gradlew bootRun` 실행 성공
+- `GET /api/health` 성공
+- 브라우저 smoke test: 회원가입, 팀 생성, task 생성 성공
+- `./gradlew test` 통과
+- `npm run build` 통과
+- `npm run lint` 통과, 기존 warning만 존재
+
+재수립된 다음 작업:
+
+1. `README.md`, `docs/ROADMAP.md`, `docs/TEST_RESULTS.md` 현재 상태 동기화
+2. 새 백엔드 API 프론트 type/client 연결
+3. MySQL 기반 전체 smoke test
+4. 제출 산출물 최종 정리
+5. KCloud 준비 문서화

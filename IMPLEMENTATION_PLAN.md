@@ -476,4 +476,6 @@ Day 1부터 Day 4까지의 MVP 기능은 로컬 빌드 기준으로 구현되었
 9. 백엔드 테스트 통과 후 프론트에는 최소 API client 연결 지점만 공유
 10. 제출 전 전체 기능 수동 시나리오와 backend test 결과 정리
 
-상세 계획은 `docs/BACKEND_UPGRADE_PLAN.md`를 기준으로 진행한다.
+현재 기준의 전체 작업 우선순위와 다음 액션은 `docs/CURRENT_WORK_PLAN.md`를 기준으로 진행한다.
+
+백엔드 고도화 이력과 상세 설계 기록은 `docs/BACKEND_UPGRADE_PLAN.md`에 유지한다.

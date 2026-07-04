@@ -1,20 +1,22 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { ArrowLeft, Trash2 } from 'lucide-react';
+import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { LoadingState } from '../../components/common/LoadingState';
+import { Alert, Avatar, Badge, Button, FieldSelect, FieldTextarea, LoadingState, StatusDot } from '../../components/ui';
+import { dueLabel, priorityTone, relativeTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Task, TaskComment, TaskPriority } from '../../types/task';
 import type { TeamMember } from '../../types/team';
+import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 
 export function TaskDetailPage() {
   const { teamId, taskId } = useParams();
   const numericTeamId = Number(teamId);
   const numericTaskId = Number(taskId);
   const navigate = useNavigate();
+  const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const { user } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -37,7 +39,7 @@ export function TaskDetailPage() {
 
   async function loadPage() {
     if (!Number.isFinite(numericTaskId) || !Number.isFinite(numericTeamId)) {
-      setErrorMessage('task 정보가 올바르지 않습니다.');
+      setErrorMessage('Invalid task.');
       setIsLoading(false);
       return;
     }
@@ -61,45 +63,31 @@ export function TaskDetailPage() {
         assigneeUserIds: taskData.assignees.map((assignee) => assignee.id),
       });
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'task 정보를 불러오지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not load this task.');
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function handleSaveTask(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setErrorMessage(null);
-
-    if (!form.title.trim()) {
-      setErrorMessage('task 제목을 입력하세요.');
+  async function saveField(next: Partial<typeof form>) {
+    if (!task) {
       return;
     }
-    if (!form.dueDate) {
-      setErrorMessage('마감일을 선택하세요.');
-      return;
-    }
-    if (form.assigneeUserIds.length === 0) {
-      setErrorMessage('담당자를 1명 이상 선택하세요.');
-      return;
-    }
-
+    const nextForm = { ...form, ...next };
+    setForm(nextForm);
     try {
       setIsSubmitting(true);
-      const updated = await taskApi.updateTask(numericTaskId, {
-        title: form.title,
-        description: form.description || undefined,
-        priority: form.priority,
-        dueDate: form.dueDate,
-        assigneeUserIds: form.assigneeUserIds,
+      setErrorMessage(null);
+      const updated = await taskApi.updateTask(task.id, {
+        title: nextForm.title.trim() || task.title,
+        description: nextForm.description || undefined,
+        priority: nextForm.priority,
+        dueDate: nextForm.dueDate,
+        assigneeUserIds: nextForm.assigneeUserIds,
       });
       setTask(updated);
-      setForm((current) => ({
-        ...current,
-        assigneeUserIds: updated.assignees.map((assignee) => assignee.id),
-      }));
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'task를 저장하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not save the task.');
     } finally {
       setIsSubmitting(false);
     }
@@ -109,29 +97,29 @@ export function TaskDetailPage() {
     if (!task) {
       return;
     }
-
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
       setTask(await taskApi.updateTaskCompletion(task.id, !task.completed));
+      void refreshTeamChrome();
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '완료 상태를 변경하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the task.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDeleteTask() {
-    if (!task || !window.confirm('이 task를 삭제할까요? 댓글도 함께 삭제됩니다.')) {
+    if (!task || !window.confirm('Delete this task? Its comments will be deleted too.')) {
       return;
     }
-
     try {
       setIsSubmitting(true);
       await taskApi.deleteTask(task.id);
+      void refreshTeamChrome();
       navigate(`/teams/${numericTeamId}/tasks`);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'task를 삭제하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not delete the task.');
     } finally {
       setIsSubmitting(false);
     }
@@ -142,7 +130,6 @@ export function TaskDetailPage() {
     setErrorMessage(null);
 
     if (!commentContent.trim()) {
-      setErrorMessage('댓글 내용을 입력하세요.');
       return;
     }
 
@@ -150,14 +137,11 @@ export function TaskDetailPage() {
       setIsSubmitting(true);
       await taskApi.createComment(numericTaskId, { content: commentContent });
       setCommentContent('');
-      const [commentsData, taskData] = await Promise.all([
-        taskApi.getComments(numericTaskId),
-        taskApi.getTask(numericTaskId),
-      ]);
+      const [commentsData, taskData] = await Promise.all([taskApi.getComments(numericTaskId), taskApi.getTask(numericTaskId)]);
       setComments(commentsData);
       setTask(taskData);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '댓글을 작성하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not post the comment.');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,10 +149,8 @@ export function TaskDetailPage() {
 
   async function handleUpdateComment(commentId: number) {
     if (!editingCommentContent.trim()) {
-      setErrorMessage('댓글 내용을 입력하세요.');
       return;
     }
-
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
@@ -177,285 +159,257 @@ export function TaskDetailPage() {
       setEditingCommentContent('');
       setComments(await taskApi.getComments(numericTaskId));
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '댓글을 수정하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the comment.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleDeleteComment(commentId: number) {
-    if (!window.confirm('댓글을 삭제할까요?')) {
+    if (!window.confirm('Delete this comment?')) {
       return;
     }
-
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
       await taskApi.deleteComment(commentId);
-      const [commentsData, taskData] = await Promise.all([
-        taskApi.getComments(numericTaskId),
-        taskApi.getTask(numericTaskId),
-      ]);
+      const [commentsData, taskData] = await Promise.all([taskApi.getComments(numericTaskId), taskApi.getTask(numericTaskId)]);
       setComments(commentsData);
       setTask(taskData);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '댓글을 삭제하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not delete the comment.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   function toggleAssignee(userId: number) {
-    setForm((current) => ({
-      ...current,
-      assigneeUserIds: current.assigneeUserIds.includes(userId)
-        ? current.assigneeUserIds.filter((id) => id !== userId)
-        : [...current.assigneeUserIds, userId],
-    }));
+    const nextIds = form.assigneeUserIds.includes(userId)
+      ? form.assigneeUserIds.filter((id) => id !== userId)
+      : [...form.assigneeUserIds, userId];
+    void saveField({ assigneeUserIds: nextIds });
   }
 
   if (isLoading) {
-    return <LoadingState label="task 상세를 불러오고 있습니다." />;
+    return <LoadingState label="Loading task…" />;
   }
+
+  if (!task) {
+    return <Alert message={errorMessage ?? 'Task not found.'} />;
+  }
+
+  const due = dueLabel(task.dueDate, task.completed);
+  const priority = priorityTone(task.priority);
+  const statusLabel = task.completed ? 'Completed' : due.tone === 'soon' ? 'In progress' : 'Backlog';
+  const statusDotVariant = task.completed ? 'filled' : due.tone === 'soon' ? 'half' : 'outline';
 
   return (
-    <section className="detail-document">
-      <div className="document-header">
-        <div>
-          <span className="eyebrow">Task #{taskId}</span>
-          <h1>{task?.title ?? 'Task 상세'}</h1>
-          {task && (
-            <div className="document-meta">
-              <span className={`priority priority-${task.priority.toLowerCase()}`}>
-                {priorityLabel(task.priority)}
-              </span>
-              <span className={task.completed ? 'soft-pill success' : 'soft-pill'}>
-                {task.completed ? 'Completed' : 'Open'}
-              </span>
-              <span>마감 {task.dueDate}</span>
-              <span>댓글 {task.commentCount}</span>
-            </div>
-          )}
+    <div className="page-container-doc">
+      <button type="button" className="back-link" onClick={() => navigate(`/teams/${numericTeamId}/tasks`)}>
+        <ArrowLeft size={15} aria-hidden="true" />
+        Back to board
+      </button>
+
+      <div className="detail-header">
+        <span className="mono muted" style={{ fontSize: 12 }}>
+          #{task.id}
+        </span>
+        <Badge variant={priority.variant}>{priority.label}</Badge>
+      </div>
+      <input
+        className="detail-title spec-title-input"
+        style={{ marginBottom: 14 }}
+        value={form.title}
+        onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
+        onBlur={() => form.title.trim() && form.title !== task.title && void saveField({ title: form.title })}
+        aria-label="Task title"
+      />
+
+      <div className="detail-meta-row">
+        <div className="detail-meta-item">
+          <span className="detail-meta-label">Status</span>
+          <span className="detail-meta-value">
+            <StatusDot variant={statusDotVariant} />
+            {statusLabel}
+          </span>
         </div>
-        {task && (
-          <div className="row-actions">
-            <Button
-              type="button"
-              variant={task.completed ? 'secondary' : 'primary'}
-              disabled={isSubmitting}
-              onClick={() => void handleToggleCompletion()}
-            >
-              {task.completed ? '미완료로 변경' : '완료'}
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              disabled={isSubmitting}
-              onClick={() => void handleDeleteTask()}
-            >
-              삭제
-            </Button>
-          </div>
-        )}
+        <div className="detail-meta-item">
+          <span className="detail-meta-label">Due</span>
+          <span className={`mono${due.tone === 'overdue' ? ' due-label-overdue' : ''}`} style={{ fontSize: 13 }}>
+            {due.label}
+          </span>
+        </div>
+        <div className="detail-meta-item">
+          <span className="detail-meta-label">Assignees</span>
+          <span className="detail-meta-value">{task.assignees.map((a) => a.name).join(', ') || 'Unassigned'}</span>
+        </div>
+        <div className="detail-meta-item">
+          <span className="detail-meta-label">Comments</span>
+          <span className="mono" style={{ fontSize: 13 }}>
+            {task.commentCount}
+          </span>
+        </div>
       </div>
 
-      <ErrorMessage message={errorMessage} />
+      <div className="detail-section">
+        <span className="detail-section-label">Description</span>
+        <FieldTextarea
+          value={form.description}
+          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+          onBlur={() => void saveField({ description: form.description })}
+          placeholder="Add a description..."
+        />
+      </div>
 
-      {task && (
-        <>
-          <form className="document-panel form-stack-plain" onSubmit={handleSaveTask}>
-            <h2>기본 정보</h2>
-            <label className="field">
-              <span>제목</span>
+      <div className="detail-fields-grid">
+        <div className="detail-section" style={{ margin: 0 }}>
+          <span className="detail-section-label">Priority</span>
+          <FieldSelect
+            value={form.priority}
+            onChange={(event) => void saveField({ priority: event.target.value as TaskPriority })}
+          >
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </FieldSelect>
+        </div>
+        <div className="detail-section" style={{ margin: 0 }}>
+          <span className="detail-section-label">Due date</span>
+          <input
+            type="date"
+            className="ds-field-control"
+            value={form.dueDate}
+            onChange={(event) => void saveField({ dueDate: event.target.value })}
+          />
+        </div>
+      </div>
+
+      <div className="detail-section">
+        <span className="detail-section-label">Assignees</span>
+        <div className="option-list">
+          {members.map((member) => (
+            <label className="option-row" key={member.id}>
               <input
-                type="text"
-                value={form.title}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, title: event.target.value }))
-                }
+                type="checkbox"
+                checked={form.assigneeUserIds.includes(member.user.id)}
+                onChange={() => toggleAssignee(member.user.id)}
               />
+              <Avatar name={member.user.name} size="sm" />
+              <span className="option-row-name">{member.user.name}</span>
+              <span className="option-row-tag">{member.role}</span>
             </label>
-            <label className="field">
-              <span>설명</span>
-              <textarea
-                value={form.description}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <div className="form-row">
-              <label className="field">
-                <span>중요도</span>
-                <select
-                  value={form.priority}
-                  onChange={(event) =>
-                    setForm((current) => ({
-                      ...current,
-                      priority: event.target.value as TaskPriority,
-                    }))
-                  }
-                >
-                  <option value="LOW">낮음</option>
-                  <option value="MEDIUM">보통</option>
-                  <option value="HIGH">높음</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>마감일</span>
-                <input
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, dueDate: event.target.value }))
-                  }
-                />
-              </label>
-            </div>
-            <fieldset className="assignee-fieldset">
-              <legend>담당자</legend>
-              <div className="checkbox-grid">
-                {members.map((member) => (
-                  <label key={member.id} className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={form.assigneeUserIds.includes(member.user.id)}
-                      onChange={() => toggleAssignee(member.user.id)}
-                    />
-                    {member.user.name}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <div className="form-actions">
-              <Button type="submit" isLoading={isSubmitting}>
-                저장
-              </Button>
-            </div>
-          </form>
+          ))}
+        </div>
+      </div>
 
-          <section className="document-panel form-stack-plain">
-            <div className="page-header">
-              <div>
-                <h2>댓글</h2>
-                <p className="muted">{comments.length}개의 댓글</p>
-              </div>
-            </div>
+      <div className="detail-action-bar">
+        <Button
+          type="button"
+          variant={task.completed ? 'secondary' : 'primary'}
+          disabled={isSubmitting}
+          onClick={() => void handleToggleCompletion()}
+        >
+          {task.completed ? 'Mark incomplete' : 'Mark complete'}
+        </Button>
+        <div className="detail-action-bar-end">
+          <Button type="button" variant="danger" disabled={isSubmitting} onClick={() => void handleDeleteTask()}>
+            <Trash2 size={14} aria-hidden="true" />
+            Delete
+          </Button>
+        </div>
+      </div>
 
-            <form className="inline-form comment-form" onSubmit={handleCreateComment}>
-              <input
-                type="text"
-                placeholder="댓글 입력"
-                value={commentContent}
-                onChange={(event) => setCommentContent(event.target.value)}
-              />
-              <Button type="submit" isLoading={isSubmitting}>
-                작성
-              </Button>
-            </form>
+      <Alert message={errorMessage} />
 
-            <div className="comment-list">
-              {comments.length === 0 ? (
-                <p className="muted">아직 댓글이 없습니다.</p>
-              ) : (
-                comments.map((comment) => {
-                  const isAuthor = comment.author.id === user?.id;
-                  const isEditing = editingCommentId === comment.id;
-
-                  return (
-                    <article className="comment-row" key={comment.id}>
-                      <div className="comment-content">
-                        <strong>{comment.author.name}</strong>
+      <div>
+        <div className="comments-heading">Comments · {comments.length}</div>
+        <div className="comment-list">
+          {comments.length === 0 ? (
+            <p className="muted" style={{ fontSize: 13 }}>
+              No comments yet. Start the thread.
+            </p>
+          ) : (
+            comments.map((comment) => {
+              const isAuthor = comment.author.id === user?.id;
+              const isEditing = editingCommentId === comment.id;
+              return (
+                <div className="comment-item" key={comment.id}>
+                  <Avatar name={comment.author.name} />
+                  <div className="comment-body-wrap">
+                    <div className="comment-head">
+                      <span className="comment-author">{comment.author.name}</span>
+                      <span className="comment-time">{relativeTime(comment.updatedAt)}</span>
+                    </div>
+                    {isEditing ? (
+                      <input
+                        className="ds-field-control"
+                        style={{ marginTop: 6 }}
+                        value={editingCommentContent}
+                        onChange={(event) => setEditingCommentContent(event.target.value)}
+                      />
+                    ) : (
+                      <div className="comment-body">{comment.content}</div>
+                    )}
+                    {isAuthor && (
+                      <div className="comment-actions">
                         {isEditing ? (
-                          <input
-                            type="text"
-                            value={editingCommentContent}
-                            onChange={(event) =>
-                              setEditingCommentContent(event.target.value)
-                            }
-                          />
+                          <>
+                            <button type="button" className="comment-action-link" onClick={() => void handleUpdateComment(comment.id)}>
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              className="comment-action-link"
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditingCommentContent('');
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </>
                         ) : (
-                          <p>{comment.content}</p>
+                          <>
+                            <button
+                              type="button"
+                              className="comment-action-link"
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditingCommentContent(comment.content);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button type="button" className="comment-action-link" onClick={() => void handleDeleteComment(comment.id)}>
+                              Delete
+                            </button>
+                          </>
                         )}
-                        <span>{formatDateTime(comment.updatedAt)}</span>
                       </div>
-                      {isAuthor && (
-                        <div className="row-actions">
-                          {isEditing ? (
-                            <>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                disabled={isSubmitting}
-                                onClick={() => void handleUpdateComment(comment.id)}
-                              >
-                                저장
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingCommentId(null);
-                                  setEditingCommentContent('');
-                                }}
-                              >
-                                취소
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                onClick={() => {
-                                  setEditingCommentId(comment.id);
-                                  setEditingCommentContent(comment.content);
-                                }}
-                              >
-                                수정
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="danger"
-                                disabled={isSubmitting}
-                                onClick={() => void handleDeleteComment(comment.id)}
-                              >
-                                삭제
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </article>
-                  );
-                })
-              )}
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <form className="comment-compose" onSubmit={handleCreateComment}>
+          <Avatar name={user?.name ?? 'You'} tone="ink" />
+          <div className="comment-compose-body">
+            <FieldTextarea
+              value={commentContent}
+              onChange={(event) => setCommentContent(event.target.value)}
+              placeholder="Add a comment…"
+              style={{ minHeight: 64 }}
+            />
+            <div className="comment-submit-row">
+              <Button type="submit" size="sm" isLoading={isSubmitting} disabled={!commentContent.trim()}>
+                Comment
+              </Button>
             </div>
-          </section>
-        </>
-      )}
-    </section>
+          </div>
+        </form>
+      </div>
+    </div>
   );
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(value));
-}
-
-function priorityLabel(priority: TaskPriority) {
-  if (priority === 'HIGH') {
-    return '높음';
-  }
-  if (priority === 'LOW') {
-    return '낮음';
-  }
-  return '보통';
 }

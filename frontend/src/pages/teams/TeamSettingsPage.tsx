@@ -1,9 +1,8 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Copy } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { LoadingState } from '../../components/common/LoadingState';
+import { Alert, Button, Card, Field, FieldInput, FieldTextarea, LoadingState } from '../../components/ui';
 import { ApiError } from '../../types/api';
 import type { TeamRole } from '../../types/team';
 
@@ -20,11 +19,12 @@ export function TeamSettingsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     async function loadTeam() {
       if (!Number.isFinite(numericTeamId)) {
-        setErrorMessage('팀 정보가 올바르지 않습니다.');
+        setErrorMessage('Invalid team.');
         setIsLoading(false);
         return;
       }
@@ -38,7 +38,7 @@ export function TeamSettingsPage() {
         setInviteCode(team.inviteCode);
         setMyRole(team.myRole);
       } catch (error) {
-        setErrorMessage(error instanceof ApiError ? error.message : '팀 정보를 불러오지 못했습니다.');
+        setErrorMessage(error instanceof ApiError ? error.message : 'Could not load team settings.');
       } finally {
         setIsLoading(false);
       }
@@ -47,13 +47,15 @@ export function TeamSettingsPage() {
     void loadTeam();
   }, [numericTeamId]);
 
+  const canManageTeam = myRole === 'LEADER';
+
   async function handleUpdateTeam(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
     setSuccessMessage(null);
 
     if (!name.trim()) {
-      setErrorMessage('팀 이름을 입력하세요.');
+      setErrorMessage('Enter a team name.');
       return;
     }
 
@@ -65,29 +67,27 @@ export function TeamSettingsPage() {
       });
       setName(team.name);
       setDescription(team.description ?? '');
-      setSuccessMessage('팀 정보가 저장되었습니다.');
+      setSuccessMessage('Team info saved.');
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '팀 정보를 저장하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not save team info.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
   async function handleRotateInviteCode() {
-    if (!window.confirm('기존 초대코드를 만료하고 새 초대코드를 발급할까요?')) {
+    if (!window.confirm('Expire the current invite code and issue a new one?')) {
       return;
     }
-
     setErrorMessage(null);
     setSuccessMessage(null);
-
     try {
       setIsSubmitting(true);
       const result = await teamApi.rotateInviteCode(numericTeamId);
       setInviteCode(result.inviteCode);
-      setSuccessMessage('초대코드가 재발급되었습니다.');
+      setSuccessMessage('Invite code regenerated.');
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '초대코드를 재발급하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not regenerate the invite code.');
     } finally {
       setIsSubmitting(false);
     }
@@ -99,7 +99,7 @@ export function TeamSettingsPage() {
   }
 
   async function handleClearPassword() {
-    if (!window.confirm('팀을 공개 팀으로 변경할까요?')) {
+    if (!window.confirm('Make this team public?')) {
       return;
     }
     await submitPassword(null);
@@ -108,113 +108,113 @@ export function TeamSettingsPage() {
   async function submitPassword(nextPassword: string | null) {
     setErrorMessage(null);
     setSuccessMessage(null);
-
     try {
       setIsSubmitting(true);
-      const result = await teamApi.updateTeamPassword(numericTeamId, {
-        password: nextPassword,
-      });
+      const result = await teamApi.updateTeamPassword(numericTeamId, { password: nextPassword });
       setHasPassword(result.hasPassword);
       setPassword('');
-      setSuccessMessage(result.hasPassword ? '팀 비밀번호가 변경되었습니다.' : '공개 팀으로 변경되었습니다.');
+      setSuccessMessage(result.hasPassword ? 'Join password updated.' : 'Team is now public.');
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '팀 비밀번호를 변경하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the join password.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  if (isLoading) {
-    return <LoadingState label="팀 설정을 불러오고 있습니다." />;
+  async function handleCopyCode() {
+    if (!inviteCode) {
+      return;
+    }
+    await navigator.clipboard.writeText(inviteCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   }
 
-  const canManageTeam = myRole === 'LEADER';
+  if (isLoading) {
+    return <LoadingState label="Loading team settings…" />;
+  }
 
   return (
-    <section className="page-section">
-      <h1>팀 설정</h1>
-      <p className="muted">Team #{teamId}의 기본 정보와 가입 비밀번호를 관리합니다.</p>
+    <div className="page-container" style={{ maxWidth: 720 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 className="page-title">Team settings</h1>
+        <p className="page-subtitle">Manage team info, the join password, and the invite code.</p>
+      </div>
 
-      <ErrorMessage message={errorMessage} />
       {!canManageTeam && (
-        <div className="notice">팀 설정은 팀장만 변경할 수 있습니다.</div>
+        <div className="readonly-note">Only the team leader can change these settings. You have read-only access.</div>
       )}
-      {successMessage && <p className="success-message">{successMessage}</p>}
+      <Alert message={errorMessage} />
+      {successMessage && <Alert message={successMessage} tone="success" />}
 
-      <form className="panel form-stack-plain" onSubmit={handleUpdateTeam}>
-        <h2>기본 정보</h2>
-        <label className="field">
-          <span>팀 이름</span>
-          <input
-            type="text"
-            value={name}
-            disabled={!canManageTeam}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <label className="field">
-          <span>설명</span>
-          <input
-            type="text"
-            value={description}
-            disabled={!canManageTeam}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-        </label>
-        <div className="form-actions">
-          <Button type="submit" isLoading={isSubmitting} disabled={!canManageTeam}>
-            저장
-          </Button>
-        </div>
-      </form>
+      <Card className="settings-section">
+        <div className="settings-section-label">Team info</div>
+        <form className="settings-field-group" onSubmit={handleUpdateTeam}>
+          <Field label="Team name">
+            <FieldInput value={name} disabled={!canManageTeam} onChange={(event) => setName(event.target.value)} />
+          </Field>
+          <Field label="Description">
+            <FieldTextarea
+              value={description}
+              disabled={!canManageTeam}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </Field>
+          <div>
+            <Button type="submit" isLoading={isSubmitting} disabled={!canManageTeam}>
+              Save
+            </Button>
+          </div>
+        </form>
+      </Card>
 
-      <form className="panel form-stack-plain" onSubmit={handleUpdatePassword}>
-        <h2>팀 비밀번호</h2>
-        <p className="muted">
-          현재 상태: {hasPassword ? '비밀번호 팀' : '공개 팀'}
+      <Card className="settings-section">
+        <div className="settings-section-label">Join password</div>
+        <p className="page-subtitle" style={{ margin: '0 0 16px' }}>
+          {hasPassword ? 'This team requires a password to join.' : 'This team is public — anyone can join.'}
         </p>
-        <label className="field">
-          <span>새 비밀번호</span>
-          <input
+        <form className="settings-row" onSubmit={handleUpdatePassword}>
+          <FieldInput
             type="password"
             value={password}
             disabled={!canManageTeam}
             onChange={(event) => setPassword(event.target.value)}
+            placeholder="New password"
           />
-        </label>
-        <div className="form-actions">
           <Button type="submit" isLoading={isSubmitting} disabled={!canManageTeam}>
-            비밀번호 저장
+            Update
           </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isSubmitting || !canManageTeam}
-            onClick={() => void handleClearPassword()}
-          >
-            공개 팀으로 변경
-          </Button>
-        </div>
-      </form>
+          {hasPassword && (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isSubmitting || !canManageTeam}
+              onClick={() => void handleClearPassword()}
+            >
+              Remove
+            </Button>
+          )}
+        </form>
+      </Card>
 
-      <section className="panel form-stack-plain">
-        <h2>초대코드</h2>
-        <p className="muted">팀원은 팀 목록에서 초대코드를 입력해 비밀번호 없이 가입할 수 있습니다.</p>
-        <label className="field">
-          <span>현재 초대코드</span>
-          <input type="text" value={inviteCode ?? ''} readOnly />
-        </label>
-        <div className="form-actions">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={isSubmitting || !canManageTeam}
-            onClick={() => void handleRotateInviteCode()}
-          >
-            초대코드 재발급
+      <Card className="settings-section" style={{ marginBottom: 0 }}>
+        <div className="settings-section-label">Invite code</div>
+        <p className="page-subtitle" style={{ margin: '0 0 16px' }}>
+          Share this code so teammates can join instantly from the teams page.
+        </p>
+        <div className="settings-row">
+          <div className="invite-code-box">
+            <span className="invite-code-value">{inviteCode}</span>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyCode()}>
+              <Copy size={13} aria-hidden="true" />
+              {copied ? 'Copied' : 'Copy'}
+            </Button>
+          </div>
+          <Button type="button" variant="secondary" disabled={isSubmitting || !canManageTeam} onClick={() => void handleRotateInviteCode()}>
+            Regenerate
           </Button>
         </div>
-      </section>
-    </section>
+      </Card>
+    </div>
   );
 }

@@ -1,0 +1,22 @@
+.ds-card {
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.ds-card-paper {
+  background: var(--paper);
+}
+
+.ds-card-sunken {
+  background: var(--bg);
+}
+
+.ds-card-interactive {
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.ds-card-interactive:hover {
+  border-color: var(--gray-400);
+}

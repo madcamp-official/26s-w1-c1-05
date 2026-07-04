@@ -34,6 +34,8 @@ public enum ErrorCode {
 	AUTHOR_CANNOT_BE_COLLABORATOR(HttpStatus.BAD_REQUEST, "작성자는 공동 작업자로 중복 선택할 수 없습니다."),
 	MEETING_NOT_FOUND(HttpStatus.NOT_FOUND, "회의록을 찾을 수 없습니다."),
 	MEETING_AUTHOR_OR_LEADER_ONLY(HttpStatus.FORBIDDEN, "회의록 작성자 또는 팀장만 수정하거나 삭제할 수 있습니다."),
+	SPEC_DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "스펙 문서를 찾을 수 없습니다."),
+	SPEC_DOCUMENT_AUTHOR_OR_LEADER_ONLY(HttpStatus.FORBIDDEN, "스펙 문서 작성자 또는 팀장만 수정하거나 삭제할 수 있습니다."),
 	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 
 	private final HttpStatus status;

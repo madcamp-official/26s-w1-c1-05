@@ -2,6 +2,7 @@ package com.scrumhelper.specdocument.dto;
 
 import com.scrumhelper.auth.dto.UserSummaryResponse;
 import com.scrumhelper.domain.specdocument.SpecDocument;
+import com.scrumhelper.domain.specdocument.SpecDocumentStatus;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -13,6 +14,8 @@ public record SpecDocumentResponse(
 		String title,
 		String content,
 		List<Long> sourceMeetingIds,
+		SpecDocumentStatus status,
+		boolean isMain,
 		UserSummaryResponse createdBy,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt
@@ -24,6 +27,8 @@ public record SpecDocumentResponse(
 				document.getTitle(),
 				document.getContent(),
 				parseSourceMeetingIds(document.getSourceMeetingIds()),
+				document.getStatus(),
+				document.isMain(),
 				UserSummaryResponse.from(document.getCreatedBy()),
 				document.getCreatedAt(),
 				document.getUpdatedAt()

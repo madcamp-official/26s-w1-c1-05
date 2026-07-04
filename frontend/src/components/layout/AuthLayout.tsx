@@ -1,14 +1,15 @@
-import { Link, Outlet } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
 export function AuthLayout() {
   return (
-    <main className="auth-page">
-      <section className="auth-panel">
-        <Link className="brand" to="/login">
-          Scrum Helper
-        </Link>
+    <div className="auth-shell">
+      <div className="auth-container">
+        <div className="auth-brand">
+          <span className="auth-brand-name">Scrum Helper</span>
+          <span className="auth-tagline">Plan sprints, track tasks, ship together.</span>
+        </div>
         <Outlet />
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }

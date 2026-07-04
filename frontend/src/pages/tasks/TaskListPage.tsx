@@ -1,31 +1,24 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Check, ListTodo, Plus, RotateCcw } from 'lucide-react';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
+import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 import * as taskApi from '../../api/taskApi';
-import * as teamApi from '../../api/teamApi';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { LoadingState } from '../../components/common/LoadingState';
+import { Alert, Avatar, Badge, Card, EmptyState, IconButton, LoadingState, SegmentedControl, StatusDot } from '../../components/ui';
+import { dueLabel, priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
-import type { Task, TaskPriority } from '../../types/task';
-import type { TeamMember } from '../../types/team';
+import type { Task } from '../../types/task';
+
+type CompletionFilter = 'ALL' | 'OPEN' | 'DONE';
 
 export function TaskListPage() {
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [members, setMembers] = useState<TeamMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [completedFilter, setCompletedFilter] = useState<'ALL' | 'OPEN' | 'DONE'>('ALL');
-  const [form, setForm] = useState({
-    title: '',
-    description: '',
-    priority: 'MEDIUM' as TaskPriority,
-    dueDate: '',
-    assigneeUserIds: [] as number[],
-  });
+  const [completedFilter, setCompletedFilter] = useState<CompletionFilter>('ALL');
+  const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
 
   useEffect(() => void loadPage(), [numericTeamId]);
 
@@ -45,7 +38,7 @@ export function TaskListPage() {
 
   async function loadPage() {
     if (!Number.isFinite(numericTeamId)) {
-      setErrorMessage('팀 정보가 올바르지 않습니다.');
+      setErrorMessage('Invalid team.');
       setIsLoading(false);
       return;
     }
@@ -53,58 +46,11 @@ export function TaskListPage() {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      const [taskData, memberData] = await Promise.all([
-        taskApi.getTasks(numericTeamId),
-        teamApi.getMembers(numericTeamId),
-      ]);
-      setTasks(taskData);
-      setMembers(memberData);
+      setTasks(await taskApi.getTasks(numericTeamId));
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'task 목록을 불러오지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not load the task board.');
     } finally {
       setIsLoading(false);
-    }
-  }
-
-  async function handleCreateTask(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setErrorMessage(null);
-
-    if (!form.title.trim()) {
-      setErrorMessage('task 제목을 입력하세요.');
-      return;
-    }
-    if (!form.dueDate) {
-      setErrorMessage('마감일을 선택하세요.');
-      return;
-    }
-    if (form.assigneeUserIds.length === 0) {
-      setErrorMessage('담당자를 1명 이상 선택하세요.');
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-      await taskApi.createTask(numericTeamId, {
-        title: form.title,
-        description: form.description || undefined,
-        priority: form.priority,
-        dueDate: form.dueDate,
-        assigneeUserIds: form.assigneeUserIds,
-      });
-      setForm({
-        title: '',
-        description: '',
-        priority: 'MEDIUM',
-        dueDate: '',
-        assigneeUserIds: [],
-      });
-      setCreateOpen(false);
-      await loadPage();
-    } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'task를 생성하지 못했습니다.');
-    } finally {
-      setIsSubmitting(false);
     }
   }
 
@@ -114,176 +60,87 @@ export function TaskListPage() {
       setErrorMessage(null);
       await taskApi.updateTaskCompletion(task.id, !task.completed);
       await loadPage();
+      void refreshTeamChrome();
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : '완료 상태를 변경하지 못했습니다.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not update the task.');
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  function toggleAssignee(userId: number) {
-    setForm((current) => ({
-      ...current,
-      assigneeUserIds: current.assigneeUserIds.includes(userId)
-        ? current.assigneeUserIds.filter((id) => id !== userId)
-        : [...current.assigneeUserIds, userId],
-    }));
-  }
-
   if (isLoading) {
-    return <LoadingState label="task 목록을 불러오고 있습니다." />;
+    return <LoadingState label="Loading task board…" />;
   }
 
   return (
-    <section className="page-section">
+    <div className="page-container">
       <div className="page-header">
         <div>
-          <span className="eyebrow">Kanban</span>
-          <h1>Task Board</h1>
-          <p className="muted">작업을 등록하고 마감이 가까운 항목을 한눈에 확인합니다.</p>
+          <h1 className="page-title">Task board</h1>
+          <p className="page-subtitle">Backlog, in-progress, and completed work for this sprint.</p>
         </div>
-        <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
-          Task 생성
-        </Button>
+        <div className="board-toolbar">
+          <SegmentedControl
+            options={[
+              { value: 'ALL', label: 'All' },
+              { value: 'OPEN', label: 'Open' },
+              { value: 'DONE', label: 'Done' },
+            ]}
+            value={completedFilter}
+            onChange={setCompletedFilter}
+          />
+          <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
+            <Plus size={15} aria-hidden="true" />
+            Add task
+          </Link>
+        </div>
       </div>
 
-      <div className="segmented">
-        <button
-          type="button"
-          className={completedFilter === 'ALL' ? 'active' : ''}
-          onClick={() => setCompletedFilter('ALL')}
-        >
-          전체
-        </button>
-        <button
-          type="button"
-          className={completedFilter === 'OPEN' ? 'active' : ''}
-          onClick={() => setCompletedFilter('OPEN')}
-        >
-          미완료
-        </button>
-        <button
-          type="button"
-          className={completedFilter === 'DONE' ? 'active' : ''}
-          onClick={() => setCompletedFilter('DONE')}
-        >
-          완료
-        </button>
-      </div>
-
-      {createOpen && (
-        <form className="panel form-stack-plain" onSubmit={handleCreateTask}>
-          <h2>새 Task</h2>
-          <label className="field">
-            <span>제목</span>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            />
-          </label>
-          <label className="field">
-            <span>설명</span>
-            <input
-              type="text"
-              value={form.description}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, description: event.target.value }))
-              }
-            />
-          </label>
-          <div className="form-row">
-            <label className="field">
-              <span>중요도</span>
-              <select
-                value={form.priority}
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    priority: event.target.value as TaskPriority,
-                  }))
-                }
-              >
-                <option value="LOW">낮음</option>
-                <option value="MEDIUM">보통</option>
-                <option value="HIGH">높음</option>
-              </select>
-            </label>
-            <label className="field">
-              <span>마감일</span>
-              <input
-                type="date"
-                value={form.dueDate}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, dueDate: event.target.value }))
-                }
-              />
-            </label>
-          </div>
-
-          <fieldset className="assignee-fieldset">
-            <legend>담당자</legend>
-            <div className="checkbox-grid">
-              {members.map((member) => (
-                <label key={member.id} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={form.assigneeUserIds.includes(member.user.id)}
-                    onChange={() => toggleAssignee(member.user.id)}
-                  />
-                  {member.user.name}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-
-          <div className="form-actions">
-            <Button type="submit" isLoading={isSubmitting}>
-              생성
-            </Button>
-            <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
-              취소
-            </Button>
-          </div>
-        </form>
-      )}
-
-      <ErrorMessage message={errorMessage} />
+      <Alert message={errorMessage} />
 
       {visibleTasks.length === 0 ? (
-        <div className="empty-panel">
-          <h2>등록된 task가 없습니다.</h2>
-          <p>첫 task를 생성하고 담당자를 지정하세요.</p>
-        </div>
+        <EmptyState
+          icon={<ListTodo size={20} aria-hidden="true" />}
+          title="No tasks in this sprint yet."
+          description="Create the first task and it will grow a branch on the team's tree."
+          action={
+            <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
+              Add task
+            </Link>
+          }
+        />
       ) : (
-        <div className="task-board">
+        <div className="board-columns">
           <TaskColumn
             title="Backlog"
-            description="여유가 있는 미완료 작업"
+            dot={<StatusDot variant="outline" />}
             tasks={backlogTasks}
-            tone="neutral"
+            emptyLabel="Nothing in backlog."
+            numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
             onToggle={handleToggleCompletion}
           />
           <TaskColumn
-            title="In Progress"
-            description="오늘 기준 2일 이내 마감"
+            title="In progress"
+            dot={<StatusDot variant="half" />}
             tasks={inProgressTasks}
-            tone="blue"
+            emptyLabel="Nothing due soon."
+            numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
             onToggle={handleToggleCompletion}
           />
           <TaskColumn
             title="Completed"
-            description="완료 처리된 작업"
+            dot={<StatusDot variant="filled" />}
             tasks={completedTasks}
-            tone="green"
+            emptyLabel="Nothing done yet."
+            numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
             onToggle={handleToggleCompletion}
           />
         </div>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -297,60 +154,57 @@ function isInProgress(task: Task) {
 
 type TaskColumnProps = {
   title: string;
-  description: string;
+  dot: ReactNode;
   tasks: Task[];
-  tone: 'neutral' | 'blue' | 'green';
+  emptyLabel: string;
+  numericTeamId: number;
   isSubmitting: boolean;
   onToggle: (task: Task) => Promise<void>;
 };
 
-function TaskColumn({ title, description, tasks, tone, isSubmitting, onToggle }: TaskColumnProps) {
+function TaskColumn({ title, dot, tasks, emptyLabel, numericTeamId, isSubmitting, onToggle }: TaskColumnProps) {
   return (
-    <section className={`task-column task-column-${tone}`}>
-      <h2>
-        {title} <span>{tasks.length}</span>
-      </h2>
-      <p className="column-description">{description}</p>
-      {tasks.map((task) => (
-        <article className="task-card" key={task.id}>
-          <div className="task-card-top">
-            <h3>{task.title}</h3>
-            <span className={`priority priority-${task.priority.toLowerCase()}`}>
-              {priorityLabel(task.priority)}
-            </span>
-          </div>
-          <p className="muted">{task.description || '설명이 없습니다.'}</p>
-          <div className="task-meta">
-            <span>마감 {task.dueDate}</span>
-            <div className="avatar-row" aria-label="담당자">
-              {task.assignees.map((user) => (
-                <span className="avatar" key={user.id} title={user.name}>
-                  {user.name.slice(0, 1)}
-                </span>
-              ))}
-              <span>{task.assignees.map((user) => user.name).join(', ')}</span>
+    <section className="board-column">
+      <div className="board-column-head">
+        <span className="board-column-title">
+          {dot}
+          {title}
+        </span>
+        <span className="board-column-count">{tasks.length}</span>
+      </div>
+      {tasks.map((task) => {
+        const due = dueLabel(task.dueDate, task.completed);
+        const priority = priorityTone(task.priority);
+        return (
+          <Card key={task.id} interactive className={`task-card${task.completed ? ' task-card-done' : ''}`}>
+            <Link to={`/teams/${numericTeamId}/tasks/${task.id}`} style={{ display: 'contents', color: 'inherit' }}>
+              <div className="task-card-top">
+                <Badge variant={priority.variant}>{priority.label}</Badge>
+                <span className="task-card-id mono">#{task.id}</span>
+              </div>
+              <div className={`task-card-title${task.completed ? ' task-card-title-done' : ''}`}>{task.title}</div>
+              {!task.completed && <div className="task-card-desc">{task.description || 'No description.'}</div>}
+            </Link>
+            <div className="task-card-footer">
+              <span className={`due-label${due.tone === 'overdue' ? ' due-label-overdue' : due.tone === 'soon' ? ' due-label-soon' : ''}`}>
+                {due.label}
+              </span>
+              <div className="task-card-actions">
+                {task.assignees[0] && <Avatar name={task.assignees[0].name} size="sm" />}
+                <IconButton
+                  active={task.completed}
+                  disabled={isSubmitting}
+                  title={task.completed ? 'Reopen task' : 'Mark complete'}
+                  onClick={() => void onToggle(task)}
+                >
+                  {task.completed ? <RotateCcw size={13} aria-hidden="true" /> : <Check size={13} aria-hidden="true" />}
+                </IconButton>
+              </div>
             </div>
-          </div>
-          <Button
-            type="button"
-            variant={task.completed ? 'secondary' : 'primary'}
-            disabled={isSubmitting}
-            onClick={() => void onToggle(task)}
-          >
-            {task.completed ? '미완료로 변경' : '완료'}
-          </Button>
-        </article>
-      ))}
+          </Card>
+        );
+      })}
+      {tasks.length === 0 && <div className="board-column-empty">{emptyLabel}</div>}
     </section>
   );
-}
-
-function priorityLabel(priority: TaskPriority) {
-  if (priority === 'HIGH') {
-    return '높음';
-  }
-  if (priority === 'LOW') {
-    return '낮음';
-  }
-  return '보통';
 }

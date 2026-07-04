@@ -34,6 +34,8 @@
 | `meetings` | 팀 회의록 |
 | `spec_documents` | 회의록 기반 스펙 문서 |
 | `task_suggestions` | 스펙 문서 기반 task 추천 후보 |
+| `task_dependencies` | task 전후 관계 |
+| `notification_events` | 로컬 mock 알림 이벤트 |
 
 ## 4. ERD
 
@@ -51,6 +53,10 @@ erDiagram
 
   TASKS ||--o{ TASK_COMMENTS : has
   USERS ||--o{ TASK_COMMENTS : writes
+  TASKS ||--o{ TASK_DEPENDENCIES : predecessor
+  TASKS ||--o{ TASK_DEPENDENCIES : successor
+  TEAMS ||--o{ NOTIFICATION_EVENTS : owns
+  USERS ||--o{ NOTIFICATION_EVENTS : receives
 
   TEAMS ||--o{ MEETINGS : owns
   USERS ||--o{ MEETINGS : authors
@@ -122,6 +128,25 @@ erDiagram
     TEXT content NN
     DATETIME created_at NN
     DATETIME updated_at NN
+  }
+
+  TASK_DEPENDENCIES {
+    BIGINT id PK
+    BIGINT predecessor_task_id FK_NN
+    BIGINT successor_task_id FK_NN
+    DATETIME created_at NN
+  }
+
+  NOTIFICATION_EVENTS {
+    BIGINT id PK
+    BIGINT team_id FK_NN
+    BIGINT recipient_user_id FK_NN
+    VARCHAR type NN
+    BIGINT source_task_id
+    BIGINT target_task_id
+    TEXT payload NN
+    BOOLEAN delivered NN
+    DATETIME created_at NN
   }
 
   RETROSPECTIVES {
@@ -308,7 +333,45 @@ erDiagram
 - task가 삭제되면 댓글도 삭제된다.
 - 팀원에서 제거되어도 기존 댓글 작성 기록은 유지한다.
 
-### 5.7 `retrospectives`
+### 5.7 `task_dependencies`
+
+| 컬럼 | 타입 | NN | Key | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | Y | PK | task 관계 ID |
+| `predecessor_task_id` | `BIGINT` | Y | FK, UQ | 선행 task ID |
+| `successor_task_id` | `BIGINT` | Y | FK, UQ | 후행 task ID |
+| `created_at` | `DATETIME(6)` | Y |  | 생성 시각 |
+
+제약:
+
+- `(predecessor_task_id, successor_task_id)`는 unique다.
+- 선행 task와 후행 task는 같은 팀에 속해야 한다.
+- 자기 자신을 선행 task로 지정할 수 없다.
+- 순환 의존성은 service layer에서 차단한다.
+- task 삭제 시 관련 dependency도 삭제한다.
+
+### 5.8 `notification_events`
+
+| 컬럼 | 타입 | NN | Key | 설명 |
+|---|---|---:|---|---|
+| `id` | `BIGINT` | Y | PK | 알림 이벤트 ID |
+| `team_id` | `BIGINT` | Y | FK | 팀 ID |
+| `recipient_user_id` | `BIGINT` | Y | FK | 수신자 사용자 ID |
+| `type` | `VARCHAR(50)` | Y | UQ 보조 | 알림 종류 |
+| `source_task_id` | `BIGINT` | N | UQ 보조 | 이벤트 원인 task ID |
+| `target_task_id` | `BIGINT` | N | UQ 보조 | 이벤트 대상 task ID |
+| `payload` | `TEXT` | Y |  | 알림 payload JSON 문자열 |
+| `delivered` | `BOOLEAN` | Y | IDX | 실제 전달 여부. 로컬 mock에서는 기본 `false` |
+| `created_at` | `DATETIME(6)` | Y |  | 생성 시각 |
+
+제약:
+
+- 현재 구현은 실제 이메일을 보내지 않고 이벤트만 저장한다.
+- `TASK_DEPENDENCY_READY` 이벤트는 선행 task 완료 시 후행 task 담당자별로 생성된다.
+- `(recipient_user_id, type, source_task_id, target_task_id)` unique 제약으로 같은 이벤트 중복 생성을 막는다.
+- 수신자는 본인이 속한 팀의 본인 알림만 조회한다.
+
+### 5.9 `retrospectives`
 
 | 컬럼 | 타입 | NN | Key | 설명 |
 |---|---|---:|---|---|
@@ -332,7 +395,7 @@ erDiagram
 - 팀원에서 제거되어도 기존 회고록 작성 기록은 유지한다.
 - `(id, team_id)` unique index를 둔다. 이는 `retrospective_collaborators.team_id`가 회고록의 팀과 일치하는지 FK로 확인하기 위한 보조 제약이다.
 
-### 5.8 `retrospective_collaborators`
+### 5.10 `retrospective_collaborators`
 
 | 컬럼 | 타입 | NN | Key | 설명 |
 |---|---|---:|---|---|
@@ -350,7 +413,7 @@ erDiagram
 - 작성자는 공동 작업자 목록에 중복 저장하지 않는다. 이 조건은 service layer에서 검증한다.
 - 팀원에서 제거되면 공동 작업자 권한은 제거될 수 있다. 회고록 본문과 작성 기록은 유지한다.
 
-### 5.9 `meetings`
+### 5.11 `meetings`
 
 | 컬럼 | 타입 | NN | Key | 설명 |
 |---|---|---:|---|---|
@@ -371,7 +434,7 @@ erDiagram
 - 회의록 수정/삭제는 작성자 또는 팀장만 가능하다.
 - 참석자 저장이 필요하면 별도 `meeting_attendees` N:M 테이블을 추가한다.
 
-### 5.10 `spec_documents`
+### 5.12 `spec_documents`
 
 | 컬럼 | 타입 | NN | Key | 설명 |
 |---|---|---:|---|---|
@@ -391,7 +454,7 @@ erDiagram
 - 초안 생성 결과는 곧바로 저장하지 않고 사용자가 검토 후 저장한다.
 - `source_meeting_ids`는 소규모 프로젝트의 단순 구현을 위해 문자열로 저장한다. 회의록별 근거 추적이나 회의록 삭제 영향 분석이 필요해지면 `spec_document_meetings(spec_document_id, meeting_id)` N:M 테이블로 분리한다.
 
-### 5.11 `task_suggestions`
+### 5.13 `task_suggestions`
 
 | 컬럼 | 타입 | NN | Key | 설명 |
 |---|---|---:|---|---|
@@ -527,6 +590,43 @@ CREATE TABLE task_comments (
     ON DELETE CASCADE,
   CONSTRAINT fk_task_comments_user
     FOREIGN KEY (user_id) REFERENCES users (id)
+    ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE task_dependencies (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  predecessor_task_id BIGINT NOT NULL,
+  successor_task_id BIGINT NOT NULL,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_task_dependencies_predecessor_successor (predecessor_task_id, successor_task_id),
+  KEY idx_task_dependencies_successor (successor_task_id),
+  CONSTRAINT fk_task_dependencies_predecessor
+    FOREIGN KEY (predecessor_task_id) REFERENCES tasks (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_task_dependencies_successor
+    FOREIGN KEY (successor_task_id) REFERENCES tasks (id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+CREATE TABLE notification_events (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  team_id BIGINT NOT NULL,
+  recipient_user_id BIGINT NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  source_task_id BIGINT NULL,
+  target_task_id BIGINT NULL,
+  payload TEXT NOT NULL,
+  delivered BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_notification_events_task_dependency (recipient_user_id, type, source_task_id, target_task_id),
+  KEY idx_notification_events_team_recipient_created_at (team_id, recipient_user_id, created_at),
+  CONSTRAINT fk_notification_events_team
+    FOREIGN KEY (team_id) REFERENCES teams (id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_notification_events_recipient
+    FOREIGN KEY (recipient_user_id) REFERENCES users (id)
     ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 

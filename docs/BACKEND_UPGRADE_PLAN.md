@@ -341,8 +341,39 @@ API 후보:
 - `TaskSuggestionServiceTests` 추가
 - `API_SPEC.md`, `DB_SCHEMA.md` 동기화
 
+추가 완료:
+
+- 팀 단위 리더보드 API 추가: `GET /api/teams/{teamId}/leaderboard`
+- 담당자 기준 완료 task 수 실시간 집계
+- 동점 rank 공유 정책 구현
+- reputation level 계산: `SEED`, `SPROUT`, `SAPLING`, `OAK`
+- `TeamLeaderboardServiceTests` 추가
+- `API_SPEC.md` 동기화
+
+추가 완료:
+
+- `task_dependencies` Entity/Repository 추가
+- task 관계 조회 API 추가: `GET /api/teams/{teamId}/task-dependencies`
+- 선행 task 추가 API 추가: `POST /api/tasks/{taskId}/dependencies`
+- 선행 task 삭제 API 추가: `DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}`
+- 같은 팀 task 관계 검증
+- 자기 참조, 중복 관계, 순환 의존성 차단
+- task 삭제 시 관련 dependency 삭제
+- `TaskDependencyServiceTests` 추가
+- `API_SPEC.md`, `DB_SCHEMA.md` 동기화
+
+추가 완료:
+
+- `notification_events` Entity/Repository 추가
+- 내 알림 조회 API 추가: `GET /api/teams/{teamId}/notifications`
+- 선행 task 완료 시 후행 task 담당자별 `TASK_DEPENDENCY_READY` 이벤트 생성
+- 같은 수신자, 선행 task, 후행 task 조합의 중복 이벤트 생성 방지
+- 실제 이메일 발송 없이 DB mock event로 검증 가능
+- `NotificationEventServiceTests` 추가
+- `API_SPEC.md`, `DB_SCHEMA.md` 동기화
+
 다음 작업:
 
-1. 팀 단위 리더보드 API 구현
-2. 완료 task 수 기반 reputation level 계산
-3. 리더보드 service 테스트 추가
+1. local/KCloud 실행 설정과 환경변수 문서 정리
+2. 새 API 프론트 연결 지점 목록 정리
+3. 전체 백엔드 테스트 결과와 제출용 실행 문서 업데이트

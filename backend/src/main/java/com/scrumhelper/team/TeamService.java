@@ -20,6 +20,7 @@ import com.scrumhelper.team.dto.JoinTeamRequest;
 import com.scrumhelper.team.dto.TeamDashboardResponse;
 import com.scrumhelper.team.dto.TeamDetailResponse;
 import com.scrumhelper.team.dto.TeamInviteCodeResponse;
+import com.scrumhelper.team.dto.TeamLeaderboardResponse;
 import com.scrumhelper.team.dto.TeamMemberResponse;
 import com.scrumhelper.team.dto.TeamPasswordResponse;
 import com.scrumhelper.team.dto.TeamSummaryResponse;
@@ -32,8 +33,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class TeamService {
@@ -175,6 +179,36 @@ public class TeamService {
 		requireMembership(teamId, currentUserId);
 		return teamMemberRepository.findByTeamIdOrderByRoleAscJoinedAtAsc(teamId).stream()
 				.map(TeamMemberResponse::from)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<TeamLeaderboardResponse> getLeaderboard(Long currentUserId, Long teamId) {
+		requireMembership(teamId, currentUserId);
+		Map<Long, Long> completedTaskCounts = taskAssigneeRepository.countCompletedTasksByUserId(teamId).stream()
+				.collect(Collectors.toMap(
+						TaskAssigneeRepository.CompletedTaskCountView::getUserId,
+						TaskAssigneeRepository.CompletedTaskCountView::getCompletedTaskCount
+				));
+		List<TeamMember> members = teamMemberRepository.findByTeamIdOrderByRoleAscJoinedAtAsc(teamId);
+		List<LeaderboardRow> rows = members.stream()
+				.map(member -> new LeaderboardRow(
+						member.getUser(),
+						completedTaskCounts.getOrDefault(member.getUser().getId(), 0L)
+				))
+				.sorted(Comparator
+						.comparingLong(LeaderboardRow::completedTaskCount).reversed()
+						.thenComparing(row -> row.user().getName(), String.CASE_INSENSITIVE_ORDER)
+						.thenComparing(row -> row.user().getId()))
+				.toList();
+
+		return assignRanks(rows).stream()
+				.map(row -> new TeamLeaderboardResponse(
+						UserSummaryResponse.from(row.user()),
+						row.completedTaskCount(),
+						row.rank(),
+						reputationLevel(row.completedTaskCount())
+				))
 				.toList();
 	}
 
@@ -337,5 +371,38 @@ public class TeamService {
 			builder.append(INVITE_CODE_ALPHABET.charAt(SECURE_RANDOM.nextInt(INVITE_CODE_ALPHABET.length())));
 		}
 		return builder.toString();
+	}
+
+	private List<RankedLeaderboardRow> assignRanks(List<LeaderboardRow> rows) {
+		java.util.ArrayList<RankedLeaderboardRow> rankedRows = new java.util.ArrayList<>();
+		long previousCount = Long.MIN_VALUE;
+		int previousRank = 0;
+		for (int index = 0; index < rows.size(); index++) {
+			LeaderboardRow row = rows.get(index);
+			int rank = row.completedTaskCount() == previousCount ? previousRank : index + 1;
+			rankedRows.add(new RankedLeaderboardRow(row.user(), row.completedTaskCount(), rank));
+			previousCount = row.completedTaskCount();
+			previousRank = rank;
+		}
+		return rankedRows;
+	}
+
+	private String reputationLevel(long completedTaskCount) {
+		if (completedTaskCount >= 10) {
+			return "OAK";
+		}
+		if (completedTaskCount >= 5) {
+			return "SAPLING";
+		}
+		if (completedTaskCount >= 1) {
+			return "SPROUT";
+		}
+		return "SEED";
+	}
+
+	private record LeaderboardRow(User user, long completedTaskCount) {
+	}
+
+	private record RankedLeaderboardRow(User user, long completedTaskCount, int rank) {
 	}
 }

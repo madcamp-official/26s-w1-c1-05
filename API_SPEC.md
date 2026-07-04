@@ -268,6 +268,61 @@ Content-Type: application/json
 }
 ```
 
+### 3.11 TeamLeaderboardResponse
+
+```json
+{
+  "user": {
+    "id": 2,
+    "name": "김민준",
+    "email": "member@example.com"
+  },
+  "completedTaskCount": 8,
+  "rank": 1,
+  "reputationLevel": "SAPLING"
+}
+```
+
+`reputationLevel` 기준:
+
+| Level | 조건 |
+|---|---:|
+| `SEED` | 완료 task 0개 |
+| `SPROUT` | 완료 task 1개 이상 |
+| `SAPLING` | 완료 task 5개 이상 |
+| `OAK` | 완료 task 10개 이상 |
+
+### 3.12 TaskDependencyResponse
+
+```json
+{
+  "id": 1,
+  "predecessorTaskId": 100,
+  "predecessorTitle": "DB 스키마 작성",
+  "predecessorCompleted": true,
+  "successorTaskId": 101,
+  "successorTitle": "API 구현",
+  "successorCompleted": false,
+  "createdAt": "2026-07-04T15:00:00"
+}
+```
+
+### 3.13 NotificationEventResponse
+
+```json
+{
+  "id": 1,
+  "teamId": 1,
+  "recipientUserId": 2,
+  "type": "TASK_DEPENDENCY_READY",
+  "sourceTaskId": 100,
+  "targetTaskId": 101,
+  "payload": "{\"message\":\"선행 task가 완료되어 후행 task를 진행할 수 있습니다.\"}",
+  "delivered": false,
+  "createdAt": "2026-07-04T15:10:00"
+}
+```
+
 ## 4. Auth API
 
 ### 4.1 회원가입
@@ -792,7 +847,53 @@ Response `200`:
 }
 ```
 
-### 5.11 팀원 제거
+### 5.11 팀 리더보드 조회
+
+```http
+GET /api/teams/{teamId}/leaderboard
+```
+
+권한: 팀원
+
+Response `200`: `TeamLeaderboardResponse[]`
+
+정책:
+
+- 완료 task 수는 task 담당자 기준으로 집계한다.
+- 여러 담당자가 같은 완료 task에 배정되어 있으면 각 담당자에게 1개씩 집계한다.
+- 미완료 task는 집계하지 않는다.
+- 동점자는 같은 rank를 공유한다.
+- 정렬은 완료 task 수 내림차순, 이름 오름차순, user id 오름차순이다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+
+### 5.12 내 알림 이벤트 조회
+
+```http
+GET /api/teams/{teamId}/notifications
+```
+
+권한: 팀원
+
+Response `200`: `NotificationEventResponse[]`
+
+정책:
+
+- 현재 로그인 사용자가 수신자인 이벤트만 조회한다.
+- 실제 이메일 발송은 하지 않고 DB에 mock event를 저장한다.
+- `TASK_DEPENDENCY_READY`는 선행 task 완료로 후행 task 진행이 가능해졌음을 의미한다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+
+### 5.13 팀원 제거
 
 ```http
 DELETE /api/teams/{teamId}/members/{memberId}
@@ -828,7 +929,7 @@ Errors:
 | `CANNOT_REMOVE_LEADER` | 400 | 팀장 제거 시도 |
 | `REASSIGN_TASK_REQUIRED` | 409 | 제거 대상이 유일 담당자인 task 존재 |
 
-### 5.12 팀장 변경
+### 5.14 팀장 변경
 
 ```http
 PATCH /api/teams/{teamId}/leader
@@ -1040,6 +1141,8 @@ Response `200`: `TaskResponse`
 
 - task 완료 처리는 팀원 모두 가능하다.
 - 상태는 완료/미완료만 존재한다.
+- 완료 처리되는 task가 선행 task로 등록되어 있으면 후행 task 담당자에게 `TASK_DEPENDENCY_READY` notification event를 생성한다.
+- 같은 선행/후행 task 조합과 같은 수신자에 대해 중복 notification event는 생성하지 않는다.
 
 ### 6.6 task 삭제
 
@@ -1063,6 +1166,84 @@ Response `200`:
 
 - 팀원 모두 task를 삭제할 수 있다.
 - task 삭제 시 담당자 연결과 댓글이 함께 삭제된다.
+- task 삭제 시 해당 task가 포함된 전후 관계도 함께 삭제된다.
+
+### 6.7 task 관계 전체 조회
+
+```http
+GET /api/teams/{teamId}/task-dependencies
+```
+
+권한: 팀원
+
+Response `200`: `TaskDependencyResponse[]`
+
+정책:
+
+- 팀 단위 task 전후 관계를 모두 조회한다.
+- 선행 task와 후행 task의 완료 상태를 함께 응답한다.
+
+### 6.8 선행 task 추가
+
+```http
+POST /api/tasks/{taskId}/dependencies
+```
+
+권한: 후행 task가 속한 팀의 팀원
+
+`taskId`는 후행 task ID다.
+
+Request:
+
+```json
+{
+  "predecessorTaskId": 100
+}
+```
+
+Response `201`: `TaskDependencyResponse`
+
+정책:
+
+- 선행 task와 후행 task는 같은 팀에 속해야 한다.
+- 자기 자신을 선행 task로 지정할 수 없다.
+- 이미 존재하는 관계는 중복 저장하지 않는다.
+- 새 관계로 순환 의존성이 생기면 저장하지 않는다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `TASK_NOT_FOUND` | 404 | task 없음 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+| `TASK_NOT_SAME_TEAM` | 400 | 서로 다른 팀 task 관계 생성 시도 |
+| `TASK_DEPENDENCY_SELF_REFERENCE` | 400 | 자기 자신을 선행 task로 지정 |
+| `TASK_DEPENDENCY_ALREADY_EXISTS` | 409 | 이미 존재하는 관계 |
+| `TASK_DEPENDENCY_CYCLE` | 409 | 순환 의존성 발생 |
+
+### 6.9 선행 task 관계 삭제
+
+```http
+DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}
+```
+
+권한: 후행 task가 속한 팀의 팀원
+
+Response `200`:
+
+```json
+{
+  "success": true,
+  "data": null,
+  "message": "deleted"
+}
+```
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `TASK_DEPENDENCY_NOT_FOUND` | 404 | task 관계 없음 |
 
 ## 7. Task Comment API
 
@@ -1633,6 +1814,11 @@ Response `200`:
 | `SPEC_DOCUMENT_NOT_FOUND` | 404 | 스펙 문서 없음 |
 | `TASK_SUGGESTION_NOT_FOUND` | 404 | task 추천 없음 |
 | `TASK_SUGGESTION_ALREADY_ACCEPTED` | 409 | 이미 수락한 task 추천 |
+| `TASK_DEPENDENCY_NOT_FOUND` | 404 | task 관계 없음 |
+| `TASK_DEPENDENCY_ALREADY_EXISTS` | 409 | 이미 존재하는 task 관계 |
+| `TASK_DEPENDENCY_SELF_REFERENCE` | 400 | 자기 자신을 선행 task로 지정 |
+| `TASK_DEPENDENCY_CYCLE` | 409 | 순환 의존성 발생 |
+| `TASK_NOT_SAME_TEAM` | 400 | 서로 다른 팀 task 관계 생성 시도 |
 
 ## 13. 화면별 API 호출 흐름
 
@@ -1657,6 +1843,8 @@ Response `200`:
 1. `GET /api/teams/{teamId}`
 2. `GET /api/teams/{teamId}/dashboard`
 3. `GET /api/teams/{teamId}/members`
+4. `GET /api/teams/{teamId}/leaderboard`
+5. `GET /api/teams/{teamId}/notifications`
 
 ### 13.4 task 화면
 
@@ -1666,6 +1854,9 @@ Response `200`:
 4. 완료 변경: `PATCH /api/tasks/{taskId}/completion`
 5. 삭제: `DELETE /api/tasks/{taskId}`
 6. 댓글 조회: `GET /api/tasks/{taskId}/comments`
+7. 관계 조회: `GET /api/teams/{teamId}/task-dependencies`
+8. 선행 task 추가: `POST /api/tasks/{taskId}/dependencies`
+9. 선행 task 삭제: `DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}`
 
 ### 13.5 회의록 화면
 

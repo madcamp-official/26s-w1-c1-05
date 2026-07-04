@@ -7,6 +7,7 @@ import com.scrumhelper.domain.task.Task;
 import com.scrumhelper.domain.task.TaskAssignee;
 import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskCommentRepository;
+import com.scrumhelper.domain.task.TaskDependencyRepository;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.team.Team;
@@ -14,6 +15,7 @@ import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.domain.team.TeamRepository;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
+import com.scrumhelper.notification.NotificationEventService;
 import com.scrumhelper.task.dto.SaveTaskRequest;
 import com.scrumhelper.task.dto.TaskCompletionRequest;
 import com.scrumhelper.task.dto.TaskResponse;
@@ -29,24 +31,30 @@ public class TaskService {
 	private final TaskRepository taskRepository;
 	private final TaskAssigneeRepository taskAssigneeRepository;
 	private final TaskCommentRepository taskCommentRepository;
+	private final TaskDependencyRepository taskDependencyRepository;
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
+	private final NotificationEventService notificationEventService;
 
 	public TaskService(
 			TaskRepository taskRepository,
 			TaskAssigneeRepository taskAssigneeRepository,
 			TaskCommentRepository taskCommentRepository,
+			TaskDependencyRepository taskDependencyRepository,
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
-			UserRepository userRepository
+			UserRepository userRepository,
+			NotificationEventService notificationEventService
 	) {
 		this.taskRepository = taskRepository;
 		this.taskAssigneeRepository = taskAssigneeRepository;
 		this.taskCommentRepository = taskCommentRepository;
+		this.taskDependencyRepository = taskDependencyRepository;
 		this.teamRepository = teamRepository;
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
+		this.notificationEventService = notificationEventService;
 	}
 
 	@Transactional(readOnly = true)
@@ -115,6 +123,9 @@ public class TaskService {
 		Task task = findTask(taskId);
 		requireMembership(task.getTeam().getId(), currentUserId);
 		task.updateCompletion(request.completed());
+		if (request.completed()) {
+			notificationEventService.createDependencyReadyEvents(task);
+		}
 		return toResponse(task);
 	}
 
@@ -122,6 +133,7 @@ public class TaskService {
 	public void deleteTask(Long currentUserId, Long taskId) {
 		Task task = findTask(taskId);
 		requireMembership(task.getTeam().getId(), currentUserId);
+		taskDependencyRepository.deleteByPredecessorIdOrSuccessorId(taskId, taskId);
 		taskCommentRepository.deleteByTaskId(taskId);
 		taskAssigneeRepository.deleteByTaskId(taskId);
 		taskRepository.delete(task);

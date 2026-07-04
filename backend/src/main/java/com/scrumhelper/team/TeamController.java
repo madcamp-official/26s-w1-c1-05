@@ -7,6 +7,7 @@ import com.scrumhelper.team.dto.JoinTeamRequest;
 import com.scrumhelper.team.dto.TeamDashboardResponse;
 import com.scrumhelper.team.dto.TeamDetailResponse;
 import com.scrumhelper.team.dto.TeamInviteCodeResponse;
+import com.scrumhelper.team.dto.TeamLeaderboardResponse;
 import com.scrumhelper.team.dto.TeamMemberResponse;
 import com.scrumhelper.team.dto.TeamPasswordResponse;
 import com.scrumhelper.team.dto.TeamSummaryResponse;
@@ -100,6 +101,14 @@ public class TeamController {
 			Authentication authentication
 	) {
 		return ApiResponse.ok(teamService.getMembers(currentUserId(authentication), teamId));
+	}
+
+	@GetMapping("/{teamId}/leaderboard")
+	public ApiResponse<List<TeamLeaderboardResponse>> getLeaderboard(
+			@PathVariable Long teamId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(teamService.getLeaderboard(currentUserId(authentication), teamId));
 	}
 
 	@PatchMapping("/{teamId}")

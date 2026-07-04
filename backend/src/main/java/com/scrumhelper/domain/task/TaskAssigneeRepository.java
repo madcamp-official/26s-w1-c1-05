@@ -25,4 +25,19 @@ public interface TaskAssigneeRepository extends JpaRepository<TaskAssignee, Long
 			  ) = 1
 			""")
 	boolean existsSoleAssigneeTask(@Param("teamId") Long teamId, @Param("userId") Long userId);
+
+	@Query("""
+			select ta.user.id as userId, count(distinct ta.task.id) as completedTaskCount
+			from TaskAssignee ta
+			where ta.team.id = :teamId
+			  and ta.task.completed = true
+			group by ta.user.id
+			""")
+	List<CompletedTaskCountView> countCompletedTasksByUserId(@Param("teamId") Long teamId);
+
+	interface CompletedTaskCountView {
+		Long getUserId();
+
+		long getCompletedTaskCount();
+	}
 }

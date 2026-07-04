@@ -67,11 +67,16 @@ export function TaskNewPage() {
     event.preventDefault();
     setErrorMessage(null);
 
-    if (!form.title.trim()) {
+    const formData = new FormData(event.currentTarget);
+    const submittedTitle = (form.title || String(formData.get('title') ?? '')).trim();
+    const submittedDescription = form.description || String(formData.get('description') ?? '');
+    const submittedDueDate = form.dueDate || String(formData.get('dueDate') ?? '');
+
+    if (!submittedTitle) {
       setErrorMessage('Enter a task title.');
       return;
     }
-    if (!form.dueDate) {
+    if (!submittedDueDate) {
       setErrorMessage('Pick a due date.');
       return;
     }
@@ -83,10 +88,10 @@ export function TaskNewPage() {
     try {
       setIsSubmitting(true);
       await taskApi.createTask(numericTeamId, {
-        title: form.title,
-        description: form.description || undefined,
+        title: submittedTitle,
+        description: submittedDescription || undefined,
         priority: form.priority,
-        dueDate: form.dueDate,
+        dueDate: submittedDueDate,
         assigneeUserIds: form.assigneeUserIds,
       });
       void refreshTeamChrome();
@@ -155,6 +160,7 @@ export function TaskNewPage() {
         <form className="task-form" onSubmit={handleSubmit}>
           <Field label="Title">
             <FieldInput
+              name="title"
               value={form.title}
               onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
               placeholder="Task title"
@@ -162,6 +168,7 @@ export function TaskNewPage() {
           </Field>
           <Field label="Description">
             <FieldTextarea
+              name="description"
               value={form.description}
               onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
             />
@@ -169,6 +176,7 @@ export function TaskNewPage() {
           <div className="task-form-row">
             <Field label="Priority">
               <FieldSelect
+                name="priority"
                 value={form.priority}
                 onChange={(event) => setForm((current) => ({ ...current, priority: event.target.value as TaskPriority }))}
               >
@@ -179,9 +187,14 @@ export function TaskNewPage() {
             </Field>
             <Field label="Due date">
               <FieldInput
+                name="dueDate"
                 type="date"
                 value={form.dueDate}
                 onChange={(event) => setForm((current) => ({ ...current, dueDate: event.target.value }))}
+                onInput={(event) => {
+                  const dueDate = event.currentTarget.value;
+                  setForm((current) => ({ ...current, dueDate }));
+                }}
               />
             </Field>
           </div>

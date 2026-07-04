@@ -38,3 +38,9 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+tasks.named('bootRun') {
+	environment 'DB_USERNAME', System.getenv('DB_USERNAME') ?: 'root'
+	environment 'DB_PASSWORD', System.getenv('DB_PASSWORD') ?: 'root'
+	environment 'JWT_SECRET', System.getenv('JWT_SECRET') ?: 'local-development-secret-change-me'
+}

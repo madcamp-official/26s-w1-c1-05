@@ -1,12 +1,6 @@
-<<<<<<< HEAD
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { BookOpenText, Plus } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
-=======
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
@@ -15,11 +9,7 @@ import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Retrospective } from '../../types/retrospective';
 import type { TeamMember } from '../../types/team';
-<<<<<<< HEAD
-import { toRetrospectiveListItemView } from '../../viewModels/retrospectiveViewModel';
-=======
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
 export function RetrospectiveListPage() {
   const { teamId } = useParams();
@@ -64,11 +54,6 @@ export function RetrospectiveListPage() {
   }, [numericTeamId]);
 
   useEffect(() => void loadPage(), [loadPage]);
-
-  const retrospectiveItems = useMemo(
-    () => retrospectives.map(toRetrospectiveListItemView),
-    [retrospectives],
-  );
 
   async function handleCreateRetrospective(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -116,22 +101,12 @@ export function RetrospectiveListPage() {
     <div className="page-container">
       <div className="page-header">
         <div>
-<<<<<<< HEAD
-          <span className="eyebrow">Retrospectives</span>
-          <h1>회고록 목록</h1>
-          <p className="muted">어제 한 일, 오늘 할 일, 궁금한/필요한/알아낸 것을 일지처럼 기록합니다.</p>
-        </div>
-        <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
-          <Plus size={16} aria-hidden="true" />
-          회고록 작성
-=======
           <h1 className="page-title">Retro</h1>
           <p className="page-subtitle">Log what you did, what's next, and what you need.</p>
         </div>
         <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
           <Plus size={15} aria-hidden="true" />
           New entry
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
         </Button>
       </div>
 
@@ -197,29 +172,6 @@ export function RetrospectiveListPage() {
           }
         />
       ) : (
-<<<<<<< HEAD
-        <div className="document-list">
-          {retrospectiveItems.map((item) => (
-            <Link
-              className="document-list-row"
-              key={item.retrospective.id}
-              to={`/teams/${numericTeamId}/retrospectives/${item.retrospective.id}`}
-            >
-              <span className="document-list-icon">
-                <BookOpenText size={16} aria-hidden="true" />
-              </span>
-              <span className="document-list-main">
-                <strong>{item.title}</strong>
-                <small>{item.preview}</small>
-              </span>
-              <span className="document-list-meta">
-                <strong>{item.displayId}</strong>
-                <small>
-                  {item.metaLine} · {item.collaboratorLabel}
-                </small>
-              </span>
-            </Link>
-=======
         <div className="retro-grid">
           {retrospectives.map((retro) => (
             <Card
@@ -247,7 +199,6 @@ export function RetrospectiveListPage() {
                 )}
               </div>
             </Card>
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
           ))}
         </div>
       )}

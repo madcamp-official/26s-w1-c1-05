@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-=======
-import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';

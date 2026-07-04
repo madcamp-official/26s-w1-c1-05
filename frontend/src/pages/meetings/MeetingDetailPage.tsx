@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-=======
-import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Clock, Trash2 } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as meetingApi from '../../api/meetingApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
@@ -35,15 +30,7 @@ export function MeetingDetailPage() {
     summary: '',
   });
 
-<<<<<<< HEAD
-  const canManage =
-    meeting != null &&
-    (meeting.author.id === user?.id || team?.myRole === 'LEADER');
-=======
-  useEffect(() => void loadPage(), [numericMeetingId, numericTeamId]);
-
   const canManage = meeting != null && (meeting.author.id === user?.id || team?.myRole === 'LEADER');
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
   const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId) || !Number.isFinite(numericMeetingId)) {
@@ -131,27 +118,6 @@ export function MeetingDetailPage() {
   }
 
   return (
-<<<<<<< HEAD
-    <section className="page-section">
-      <div className="page-header">
-        <div>
-          <span className="eyebrow">Meeting detail</span>
-          <h1>{meeting?.title ?? '회의록 상세'}</h1>
-          {meeting && (
-            <p className="muted">
-              작성 {meeting.author.name} · 회의 {formatDateTime(meeting.meetingAt)}
-            </p>
-          )}
-        </div>
-        {meeting && canManage && (
-          <Button
-            type="button"
-            variant="danger"
-            disabled={isSubmitting}
-            onClick={() => void handleDeleteMeeting()}
-          >
-            삭제
-=======
     <div className="page-container-doc">
       <button type="button" className="back-link" onClick={() => navigate(`/teams/${numericTeamId}/meetings`)}>
         <ArrowLeft size={15} aria-hidden="true" />
@@ -175,7 +141,6 @@ export function MeetingDetailPage() {
           <Button type="button" variant="danger" size="sm" disabled={isSubmitting} onClick={() => void handleDeleteMeeting()}>
             <Trash2 size={14} aria-hidden="true" />
             Delete
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
           </Button>
         )}
       </div>

@@ -1,19 +1,4 @@
-<<<<<<< HEAD
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { useParams } from 'react-router-dom';
-import * as taskApi from '../../api/taskApi';
-import * as teamApi from '../../api/teamApi';
-import { Button } from '../../components/common/Button';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { InitialsAvatar } from '../../components/common/InitialsAvatar';
-import { LoadingState } from '../../components/common/LoadingState';
-import { StatusDot } from '../../components/common/StatusDot';
-import { ApiError } from '../../types/api';
-import type { Task, TaskPriority } from '../../types/task';
-import type { TeamMember } from '../../types/team';
-import { toTaskCardView, type TaskCardView } from '../../viewModels/taskViewModel';
-=======
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Check, ListTodo, Plus, RotateCcw } from 'lucide-react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
@@ -24,7 +9,6 @@ import { ApiError } from '../../types/api';
 import type { Task } from '../../types/task';
 
 type CompletionFilter = 'ALL' | 'OPEN' | 'DONE';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
 export function TaskListPage() {
   const { teamId } = useParams();
@@ -66,10 +50,9 @@ export function TaskListPage() {
     return tasks;
   }, [tasks, completedFilter]);
 
-  const taskViews = visibleTasks.map(toTaskCardView);
-  const backlogTasks = taskViews.filter((task) => task.column === 'backlog');
-  const inProgressTasks = taskViews.filter((task) => task.column === 'progress');
-  const completedTasks = taskViews.filter((task) => task.column === 'done');
+  const backlogTasks = visibleTasks.filter((task) => !task.completed && !isDueSoon(task.dueDate));
+  const inProgressTasks = visibleTasks.filter((task) => !task.completed && isDueSoon(task.dueDate));
+  const completedTasks = visibleTasks.filter((task) => task.completed);
 
   async function handleToggleCompletion(task: Task) {
     try {
@@ -163,64 +146,16 @@ export function TaskListPage() {
 
 type TaskColumnProps = {
   title: string;
-<<<<<<< HEAD
-  description: string;
-  tasks: TaskCardView[];
-  tone: 'neutral' | 'blue' | 'green';
-=======
   dot: ReactNode;
   tasks: Task[];
   emptyLabel: string;
   numericTeamId: number;
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
   isSubmitting: boolean;
   onToggle: (task: Task) => Promise<void>;
 };
 
 function TaskColumn({ title, dot, tasks, emptyLabel, numericTeamId, isSubmitting, onToggle }: TaskColumnProps) {
   return (
-<<<<<<< HEAD
-    <section className={`task-column task-column-${tone}`}>
-      <h2>
-        {title} <span>{tasks.length}</span>
-      </h2>
-      <p className="column-description">{description}</p>
-      {tasks.map((taskView) => (
-        <article className="task-card" key={taskView.task.id}>
-          <div className="task-card-top">
-            <div>
-              <span className="task-id">{taskView.displayId}</span>
-              <h3>{taskView.title}</h3>
-            </div>
-            <span className={`priority priority-${taskView.priority.toLowerCase()}`}>
-              {taskView.priorityLabel}
-            </span>
-          </div>
-          <p className="muted">{taskView.description}</p>
-          <div className="task-meta">
-            <span className="status-line">
-              <StatusDot status={taskView.status} />
-              {taskView.statusLabel}
-            </span>
-            <span>{taskView.dueLabel}</span>
-            <div className="avatar-row" aria-label="담당자">
-              {taskView.task.assignees.map((user) => (
-                <InitialsAvatar name={user.name} key={user.id} />
-              ))}
-              <span>{taskView.assigneeNames}</span>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant={taskView.task.completed ? 'secondary' : 'primary'}
-            disabled={isSubmitting}
-            onClick={() => void onToggle(taskView.task)}
-          >
-            {taskView.task.completed ? '미완료로 변경' : '완료'}
-          </Button>
-        </article>
-      ))}
-=======
     <section className="board-column">
       <div className="board-column-head">
         <span className="board-column-title">
@@ -262,7 +197,14 @@ function TaskColumn({ title, dot, tasks, emptyLabel, numericTeamId, isSubmitting
         );
       })}
       {tasks.length === 0 && <div className="board-column-empty">{emptyLabel}</div>}
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
     </section>
   );
+}
+
+function isDueSoon(dueDate: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(`${dueDate}T00:00:00`);
+  const diffDays = Math.ceil((due.getTime() - today.getTime()) / 86_400_000);
+  return diffDays <= 2;
 }

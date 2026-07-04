@@ -1,21 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-<<<<<<< HEAD
-import { CalendarDays, Plus } from 'lucide-react';
-import * as teamApi from '../../api/teamApi';
-import { GrowthTree } from '../../components/common/GrowthTree';
-import { ErrorMessage } from '../../components/common/ErrorMessage';
-import { LoadingState } from '../../components/common/LoadingState';
-=======
 import { CalendarDays, Plus, Sprout } from 'lucide-react';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
 import { Alert, LoadingState, StatTile } from '../../components/ui';
 import { GrowthTree } from '../../components/growth/GrowthTree';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import { ApiError } from '../../types/api';
 import type { TeamDashboard, TeamDetail } from '../../types/team';
-import { toDashboardView } from '../../viewModels/dashboardViewModel';
 
 export function TeamDashboardPage() {
   const { teamId } = useParams();
@@ -56,58 +47,17 @@ export function TeamDashboardPage() {
     return <LoadingState label="Loading dashboard…" />;
   }
 
-<<<<<<< HEAD
-  const dashboardView = team && dashboard ? toDashboardView(team, dashboard) : null;
-=======
   const completionRate =
     dashboard && dashboard.task.totalCount > 0
       ? Math.round((dashboard.task.completedCount / dashboard.task.totalCount) * 100)
       : 0;
   const greeting = timeOfDayGreeting();
   const upcomingItems = getUpcomingLabels(dashboard);
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
   return (
     <div className="page-container">
       <Alert message={errorMessage} />
 
-<<<<<<< HEAD
-      {dashboardView && (
-        <>
-          <div className="summary-grid dashboard-kpis">
-            {dashboardView.metrics.map((metric) => (
-              <section className="summary-tile" key={metric.label}>
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-                <small>{metric.helper}</small>
-              </section>
-            ))}
-          </div>
-
-          <div className="dashboard-grid">
-            <section className="panel growth-panel">
-              <div className="section-heading">
-                <div>
-                  <span className="eyebrow">Growth tree</span>
-                  <h2>완료한 Task가 나무를 키웁니다</h2>
-                </div>
-                <span className="soft-pill">{dashboardView.growthFruitCount} fruit</span>
-              </div>
-              <div className="tree-widget">
-                <GrowthTree
-                  taskCount={dashboardView.growthTaskCount}
-                  fruitCount={dashboardView.growthFruitCount}
-                />
-              </div>
-              <div className="progress-row">
-                <span>Task completion</span>
-                <strong>{dashboardView.completionRate}%</strong>
-              </div>
-              <div className="progress-track">
-                <div className="progress-fill" style={{ width: `${dashboardView.completionRate}%` }} />
-              </div>
-            </section>
-=======
       {team && dashboard && (
         <div className="fade-in">
           <div className="dashboard-hero">
@@ -163,7 +113,6 @@ export function TeamDashboardPage() {
                 </div>
               </div>
             </div>
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
             <div className="dashboard-side">
               <div className="progress-card">
@@ -189,13 +138,8 @@ export function TeamDashboardPage() {
                     </span>
                   ))}
                 </div>
-<<<<<<< HEAD
-                <div className="mini-list">
-                  {dashboardView.upcomingItems.map((item) => (
-=======
                 <div className="calendar-mini-list">
                   {upcomingItems.map((item) => (
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
                     <span key={item}>{item}</span>
                   ))}
                 </div>
@@ -224,8 +168,6 @@ export function TeamDashboardPage() {
       )}
     </div>
   );
-<<<<<<< HEAD
-=======
 }
 
 function timeOfDayGreeting() {
@@ -247,5 +189,4 @@ function getUpcomingLabels(dashboard: TeamDashboard | null) {
     return ['No upcoming deadlines'];
   }
   return [`Due within 2 days: ${dashboard.task.dueSoonCount}`, `Overdue: ${dashboard.task.overdueCount}`];
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 }

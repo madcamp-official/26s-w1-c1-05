@@ -1,11 +1,6 @@
-<<<<<<< HEAD
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-=======
-import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Trash2 } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
@@ -142,27 +137,6 @@ export function RetrospectiveDetailPage() {
   }
 
   return (
-<<<<<<< HEAD
-    <section className="page-section">
-      <div className="page-header">
-        <div>
-          <span className="eyebrow">Retrospective detail</span>
-          <h1>{retrospective?.title ?? '회고록 상세'}</h1>
-          {retrospective && (
-            <p className="muted">
-              작성 {retrospective.author.name} · 수정 {formatDateTime(retrospective.updatedAt)}
-            </p>
-          )}
-        </div>
-        {retrospective && canEdit && (
-          <Button
-            type="button"
-            variant="danger"
-            disabled={isSubmitting}
-            onClick={() => void handleDeleteRetrospective()}
-          >
-            삭제
-=======
     <div className="page-container-narrow">
       <button type="button" className="back-link" onClick={() => navigate(`/teams/${numericTeamId}/retrospectives`)}>
         <ArrowLeft size={15} aria-hidden="true" />
@@ -192,7 +166,6 @@ export function RetrospectiveDetailPage() {
           <Button type="button" variant="danger" size="sm" disabled={isSubmitting} onClick={() => void handleDeleteRetrospective()}>
             <Trash2 size={14} aria-hidden="true" />
             Delete
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
           </Button>
         )}
       </div>

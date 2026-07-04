@@ -26,9 +26,9 @@ CREATE DATABASE scrum_helper
 | port | `3306` |
 | database | `scrum_helper` |
 | username | `root` |
-| password | empty |
+| password | `root` |
 
-다른 값을 쓰는 경우 환경 변수로 덮어쓴다.
+`bootRun`은 로컬 개발 기본값으로 `root/root`를 사용한다. 다른 값을 쓰는 경우 환경 변수로 덮어쓴다.
 
 ## 3. 백엔드 실행
 
@@ -39,6 +39,12 @@ backend
 ```
 
 PowerShell 예시:
+
+```powershell
+.\gradlew.bat bootRun
+```
+
+MySQL 계정 정보가 기본값과 다르면 같은 터미널에서 먼저 환경 변수를 설정한다.
 
 ```powershell
 $env:DB_USERNAME = "root"
@@ -53,8 +59,8 @@ $env:JWT_SECRET = "local-development-secret-change-me"
 |---|---|---|
 | `SERVER_PORT` | `8080` | 백엔드 포트 |
 | `DB_URL` | `jdbc:mysql://localhost:3306/scrum_helper?...` | MySQL JDBC URL |
-| `DB_USERNAME` | `root` | DB 사용자 |
-| `DB_PASSWORD` | empty | DB 비밀번호 |
+| `DB_USERNAME` | `root` in `bootRun` | DB 사용자 |
+| `DB_PASSWORD` | `root` in `bootRun` | DB 비밀번호 |
 | `JPA_DDL_AUTO` | `update` | JPA schema 반영 방식 |
 | `JWT_SECRET` | local default | JWT 서명 secret |
 | `JWT_EXPIRATION_MILLIS` | `86400000` | access token 만료 시간 |

@@ -1,10 +1,5 @@
-<<<<<<< HEAD
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-=======
-import { useEffect, useState } from 'react';
 import { useOutletContext, useParams } from 'react-router-dom';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as teamApi from '../../api/teamApi';
 import { Alert, Avatar, Badge, Button, LoadingState } from '../../components/ui';
 import { ApiError } from '../../types/api';
@@ -85,21 +80,6 @@ export function TeamMembersPage() {
   }
 
   return (
-<<<<<<< HEAD
-    <section className="page-section">
-      <div className="page-header">
-        <div>
-          <span className="eyebrow">Members</span>
-          <h1>팀원 관리</h1>
-          <p className="muted">
-            Team #{teamId}에 가입한 사용자입니다. 팀장만 팀장 변경과 팀원 제거를 할 수 있습니다.
-          </p>
-        </div>
-        <span className="soft-pill">{members.length}명</span>
-      </div>
-      <ErrorMessage message={errorMessage} />
-      <div className="member-list">
-=======
     <div className="page-container" style={{ maxWidth: 900 }}>
       <div style={{ marginBottom: 20 }}>
         <h1 className="page-title">Members</h1>
@@ -113,7 +93,6 @@ export function TeamMembersPage() {
       <Alert message={errorMessage} />
 
       <div className="members-list">
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
         {members.map((member) => (
           <div className="member-row" key={member.id}>
             <Avatar name={member.user.name} size="lg" />

@@ -1,22 +1,12 @@
-<<<<<<< HEAD
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { CalendarDays, Plus } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
-=======
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { CalendarDays, Plus } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 import * as meetingApi from '../../api/meetingApi';
 import { Alert, Button, Card, EmptyState, Field, FieldInput, FieldTextarea, LoadingState } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
-<<<<<<< HEAD
-import { toMeetingListItemView } from '../../viewModels/meetingViewModel';
-=======
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
 
 export function MeetingListPage() {
   const { teamId } = useParams();
@@ -54,8 +44,6 @@ export function MeetingListPage() {
 
   useEffect(() => void loadPage(), [loadPage]);
 
-  const meetingItems = useMemo(() => meetings.map(toMeetingListItemView), [meetings]);
-
   async function handleCreateMeeting(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setErrorMessage(null);
@@ -92,22 +80,12 @@ export function MeetingListPage() {
     <div className="page-container">
       <div className="page-header">
         <div>
-<<<<<<< HEAD
-          <span className="eyebrow">Meetings</span>
-          <h1>회의</h1>
-          <p className="muted">회의 내용을 기록하고, 이후 스펙 문서와 task 자동 생성의 입력으로 사용합니다.</p>
-        </div>
-        <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
-          <Plus size={16} aria-hidden="true" />
-          회의록 작성
-=======
           <h1 className="page-title">Meetings</h1>
           <p className="page-subtitle">Log meeting notes to build the raw material for spec docs.</p>
         </div>
         <Button type="button" onClick={() => setCreateOpen((open) => !open)}>
           <Plus size={15} aria-hidden="true" />
           New meeting
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
         </Button>
       </div>
 
@@ -160,29 +138,6 @@ export function MeetingListPage() {
           }
         />
       ) : (
-<<<<<<< HEAD
-        <div className="document-list">
-          {meetingItems.map((item) => (
-            <Link
-              className="document-list-row"
-              key={item.meeting.id}
-              to={`/teams/${numericTeamId}/meetings/${item.meeting.id}`}
-            >
-              <span className="document-list-icon">
-                <CalendarDays size={16} aria-hidden="true" />
-              </span>
-              <span className="document-list-main">
-                <strong>{item.title}</strong>
-                <small>{item.summaryPreview}</small>
-              </span>
-              <span className="document-list-meta">
-                <strong>{item.displayId}</strong>
-                <small>
-                  {item.dateLabel} · {item.authorLabel}
-                </small>
-              </span>
-            </Link>
-=======
         <div className="row-list">
           {meetings.map((meeting) => (
             <Card
@@ -203,7 +158,6 @@ export function MeetingListPage() {
                 <div className="row-meta-sub">{meeting.author.name}</div>
               </div>
             </Card>
->>>>>>> 593071400011d7790d80c28dea2ef37d10699e92
           ))}
         </div>
       )}

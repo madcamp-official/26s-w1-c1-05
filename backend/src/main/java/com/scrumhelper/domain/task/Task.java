@@ -16,7 +16,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -44,15 +43,15 @@ public class Task {
 	@Column(nullable = false, length = 20)
 	private TaskPriority priority;
 
-	@Column(name = "due_date", nullable = false)
-	private LocalDate dueDate;
-
 	@Column(nullable = false)
 	private boolean completed;
 
 	@Enumerated(EnumType.STRING)
 	@Column(length = 20)
 	private TaskStatus status;
+
+	@Column(name = "sort_order", nullable = false, columnDefinition = "integer default 0")
+	private int sortOrder;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
@@ -63,19 +62,18 @@ public class Task {
 	protected Task() {
 	}
 
-	private Task(Team team, User createdBy, String title, String description, TaskPriority priority, LocalDate dueDate) {
+	private Task(Team team, User createdBy, String title, String description, TaskPriority priority) {
 		this.team = team;
 		this.createdBy = createdBy;
 		this.title = title;
 		this.description = description;
 		this.priority = priority;
-		this.dueDate = dueDate;
 		this.completed = false;
 		this.status = TaskStatus.BACKLOG;
 	}
 
-	public static Task create(Team team, User createdBy, String title, String description, TaskPriority priority, LocalDate dueDate) {
-		return new Task(team, createdBy, title, description, priority, dueDate);
+	public static Task create(Team team, User createdBy, String title, String description, TaskPriority priority) {
+		return new Task(team, createdBy, title, description, priority);
 	}
 
 	@PrePersist
@@ -114,16 +112,20 @@ public class Task {
 		return priority;
 	}
 
-	public LocalDate getDueDate() {
-		return dueDate;
-	}
-
 	public boolean isCompleted() {
 		return getStatus() == TaskStatus.DONE;
 	}
 
 	public TaskStatus getStatus() {
 		return status == null ? (completed ? TaskStatus.DONE : TaskStatus.BACKLOG) : status;
+	}
+
+	public int getSortOrder() {
+		return sortOrder;
+	}
+
+	public void assignSortOrder(int sortOrder) {
+		this.sortOrder = sortOrder;
 	}
 
 	public LocalDateTime getCreatedAt() {
@@ -134,11 +136,10 @@ public class Task {
 		return updatedAt;
 	}
 
-	public void update(String title, String description, TaskPriority priority, LocalDate dueDate) {
+	public void update(String title, String description, TaskPriority priority) {
 		this.title = title;
 		this.description = description;
 		this.priority = priority;
-		this.dueDate = dueDate;
 	}
 
 	public void updateStatus(TaskStatus status) {

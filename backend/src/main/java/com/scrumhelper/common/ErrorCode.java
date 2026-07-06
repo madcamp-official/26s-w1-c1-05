@@ -38,11 +38,6 @@ public enum ErrorCode {
 	SPEC_DOCUMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "스펙 문서를 찾을 수 없습니다."),
 	TASK_SUGGESTION_NOT_FOUND(HttpStatus.NOT_FOUND, "task 추천을 찾을 수 없습니다."),
 	TASK_SUGGESTION_ALREADY_ACCEPTED(HttpStatus.CONFLICT, "이미 수락한 task 추천입니다."),
-	TASK_DEPENDENCY_NOT_FOUND(HttpStatus.NOT_FOUND, "task 관계를 찾을 수 없습니다."),
-	TASK_DEPENDENCY_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 존재하는 task 관계입니다."),
-	TASK_DEPENDENCY_SELF_REFERENCE(HttpStatus.BAD_REQUEST, "자기 자신을 선행 task로 지정할 수 없습니다."),
-	TASK_DEPENDENCY_CYCLE(HttpStatus.CONFLICT, "순환 task 관계는 만들 수 없습니다."),
-	TASK_NOT_SAME_TEAM(HttpStatus.BAD_REQUEST, "같은 팀의 task만 관계를 만들 수 있습니다."),
 	SPEC_DOCUMENT_AUTHOR_OR_LEADER_ONLY(HttpStatus.FORBIDDEN, "스펙 문서 작성자 또는 팀장만 수정하거나 삭제할 수 있습니다."),
 	INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");
 

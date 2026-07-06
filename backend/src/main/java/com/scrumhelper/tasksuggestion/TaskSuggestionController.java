@@ -26,25 +26,12 @@ public class TaskSuggestionController {
 		this.taskSuggestionService = taskSuggestionService;
 	}
 
-	@PostMapping("/spec-documents/{specDocumentId}/task-suggestions")
-	public ResponseEntity<ApiResponse<List<TaskSuggestionResponse>>> generateSuggestions(
-			@PathVariable Long specDocumentId,
+	@GetMapping("/teams/{teamId}/task-suggestions")
+	public ApiResponse<List<TaskSuggestionResponse>> getQueuedSuggestions(
+			@PathVariable Long teamId,
 			Authentication authentication
 	) {
-		return ResponseEntity
-				.status(HttpStatus.CREATED)
-				.body(ApiResponse.created(taskSuggestionService.generateSuggestions(
-						currentUserId(authentication),
-						specDocumentId
-				)));
-	}
-
-	@GetMapping("/spec-documents/{specDocumentId}/task-suggestions")
-	public ApiResponse<List<TaskSuggestionResponse>> getSuggestions(
-			@PathVariable Long specDocumentId,
-			Authentication authentication
-	) {
-		return ApiResponse.ok(taskSuggestionService.getSuggestions(currentUserId(authentication), specDocumentId));
+		return ApiResponse.ok(taskSuggestionService.getQueuedSuggestions(currentUserId(authentication), teamId));
 	}
 
 	@PostMapping("/task-suggestions/{suggestionId}/accept")

@@ -9,8 +9,6 @@ import com.scrumhelper.domain.task.Task;
 import com.scrumhelper.domain.task.TaskAssignee;
 import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskCommentRepository;
-import com.scrumhelper.domain.task.TaskDependency;
-import com.scrumhelper.domain.task.TaskDependencyRepository;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.task.TaskStatus;
@@ -21,18 +19,18 @@ import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.domain.team.TeamRepository;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
-import com.scrumhelper.notification.NotificationEventService;
 import com.scrumhelper.specdocument.GeminiSpecDraftClient;
 import com.scrumhelper.task.dto.AcceptAiTaskRecommendationRequest;
 import com.scrumhelper.task.dto.AiTaskRecommendationResponse;
 import com.scrumhelper.task.dto.SaveTaskRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TaskStatusRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -42,12 +40,10 @@ public class TaskService {
 	private final TaskRepository taskRepository;
 	private final TaskAssigneeRepository taskAssigneeRepository;
 	private final TaskCommentRepository taskCommentRepository;
-	private final TaskDependencyRepository taskDependencyRepository;
 	private final UserTodoTaskRepository userTodoTaskRepository;
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
-	private final NotificationEventService notificationEventService;
 	private final GeminiSpecDraftClient geminiSpecDraftClient;
 	private final ObjectMapper objectMapper;
 
@@ -55,24 +51,20 @@ public class TaskService {
 			TaskRepository taskRepository,
 			TaskAssigneeRepository taskAssigneeRepository,
 			TaskCommentRepository taskCommentRepository,
-			TaskDependencyRepository taskDependencyRepository,
 			UserTodoTaskRepository userTodoTaskRepository,
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
 			UserRepository userRepository,
-			NotificationEventService notificationEventService,
 			GeminiSpecDraftClient geminiSpecDraftClient,
 			ObjectMapper objectMapper
 	) {
 		this.taskRepository = taskRepository;
 		this.taskAssigneeRepository = taskAssigneeRepository;
 		this.taskCommentRepository = taskCommentRepository;
-		this.taskDependencyRepository = taskDependencyRepository;
 		this.userTodoTaskRepository = userTodoTaskRepository;
 		this.teamRepository = teamRepository;
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
-		this.notificationEventService = notificationEventService;
 		this.geminiSpecDraftClient = geminiSpecDraftClient;
 		this.objectMapper = objectMapper;
 	}
@@ -83,12 +75,11 @@ public class TaskService {
 			Long teamId,
 			Boolean completed,
 			TaskPriority priority,
-			Long assigneeId,
-			LocalDate dueFrom,
-			LocalDate dueTo
+			Long assigneeId
 	) {
 		requireMembership(teamId, currentUserId);
-		return taskRepository.findAll(buildSpecification(teamId, completed, priority, dueFrom, dueTo)).stream()
+		Sort sort = Sort.by(Sort.Direction.ASC, "sortOrder").and(Sort.by(Sort.Direction.ASC, "createdAt"));
+		return taskRepository.findAll(buildSpecification(teamId, completed, priority), sort).stream()
 				.filter(task -> assigneeId == null || taskAssigneeRepository.findByTaskId(task.getId()).stream()
 						.anyMatch(assignee -> assignee.getUser().getId().equals(assigneeId)))
 				.map(this::toResponse)
@@ -103,7 +94,6 @@ public class TaskService {
 				.filter(task -> completed == null || task.isCompleted() == completed)
 				.sorted(Comparator
 						.comparing(Task::isCompleted)
-						.thenComparing(Task::getDueDate)
 						.thenComparing(Task::getCreatedAt))
 				.map(this::toResponse)
 				.toList();
@@ -116,14 +106,15 @@ public class TaskService {
 		User createdBy = findUser(currentUserId);
 		validateAssignees(teamId, request.assigneeUserIds());
 
-		Task task = taskRepository.save(Task.create(
+		Task task = Task.create(
 				team,
 				createdBy,
 				request.title().trim(),
 				normalizeOptionalText(request.description()),
-				request.priority(),
-				request.dueDate()
-		));
+				request.priority()
+		);
+		task.assignSortOrder((int) taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.BACKLOG));
+		taskRepository.save(task);
 		replaceAssignees(task, team, request.assigneeUserIds());
 		return toResponse(task);
 	}
@@ -178,8 +169,7 @@ public class TaskService {
 		task.update(
 				request.title().trim(),
 				normalizeOptionalText(request.description()),
-				request.priority(),
-				request.dueDate()
+				request.priority()
 		);
 		replaceAssignees(task, team, request.assigneeUserIds());
 		return toResponse(task);
@@ -189,10 +179,23 @@ public class TaskService {
 	public TaskResponse updateStatus(Long currentUserId, Long taskId, TaskStatusRequest request) {
 		Task task = findTask(taskId);
 		requireMembership(task.getTeam().getId(), currentUserId);
-		task.updateStatus(request.status());
-		if (request.status() == TaskStatus.DONE) {
+		TaskStatus previousStatus = task.getStatus();
+		TaskStatus nextStatus = request.status();
+
+		List<Task> columnTasks = new ArrayList<>(taskRepository
+				.findByTeamIdAndStatusOrderBySortOrderAscCreatedAtAsc(task.getTeam().getId(), nextStatus));
+		columnTasks.removeIf(candidate -> candidate.getId().equals(taskId));
+		int position = request.position() == null
+				? columnTasks.size()
+				: Math.max(0, Math.min(request.position(), columnTasks.size()));
+		columnTasks.add(position, task);
+		for (int i = 0; i < columnTasks.size(); i++) {
+			columnTasks.get(i).assignSortOrder(i);
+		}
+
+		task.updateStatus(nextStatus);
+		if (nextStatus == TaskStatus.DONE && previousStatus != TaskStatus.DONE) {
 			userTodoTaskRepository.deleteByTaskId(taskId);
-			notificationEventService.createDependencyReadyEvents(task);
 		}
 		return toResponse(task);
 	}
@@ -201,7 +204,6 @@ public class TaskService {
 	public void deleteTask(Long currentUserId, Long taskId) {
 		Task task = findTask(taskId);
 		requireMembership(task.getTeam().getId(), currentUserId);
-		taskDependencyRepository.deleteByPredecessorIdOrSuccessorId(taskId, taskId);
 		taskCommentRepository.deleteByTaskId(taskId);
 		taskAssigneeRepository.deleteByTaskId(taskId);
 		userTodoTaskRepository.deleteByTaskId(taskId);
@@ -211,9 +213,7 @@ public class TaskService {
 	private Specification<Task> buildSpecification(
 			Long teamId,
 			Boolean completed,
-			TaskPriority priority,
-			LocalDate dueFrom,
-			LocalDate dueTo
+			TaskPriority priority
 	) {
 		return (root, query, criteriaBuilder) -> {
 			query.distinct(true);
@@ -223,12 +223,6 @@ public class TaskService {
 			}
 			if (completed != null) {
 				predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("completed"), completed));
-			}
-			if (dueFrom != null) {
-				predicate = criteriaBuilder.and(predicate, criteriaBuilder.greaterThanOrEqualTo(root.get("dueDate"), dueFrom));
-			}
-			if (dueTo != null) {
-				predicate = criteriaBuilder.and(predicate, criteriaBuilder.lessThanOrEqualTo(root.get("dueDate"), dueTo));
 			}
 			return predicate;
 		};
@@ -299,14 +293,10 @@ public class TaskService {
 
 				팀 전체 task 맥락:
 				%s
-
-				task 관계:
-				%s
 				""".formatted(
 				team.getName(),
 				formatCandidateTaskContext(candidates),
-				formatTaskContext(team.getId()),
-				formatDependencyContext(team.getId())
+				formatTaskContext(team.getId())
 		);
 	}
 
@@ -315,21 +305,17 @@ public class TaskService {
 				.map(TaskAssignee::getTask)
 				.filter(task -> !task.isCompleted())
 				.filter(task -> !userTodoTaskRepository.existsByTeamIdAndUserIdAndTaskId(teamId, userId, task.getId()))
-				.sorted(Comparator
-						.comparing(this::hasIncompleteBlockers)
-						.thenComparing(Task::getDueDate)
-						.thenComparing(Task::getCreatedAt))
+				.sorted(Comparator.comparing(Task::getCreatedAt))
 				.toList();
 	}
 
 	private String formatCandidateTaskContext(List<Task> tasks) {
 		return tasks.stream()
-				.map(task -> "- taskId=%d [%s/%s] %s, due=%s%s".formatted(
+				.map(task -> "- taskId=%d [%s/%s] %s%s".formatted(
 						task.getId(),
 						task.getStatus(),
 						task.getPriority(),
 						task.getTitle(),
-						task.getDueDate(),
 						task.getDescription() == null || task.getDescription().isBlank()
 								? ""
 								: ", description=" + compact(task.getDescription(), 300)
@@ -343,12 +329,11 @@ public class TaskService {
 			return "- 아직 등록된 task가 없음";
 		}
 		return tasks.stream()
-				.map(task -> "- #%d [%s/%s] %s, due=%s, assignees=%s%s".formatted(
+				.map(task -> "- #%d [%s/%s] %s, assignees=%s%s".formatted(
 						task.getId(),
 						task.getStatus(),
 						task.getPriority(),
 						task.getTitle(),
-						task.getDueDate(),
 						formatAssigneeNames(task.getId()),
 						task.getDescription() == null || task.getDescription().isBlank()
 								? ""
@@ -364,21 +349,6 @@ public class TaskService {
 		return names.isEmpty() ? "none" : String.join(", ", names);
 	}
 
-	private String formatDependencyContext(Long teamId) {
-		List<TaskDependency> dependencies = taskDependencyRepository.findByPredecessorTeamIdOrderByCreatedAtAsc(teamId);
-		if (dependencies.isEmpty()) {
-			return "- 등록된 task 관계 없음";
-		}
-		return dependencies.stream()
-				.map(dependency -> "- #%d %s -> #%d %s".formatted(
-						dependency.getPredecessor().getId(),
-						dependency.getPredecessor().getTitle(),
-						dependency.getSuccessor().getId(),
-						dependency.getSuccessor().getTitle()
-				))
-				.collect(java.util.stream.Collectors.joining("\n"));
-	}
-
 	private Optional<AiTaskRecommendationResponse> parseAiTaskRecommendation(String content, List<Task> candidates) {
 		try {
 			JsonNode root = objectMapper.readTree(extractJsonObject(content));
@@ -392,7 +362,7 @@ public class TaskService {
 					.findFirst()
 					.map(task -> new AiTaskRecommendationResponse(
 							toResponse(task),
-							reason.isBlank() ? "기존 task 목록과 dependency 맥락을 고려해 추천했습니다." : reason,
+							reason.isBlank() ? "기존 task 목록을 고려해 추천했습니다." : reason,
 							"GEMINI"
 					));
 		} catch (Exception ignored) {
@@ -416,14 +386,9 @@ public class TaskService {
 		Task source = candidates.get(0);
 		return new AiTaskRecommendationResponse(
 				toResponse(source),
-				"마감일과 dependency 상태를 기준으로 현재 Todo에 추가하기 좋은 기존 task입니다.",
+				"현재 Todo에 추가하기 좋은 기존 task입니다.",
 				"LOCAL_FALLBACK"
 		);
-	}
-
-	private boolean hasIncompleteBlockers(Task task) {
-		return taskDependencyRepository.findBySuccessorId(task.getId()).stream()
-				.anyMatch(dependency -> !dependency.getPredecessor().isCompleted());
 	}
 
 	private String extractJsonObject(String content) {

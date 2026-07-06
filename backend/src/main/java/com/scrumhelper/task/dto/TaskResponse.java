@@ -5,7 +5,6 @@ import com.scrumhelper.domain.task.Task;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskStatus;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,7 +14,6 @@ public record TaskResponse(
 		String title,
 		String description,
 		TaskPriority priority,
-		LocalDate dueDate,
 		TaskStatus status,
 		UserSummaryResponse createdBy,
 		List<UserSummaryResponse> assignees,
@@ -30,7 +28,6 @@ public record TaskResponse(
 				task.getTitle(),
 				task.getDescription(),
 				task.getPriority(),
-				task.getDueDate(),
 				task.getStatus(),
 				UserSummaryResponse.from(task.getCreatedBy()),
 				assignees,

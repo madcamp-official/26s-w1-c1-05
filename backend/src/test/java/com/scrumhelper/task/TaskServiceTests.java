@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -48,7 +47,7 @@ class TaskServiceTests {
 		TestContext context = createContext();
 		TaskResponse mineIncomplete = createTask(context.ownerId(), context.team().id(), "내 미완료 task", List.of(context.memberId()));
 		TaskResponse mineDone = createTask(context.ownerId(), context.team().id(), "내 완료 task", List.of(context.memberId()));
-		taskService.updateStatus(context.ownerId(), mineDone.id(), new TaskStatusRequest(TaskStatus.DONE));
+		taskService.updateStatus(context.ownerId(), mineDone.id(), new TaskStatusRequest(TaskStatus.DONE, null));
 		createTask(context.ownerId(), context.team().id(), "다른 사람 task", List.of(context.ownerId()));
 
 		List<TaskResponse> myTasks = taskService.getMyTasks(context.memberId(), context.team().id(), null);
@@ -117,7 +116,6 @@ class TaskServiceTests {
 						title,
 						"내 담당 task API 검증",
 						TaskPriority.MEDIUM,
-						LocalDate.of(2026, 7, 8),
 						assigneeUserIds
 				)
 		);

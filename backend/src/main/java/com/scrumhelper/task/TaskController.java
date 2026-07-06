@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -39,8 +38,6 @@ public class TaskController {
 			@RequestParam(required = false) Boolean completed,
 			@RequestParam(required = false) TaskPriority priority,
 			@RequestParam(required = false) Long assigneeId,
-			@RequestParam(required = false) LocalDate dueFrom,
-			@RequestParam(required = false) LocalDate dueTo,
 			Authentication authentication
 	) {
 		return ApiResponse.ok(taskService.getTasks(
@@ -48,9 +45,7 @@ public class TaskController {
 				teamId,
 				completed,
 				priority,
-				assigneeId,
-				dueFrom,
-				dueTo
+				assigneeId
 		));
 	}
 

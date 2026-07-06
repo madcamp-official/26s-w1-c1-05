@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -115,7 +114,7 @@ class TeamLeaderboardServiceTests {
 			TaskPriority priority
 	) {
 		TaskResponse task = taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds, priority));
-		return taskService.updateStatus(currentUserId, task.id(), new TaskStatusRequest(TaskStatus.DONE));
+		return taskService.updateStatus(currentUserId, task.id(), new TaskStatusRequest(TaskStatus.DONE, null));
 	}
 
 	private TaskResponse createIncompleteTask(Long currentUserId, Long teamId, List<Long> assigneeUserIds) {
@@ -127,7 +126,6 @@ class TeamLeaderboardServiceTests {
 				"Leaderboard task",
 				"Completed task ranking verification",
 				priority,
-				LocalDate.of(2026, 7, 6),
 				assigneeUserIds
 		);
 	}

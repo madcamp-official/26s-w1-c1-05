@@ -58,17 +58,22 @@ export function updateTask(taskId: number, data: SaveTaskRequest) {
   }).then(normalizeTask);
 }
 
-export function updateTaskStatus(taskId: number, status: TaskStatus) {
+export function updateTaskStatus(taskId: number, status: TaskStatus, position?: number) {
   return request<WireTask>(`/tasks/${taskId}/status`, {
     method: 'PATCH',
-    body: { status },
+    body: { status, position },
   }).then(normalizeTask);
 }
 
-export function getTaskRecommendations(documentId: number) {
-  return request<TaskRecommendation[]>(`/spec-documents/${documentId}/task-suggestions`, {
+export function getQueuedTaskSuggestions(teamId: number) {
+  return request<TaskRecommendation[]>(`/teams/${teamId}/task-suggestions`);
+}
+
+export function acceptTaskSuggestion(suggestionId: number, assigneeUserIds: number[]) {
+  return request<WireTask>(`/task-suggestions/${suggestionId}/accept`, {
     method: 'POST',
-  });
+    body: { assigneeUserIds },
+  }).then(normalizeTask);
 }
 
 type WireTask = Omit<Task, 'status'> & {

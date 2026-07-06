@@ -18,6 +18,7 @@ import com.scrumhelper.specdocument.dto.SaveSpecDocumentRequest;
 import com.scrumhelper.specdocument.dto.SpecDocumentResponse;
 import com.scrumhelper.specdocument.dto.SpecDraftResponse;
 import com.scrumhelper.specdocument.dto.UpdateSpecDocumentRequest;
+import com.scrumhelper.tasksuggestion.TaskSuggestionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class SpecDocumentService {
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
 	private final GeminiSpecDraftClient geminiSpecDraftClient;
+	private final TaskSuggestionService taskSuggestionService;
 
 	public SpecDocumentService(
 			SpecDocumentRepository specDocumentRepository,
@@ -46,7 +48,8 @@ public class SpecDocumentService {
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
 			UserRepository userRepository,
-			GeminiSpecDraftClient geminiSpecDraftClient
+			GeminiSpecDraftClient geminiSpecDraftClient,
+			TaskSuggestionService taskSuggestionService
 	) {
 		this.specDocumentRepository = specDocumentRepository;
 		this.meetingRepository = meetingRepository;
@@ -54,6 +57,7 @@ public class SpecDocumentService {
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
 		this.geminiSpecDraftClient = geminiSpecDraftClient;
+		this.taskSuggestionService = taskSuggestionService;
 	}
 
 	@Transactional(readOnly = true)
@@ -138,10 +142,12 @@ public class SpecDocumentService {
 		requireMembership(teamId, currentUserId);
 
 		Optional<SpecDocument> currentMain = specDocumentRepository.findByTeamIdAndIsMainTrue(teamId);
-		if (currentMain.isPresent() && !currentMain.get().getId().equals(document.getId())) {
-			currentMain.get().unmarkMain();
+		boolean alreadyMain = currentMain.isPresent() && currentMain.get().getId().equals(document.getId());
+		if (!alreadyMain) {
+			currentMain.ifPresent(SpecDocument::unmarkMain);
+			document.markAsMain();
+			taskSuggestionService.generateForSpecFinalization(currentMain.orElse(null), document);
 		}
-		document.markAsMain();
 		return SpecDocumentResponse.from(document);
 	}
 

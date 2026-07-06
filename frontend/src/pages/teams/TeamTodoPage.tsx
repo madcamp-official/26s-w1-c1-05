@@ -3,7 +3,7 @@ import { ArrowLeft, CheckSquare, Plus, Save, Sparkles } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import { Alert, Badge, Button, EmptyState, LoadingState } from '../../components/ui';
-import { dueLabel, priorityTone } from '../../utils/format';
+import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Task, TodoList } from '../../types/task';
 
@@ -53,7 +53,7 @@ export function TeamTodoPage() {
       if (aSelected !== bSelected) {
         return aSelected ? -1 : 1;
       }
-      return a.dueDate.localeCompare(b.dueDate) || a.createdAt.localeCompare(b.createdAt);
+      return a.createdAt.localeCompare(b.createdAt);
     });
   }, [selectedIds, todoList]);
 
@@ -154,7 +154,7 @@ export function TeamTodoPage() {
         <section className="todo-recommend-section">
           <div className="todo-recommend-head">
             <span className="eyebrow">Recommended</span>
-            <span className="todo-recommend-copy">Unblocked tasks assigned to you.</span>
+            <span className="todo-recommend-copy">Open tasks assigned to you.</span>
           </div>
           <div className="todo-recommend-list">
             {recommendedTasks.map((task) => (
@@ -201,7 +201,6 @@ function RecommendedTodoTask({
   onAdd: () => void;
   teamId: number;
 }) {
-  const due = dueLabel(task.dueDate, false);
   const priority = priorityTone(task.priority);
 
   return (
@@ -212,7 +211,6 @@ function RecommendedTodoTask({
           <Badge variant={priority.variant}>{priority.label}</Badge>
         </div>
         <div className="todo-editor-meta">
-          <span className={due.tone === 'overdue' ? 'due-label due-label-overdue' : 'due-label'}>{due.label}</span>
           <Link to={`/teams/${teamId}/tasks/${task.id}`} className="todo-editor-task-link">
             Open task
           </Link>
@@ -237,7 +235,6 @@ function TodoEditorRow({
   onToggle: () => void;
   teamId: number;
 }) {
-  const due = dueLabel(task.dueDate, task.status === 'DONE');
   const priority = priorityTone(task.priority);
 
   return (
@@ -249,7 +246,6 @@ function TodoEditorRow({
           <Badge variant={priority.variant}>{priority.label}</Badge>
         </div>
         <div className="todo-editor-meta">
-          <span className={due.tone === 'overdue' ? 'due-label due-label-overdue' : 'due-label'}>{due.label}</span>
           <Link to={`/teams/${teamId}/tasks/${task.id}`} className="todo-editor-task-link">
             Open task
           </Link>

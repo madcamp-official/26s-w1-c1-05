@@ -29,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -253,7 +252,6 @@ class BackendPolicyRegressionTests {
 				"정책 검증 task",
 				"권한과 담당자 정책을 검증한다.",
 				TaskPriority.MEDIUM,
-				LocalDate.of(2026, 7, 6),
 				assigneeUserIds
 		);
 	}

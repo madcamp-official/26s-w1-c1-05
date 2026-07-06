@@ -10,33 +10,6 @@ export function initials(name: string): string {
     .toUpperCase();
 }
 
-export type DueTone = 'overdue' | 'soon' | 'normal';
-
-export function dueLabel(dueDateISO: string, completed: boolean): { label: string; tone: DueTone } {
-  if (completed) {
-    return { label: 'Completed', tone: 'normal' };
-  }
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const due = new Date(`${dueDateISO}T00:00:00`);
-  const diffDays = Math.round((due.getTime() - now.getTime()) / 86_400_000);
-
-  if (diffDays < 0) {
-    return { label: `${-diffDays}d overdue`, tone: 'overdue' };
-  }
-  if (diffDays === 0) {
-    return { label: 'Due today', tone: 'soon' };
-  }
-  if (diffDays === 1) {
-    return { label: 'Due tomorrow', tone: 'soon' };
-  }
-  if (diffDays <= 2) {
-    return { label: `In ${diffDays} days`, tone: 'soon' };
-  }
-  return { label: `In ${diffDays} days`, tone: 'normal' };
-}
-
 export function priorityTone(priority: TaskPriority): { label: string; variant: 'solid' | 'subtle' | 'outline' } {
   if (priority === 'HIGH') {
     return { label: 'HIGH', variant: 'solid' };

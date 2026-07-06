@@ -9,6 +9,8 @@ import java.util.List;
 public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
 	List<Task> findByTeamIdOrderByCreatedAtAsc(Long teamId);
 
+	List<Task> findByTeamIdAndStatusOrderBySortOrderAscCreatedAtAsc(Long teamId, TaskStatus status);
+
 	long countByTeamId(Long teamId);
 
 	long countByTeamIdAndCompleted(Long teamId, boolean completed);

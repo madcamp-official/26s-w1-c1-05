@@ -58,10 +58,10 @@ export function updateTask(taskId: number, data: SaveTaskRequest) {
   }).then(normalizeTask);
 }
 
-export function updateTaskStatus(taskId: number, status: TaskStatus) {
+export function updateTaskStatus(taskId: number, status: TaskStatus, position?: number) {
   return request<WireTask>(`/tasks/${taskId}/status`, {
     method: 'PATCH',
-    body: { status },
+    body: { status, position },
   }).then(normalizeTask);
 }
 

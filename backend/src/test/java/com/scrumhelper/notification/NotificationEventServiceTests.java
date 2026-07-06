@@ -59,7 +59,7 @@ class NotificationEventServiceTests {
 
 		assertThat(notificationEventService.getMyNotifications(context.memberId(), context.team().id())).isEmpty();
 
-		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE, null));
 
 		List<NotificationEventResponse> notifications = notificationEventService.getMyNotifications(
 				context.memberId(),
@@ -84,9 +84,9 @@ class NotificationEventServiceTests {
 				new AddTaskDependencyRequest(predecessor.id())
 		);
 
-		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE));
-		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.BACKLOG));
-		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE, null));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.BACKLOG, null));
+		taskService.updateStatus(context.ownerId(), predecessor.id(), new TaskStatusRequest(TaskStatus.DONE, null));
 
 		assertThat(notificationEventService.getMyNotifications(context.memberId(), context.team().id())).hasSize(1);
 	}

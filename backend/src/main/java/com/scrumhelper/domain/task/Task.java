@@ -54,6 +54,9 @@ public class Task {
 	@Column(length = 20)
 	private TaskStatus status;
 
+	@Column(name = "sort_order", nullable = false, columnDefinition = "integer default 0")
+	private int sortOrder;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -124,6 +127,14 @@ public class Task {
 
 	public TaskStatus getStatus() {
 		return status == null ? (completed ? TaskStatus.DONE : TaskStatus.BACKLOG) : status;
+	}
+
+	public int getSortOrder() {
+		return sortOrder;
+	}
+
+	public void assignSortOrder(int sortOrder) {
+		this.sortOrder = sortOrder;
 	}
 
 	public LocalDateTime getCreatedAt() {

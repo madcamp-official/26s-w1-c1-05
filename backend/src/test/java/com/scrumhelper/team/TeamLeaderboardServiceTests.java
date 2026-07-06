@@ -115,7 +115,7 @@ class TeamLeaderboardServiceTests {
 			TaskPriority priority
 	) {
 		TaskResponse task = taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds, priority));
-		return taskService.updateStatus(currentUserId, task.id(), new TaskStatusRequest(TaskStatus.DONE));
+		return taskService.updateStatus(currentUserId, task.id(), new TaskStatusRequest(TaskStatus.DONE, null));
 	}
 
 	private TaskResponse createIncompleteTask(Long currentUserId, Long teamId, List<Long> assigneeUserIds) {

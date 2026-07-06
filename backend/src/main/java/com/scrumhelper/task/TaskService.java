@@ -28,11 +28,13 @@ import com.scrumhelper.task.dto.AiTaskRecommendationResponse;
 import com.scrumhelper.task.dto.SaveTaskRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TaskStatusRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -88,7 +90,8 @@ public class TaskService {
 			LocalDate dueTo
 	) {
 		requireMembership(teamId, currentUserId);
-		return taskRepository.findAll(buildSpecification(teamId, completed, priority, dueFrom, dueTo)).stream()
+		Sort sort = Sort.by(Sort.Direction.ASC, "sortOrder").and(Sort.by(Sort.Direction.ASC, "createdAt"));
+		return taskRepository.findAll(buildSpecification(teamId, completed, priority, dueFrom, dueTo), sort).stream()
 				.filter(task -> assigneeId == null || taskAssigneeRepository.findByTaskId(task.getId()).stream()
 						.anyMatch(assignee -> assignee.getUser().getId().equals(assigneeId)))
 				.map(this::toResponse)
@@ -116,14 +119,16 @@ public class TaskService {
 		User createdBy = findUser(currentUserId);
 		validateAssignees(teamId, request.assigneeUserIds());
 
-		Task task = taskRepository.save(Task.create(
+		Task task = Task.create(
 				team,
 				createdBy,
 				request.title().trim(),
 				normalizeOptionalText(request.description()),
 				request.priority(),
 				request.dueDate()
-		));
+		);
+		task.assignSortOrder((int) taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.BACKLOG));
+		taskRepository.save(task);
 		replaceAssignees(task, team, request.assigneeUserIds());
 		return toResponse(task);
 	}
@@ -189,8 +194,22 @@ public class TaskService {
 	public TaskResponse updateStatus(Long currentUserId, Long taskId, TaskStatusRequest request) {
 		Task task = findTask(taskId);
 		requireMembership(task.getTeam().getId(), currentUserId);
-		task.updateStatus(request.status());
-		if (request.status() == TaskStatus.DONE) {
+		TaskStatus previousStatus = task.getStatus();
+		TaskStatus nextStatus = request.status();
+
+		List<Task> columnTasks = new ArrayList<>(taskRepository
+				.findByTeamIdAndStatusOrderBySortOrderAscCreatedAtAsc(task.getTeam().getId(), nextStatus));
+		columnTasks.removeIf(candidate -> candidate.getId().equals(taskId));
+		int position = request.position() == null
+				? columnTasks.size()
+				: Math.max(0, Math.min(request.position(), columnTasks.size()));
+		columnTasks.add(position, task);
+		for (int i = 0; i < columnTasks.size(); i++) {
+			columnTasks.get(i).assignSortOrder(i);
+		}
+
+		task.updateStatus(nextStatus);
+		if (nextStatus == TaskStatus.DONE && previousStatus != TaskStatus.DONE) {
 			userTodoTaskRepository.deleteByTaskId(taskId);
 			notificationEventService.createDependencyReadyEvents(task);
 		}

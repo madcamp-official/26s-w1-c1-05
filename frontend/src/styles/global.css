@@ -1147,6 +1147,18 @@ p {
   display: flex;
   flex-direction: column;
   gap: 9px;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.board-column-drag-over {
+  background: var(--gray-100);
+  border-color: var(--gray-600);
+}
+
+.board-drop-indicator {
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--gray-600);
 }
 
 .board-column-head {
@@ -1185,6 +1197,11 @@ p {
   flex-direction: column;
   gap: 9px;
   padding: 12px;
+  cursor: grab;
+}
+
+.task-card-dragging {
+  opacity: 0.4;
 }
 
 .ai-recommendation-card {

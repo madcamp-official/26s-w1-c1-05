@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 
 public record TaskStatusRequest(
 		@NotNull(message = "상태를 선택하세요.")
-		TaskStatus status
+		TaskStatus status,
+		Integer position
 ) {
 }

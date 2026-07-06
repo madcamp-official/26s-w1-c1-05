@@ -2,7 +2,7 @@ import { clearStoredToken, getStoredToken } from '../auth/authStorage';
 import { ApiError, type ApiEnvelope } from '../types/api';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
+  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -70,7 +70,8 @@ function buildUrl(
 ) {
   const baseUrl = API_BASE_URL.replace(/\/$/, '');
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-  const url = new URL(`${baseUrl}${normalizedPath}`);
+
+  const url = new URL(`${baseUrl}${normalizedPath}`, window.location.origin);
 
   if (query) {
     Object.entries(query).forEach(([key, value]) => {

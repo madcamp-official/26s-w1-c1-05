@@ -3,9 +3,11 @@ package com.scrumhelper.meeting;
 import com.scrumhelper.common.ApiResponse;
 import com.scrumhelper.meeting.dto.MeetingResponse;
 import com.scrumhelper.meeting.dto.MeetingSummaryResponse;
+import com.scrumhelper.meeting.dto.MeetingTranscriptionResponse;
 import com.scrumhelper.meeting.dto.SaveMeetingRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,7 +17,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -45,6 +49,15 @@ public class MeetingController {
 		return ResponseEntity
 				.status(HttpStatus.CREATED)
 				.body(ApiResponse.created(meetingService.createMeeting(currentUserId(authentication), teamId, request)));
+	}
+
+	@PostMapping(value = "/teams/{teamId}/meetings/transcription", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ApiResponse<MeetingTranscriptionResponse> transcribeMeetingAudio(
+			@PathVariable Long teamId,
+			@RequestPart("file") MultipartFile file,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(meetingService.transcribeMeetingAudio(currentUserId(authentication), teamId, file));
 	}
 
 	@GetMapping("/meetings/{meetingId}")

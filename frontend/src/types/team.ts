@@ -52,6 +52,13 @@ export type TeamDashboard = {
   };
 };
 
+export type TeamLeaderboardRow = {
+  user: UserSummary;
+  completedTaskCount: number;
+  rank: number;
+  reputationLevel: 'SEED' | 'SPROUT' | 'SAPLING' | 'OAK' | string;
+};
+
 export type CreateTeamRequest = {
   name: string;
   description?: string;

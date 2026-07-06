@@ -260,7 +260,18 @@ Content-Type: application/json
 `generatedBy`는 Gemini 호출 성공 시 `GEMINI`, API 키가 없거나 호출 실패 시 `LOCAL_FALLBACK`이다.
 생성된 요약은 `meetings.summary`에 저장된다.
 
-### 3.10 SpecDocumentResponse
+### 3.10 MeetingTranscriptionResponse
+
+```json
+{
+  "transcript": "Speaker 1 [00:00]: 오늘은 task 추천 API를 검토하겠습니다.",
+  "generatedBy": "GEMINI"
+}
+```
+
+`generatedBy`는 Gemini 오디오 분석 성공 시 `GEMINI`, API 키가 없거나 호출 실패 시 `LOCAL_FALLBACK`이다.
+
+### 3.11 SpecDocumentResponse
 
 ```json
 {
@@ -279,7 +290,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.11 TaskSuggestionResponse
+### 3.12 TaskSuggestionResponse
 
 ```json
 {
@@ -296,7 +307,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.12 TeamLeaderboardResponse
+### 3.13 TeamLeaderboardResponse
 
 ```json
 {
@@ -320,7 +331,7 @@ Content-Type: application/json
 | `SAPLING` | 완료 task 5개 이상 |
 | `OAK` | 완료 task 10개 이상 |
 
-### 3.13 TaskDependencyResponse
+### 3.14 TaskDependencyResponse
 
 ```json
 {
@@ -335,7 +346,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.14 NotificationEventResponse
+### 3.15 NotificationEventResponse
 
 ```json
 {
@@ -1064,7 +1075,35 @@ Response `200`:
 }
 ```
 
-### 6.2 task 생성
+### 6.2 내 담당 task 목록 조회
+
+```http
+GET /api/teams/{teamId}/tasks/my
+```
+
+권한: 팀원
+
+Query:
+
+| 이름 | 필수 | 설명 |
+|---|---|---|
+| `completed` | N | `true` 또는 `false` |
+
+Response `200`: `TaskResponse[]`
+
+정책:
+
+- 현재 로그인 사용자가 담당자로 배정된 task만 반환한다.
+- 완료 여부 필터가 없으면 완료/미완료를 모두 반환한다.
+- 정렬은 미완료 우선, 마감일 오름차순, 생성일 오름차순이다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+
+### 6.3 task 생성
 
 ```http
 POST /api/teams/{teamId}/tasks
@@ -1102,7 +1141,7 @@ Errors:
 | `ASSIGNEE_REQUIRED` | 400 | 담당자 0명 |
 | `ASSIGNEE_NOT_TEAM_MEMBER` | 400 | 담당자가 팀원이 아님 |
 
-### 6.3 task 상세 조회
+### 6.4 task 상세 조회
 
 ```http
 GET /api/tasks/{taskId}
@@ -1119,7 +1158,7 @@ Errors:
 | `TASK_NOT_FOUND` | 404 | task 없음 |
 | `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
 
-### 6.4 task 수정
+### 6.5 task 수정
 
 ```http
 PATCH /api/tasks/{taskId}
@@ -1147,10 +1186,10 @@ Response `200`: `TaskResponse`
 - 담당자는 1명 이상이어야 한다.
 - 담당자는 같은 팀의 팀원만 가능하다.
 
-### 6.5 task 완료 여부 변경
+### 6.6 task 상태 변경
 
 ```http
-PATCH /api/tasks/{taskId}/completion
+PATCH /api/tasks/{taskId}/status
 ```
 
 권한: task가 속한 팀의 팀원
@@ -1159,7 +1198,7 @@ Request:
 
 ```json
 {
-  "completed": true
+  "status": "DONE"
 }
 ```
 
@@ -1167,12 +1206,13 @@ Response `200`: `TaskResponse`
 
 정책:
 
-- task 완료 처리는 팀원 모두 가능하다.
-- 상태는 완료/미완료만 존재한다.
+- task 상태 변경은 팀원 모두 가능하다.
+- 상태는 `BACKLOG`, `IN_PROGRESS`, `DONE`을 사용한다.
+- `DONE` 상태는 완료 task로 집계한다.
 - 완료 처리되는 task가 선행 task로 등록되어 있으면 후행 task 담당자에게 `TASK_DEPENDENCY_READY` notification event를 생성한다.
 - 같은 선행/후행 task 조합과 같은 수신자에 대해 중복 notification event는 생성하지 않는다.
 
-### 6.6 task 삭제
+### 6.7 task 삭제
 
 ```http
 DELETE /api/tasks/{taskId}
@@ -1196,7 +1236,7 @@ Response `200`:
 - task 삭제 시 담당자 연결과 댓글이 함께 삭제된다.
 - task 삭제 시 해당 task가 포함된 전후 관계도 함께 삭제된다.
 
-### 6.7 task 관계 전체 조회
+### 6.8 task 관계 전체 조회
 
 ```http
 GET /api/teams/{teamId}/task-dependencies
@@ -1211,7 +1251,7 @@ Response `200`: `TaskDependencyResponse[]`
 - 팀 단위 task 전후 관계를 모두 조회한다.
 - 선행 task와 후행 task의 완료 상태를 함께 응답한다.
 
-### 6.8 선행 task 추가
+### 6.9 선행 task 추가
 
 ```http
 POST /api/tasks/{taskId}/dependencies
@@ -1249,7 +1289,7 @@ Errors:
 | `TASK_DEPENDENCY_ALREADY_EXISTS` | 409 | 이미 존재하는 관계 |
 | `TASK_DEPENDENCY_CYCLE` | 409 | 순환 의존성 발생 |
 
-### 6.9 선행 task 관계 삭제
+### 6.10 선행 task 관계 삭제
 
 ```http
 DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}
@@ -1434,7 +1474,37 @@ Validation:
 - `meetingAt`: required
 - `rawContent`, `summary`: optional
 
-### 8.3 회의록 상세 조회
+### 8.3 녹음 파일 script 변환
+
+```http
+POST /api/teams/{teamId}/meetings/transcription
+```
+
+권한: 팀원
+
+Request: `multipart/form-data`
+
+| 이름 | 필수 | 설명 |
+|---|---|---|
+| `file` | Y | `audio/*`, `.mp3`, `.m4a`, `.wav`, `.webm`, `.ogg` 등 회의 녹음 파일 |
+
+Response `200`: `MeetingTranscriptionResponse`
+
+정책:
+
+- 업로드 파일은 Gemini Files API에 업로드한 뒤 generateContent의 audio input으로 script 변환을 요청한다.
+- Gemini API 키가 없거나 업로드/분석 호출이 실패하면 `LOCAL_FALLBACK` placeholder script를 반환한다.
+- 반환된 script는 DB에 자동 저장하지 않는다. 프론트는 사용자가 검토한 뒤 회의록 `rawContent`에 저장한다.
+- 실시간 transcription은 지원하지 않고, 업로드 파일 단위 변환만 지원한다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `VALIDATION_ERROR` | 400 | 파일 미첨부 또는 파일 읽기 실패 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
+
+### 8.4 회의록 상세 조회
 
 ```http
 GET /api/meetings/{meetingId}
@@ -1444,7 +1514,7 @@ GET /api/meetings/{meetingId}
 
 Response `200`: `MeetingResponse`
 
-### 8.4 회의록 수정
+### 8.5 회의록 수정
 
 ```http
 PATCH /api/meetings/{meetingId}
@@ -1456,7 +1526,7 @@ Request: 회의록 생성 request와 동일
 
 Response `200`: `MeetingResponse`
 
-### 8.5 회의록 삭제
+### 8.6 회의록 삭제
 
 ```http
 DELETE /api/meetings/{meetingId}
@@ -1482,7 +1552,7 @@ Errors:
 | `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
 | `MEETING_AUTHOR_OR_LEADER_ONLY` | 403 | 작성자 또는 팀장이 아님 |
 
-### 8.6 회의록 요약 생성
+### 8.7 회의록 요약 생성
 
 ```http
 POST /api/meetings/{meetingId}/summary
@@ -1903,23 +1973,25 @@ Response `200`:
 ### 13.4 task 화면
 
 1. `GET /api/teams/{teamId}/tasks`
-2. 생성: `POST /api/teams/{teamId}/tasks`
-3. 수정: `PATCH /api/tasks/{taskId}`
-4. 완료 변경: `PATCH /api/tasks/{taskId}/completion`
-5. 삭제: `DELETE /api/tasks/{taskId}`
-6. 댓글 조회: `GET /api/tasks/{taskId}/comments`
-7. 관계 조회: `GET /api/teams/{teamId}/task-dependencies`
-8. 선행 task 추가: `POST /api/tasks/{taskId}/dependencies`
-9. 선행 task 삭제: `DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}`
+2. 내 담당 task: `GET /api/teams/{teamId}/tasks/my`
+3. 생성: `POST /api/teams/{teamId}/tasks`
+4. 수정: `PATCH /api/tasks/{taskId}`
+5. 완료 변경: `PATCH /api/tasks/{taskId}/status`
+6. 삭제: `DELETE /api/tasks/{taskId}`
+7. 댓글 조회: `GET /api/tasks/{taskId}/comments`
+8. 관계 조회: `GET /api/teams/{teamId}/task-dependencies`
+9. 선행 task 추가: `POST /api/tasks/{taskId}/dependencies`
+10. 선행 task 삭제: `DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}`
 
 ### 13.5 회의록 화면
 
 1. `GET /api/teams/{teamId}/meetings`
 2. 생성: `POST /api/teams/{teamId}/meetings`
-3. 상세: `GET /api/meetings/{meetingId}`
-4. 수정: `PATCH /api/meetings/{meetingId}`
-5. 요약 생성: `POST /api/meetings/{meetingId}/summary`
-6. 삭제: `DELETE /api/meetings/{meetingId}`
+3. 녹음 파일 script 변환: `POST /api/teams/{teamId}/meetings/transcription`
+4. 상세: `GET /api/meetings/{meetingId}`
+5. 수정: `PATCH /api/meetings/{meetingId}`
+6. 요약 생성: `POST /api/meetings/{meetingId}/summary`
+7. 삭제: `DELETE /api/meetings/{meetingId}`
 
 ### 13.6 스펙 문서 화면
 

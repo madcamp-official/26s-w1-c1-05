@@ -15,6 +15,12 @@ export function getTasks(teamId: number, params?: TaskFilter) {
   }).then((tasks) => tasks.map(normalizeTask));
 }
 
+export function getMyTasks(teamId: number, completed?: boolean) {
+  return request<WireTask[]>(`/teams/${teamId}/tasks/my`, {
+    query: completed == null ? undefined : { completed },
+  }).then((tasks) => tasks.map(normalizeTask));
+}
+
 export function createTask(teamId: number, data: SaveTaskRequest) {
   return request<WireTask>(`/teams/${teamId}/tasks`, {
     method: 'POST',
@@ -41,9 +47,9 @@ export function updateTaskStatus(taskId: number, status: TaskStatus) {
 }
 
 export function getTaskRecommendations(documentId: number) {
-  return request<{ tasks: TaskRecommendation[] }>(`/spec-documents/${documentId}/task-recommendations`, {
+  return request<TaskRecommendation[]>(`/spec-documents/${documentId}/task-suggestions`, {
     method: 'POST',
-  }).then((response) => response.tasks);
+  });
 }
 
 type WireTask = Omit<Task, 'status'> & {

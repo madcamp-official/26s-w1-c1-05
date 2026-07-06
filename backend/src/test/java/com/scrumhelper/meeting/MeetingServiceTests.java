@@ -6,6 +6,7 @@ import com.scrumhelper.common.BusinessException;
 import com.scrumhelper.common.ErrorCode;
 import com.scrumhelper.meeting.dto.MeetingResponse;
 import com.scrumhelper.meeting.dto.MeetingSummaryResponse;
+import com.scrumhelper.meeting.dto.MeetingTranscriptionResponse;
 import com.scrumhelper.meeting.dto.SaveMeetingRequest;
 import com.scrumhelper.team.TeamService;
 import com.scrumhelper.team.dto.CreateTeamRequest;
@@ -13,6 +14,7 @@ import com.scrumhelper.team.dto.TeamDetailResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -56,6 +58,39 @@ class MeetingServiceTests {
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.MEETING_AUTHOR_OR_LEADER_ONLY);
+	}
+
+	@Test
+	void transcribeMeetingAudioReturnsLocalFallbackWhenGeminiKeyIsMissing() {
+		TestContext context = createContext();
+		MockMultipartFile file = new MockMultipartFile(
+				"file",
+				"meeting.mp3",
+				"audio/mpeg",
+				new byte[] {1, 2, 3}
+		);
+
+		MeetingTranscriptionResponse response = meetingService.transcribeMeetingAudio(context.ownerId(), context.team().id(), file);
+
+		assertThat(response.generatedBy()).isEqualTo("LOCAL_FALLBACK");
+		assertThat(response.transcript()).contains("meeting.mp3");
+	}
+
+	@Test
+	void outsiderCannotTranscribeMeetingAudio() {
+		TestContext context = createContext();
+		Long outsiderId = signup("meeting-outsider-" + UUID.randomUUID().toString().substring(0, 8) + "@test.com");
+		MockMultipartFile file = new MockMultipartFile(
+				"file",
+				"meeting.mp3",
+				"audio/mpeg",
+				new byte[] {1, 2, 3}
+		);
+
+		assertThatThrownBy(() -> meetingService.transcribeMeetingAudio(outsiderId, context.team().id(), file))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.NOT_TEAM_MEMBER);
 	}
 
 	private TestContext createContext() {

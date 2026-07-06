@@ -65,11 +65,14 @@ $env:JWT_SECRET = "local-development-secret-change-me"
 | `JWT_SECRET` | local default | JWT 서명 secret |
 | `JWT_EXPIRATION_MILLIS` | `86400000` | access token 만료 시간 |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | 프론트엔드 origin |
+| `MULTIPART_MAX_FILE_SIZE` | `25MB` | 회의 녹음 업로드 단일 파일 크기 제한 |
+| `MULTIPART_MAX_REQUEST_SIZE` | `25MB` | 회의 녹음 업로드 요청 전체 크기 제한 |
 | `GEMINI_API_KEY` | empty | Gemini API key. 없으면 local fallback |
 | `GOOGLE_API_KEY` | empty | `GEMINI_API_KEY`가 없을 때 대체로 사용하는 Gemini API key |
 | `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini generateContent 모델명 |
 | `GEMINI_FALLBACK_MODELS` | `gemini-2.5-flash,gemini-2.0-flash` | `GEMINI_MODEL` 실패 시 순서대로 재시도할 모델명 |
 | `GEMINI_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta` | Gemini generateContent API base URL. 로컬 테스트 서버 검증 시에만 변경 |
+| `GEMINI_UPLOAD_BASE_URL` | `https://generativelanguage.googleapis.com/upload/v1beta` | Gemini Files API upload base URL. 로컬 테스트 서버 검증 시에만 변경 |
 
 헬스 체크:
 

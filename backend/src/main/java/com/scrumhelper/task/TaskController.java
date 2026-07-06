@@ -34,6 +34,7 @@ public class TaskController {
 	@GetMapping("/teams/{teamId}/tasks")
 	public ApiResponse<List<TaskResponse>> getTasks(
 			@PathVariable Long teamId,
+			@RequestParam(required = false) Boolean completed,
 			@RequestParam(required = false) TaskPriority priority,
 			@RequestParam(required = false) Long assigneeId,
 			@RequestParam(required = false) LocalDate dueFrom,
@@ -43,6 +44,7 @@ public class TaskController {
 		return ApiResponse.ok(taskService.getTasks(
 				currentUserId(authentication),
 				teamId,
+				completed,
 				priority,
 				assigneeId,
 				dueFrom,
@@ -59,6 +61,15 @@ public class TaskController {
 		return ResponseEntity
 				.status(HttpStatus.CREATED)
 				.body(ApiResponse.created(taskService.createTask(currentUserId(authentication), teamId, request)));
+	}
+
+	@GetMapping("/teams/{teamId}/tasks/my")
+	public ApiResponse<List<TaskResponse>> getMyTasks(
+			@PathVariable Long teamId,
+			@RequestParam(required = false) Boolean completed,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(taskService.getMyTasks(currentUserId(authentication), teamId, completed));
 	}
 
 	@GetMapping("/tasks/{taskId}")

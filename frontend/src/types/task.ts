@@ -39,6 +39,7 @@ export type TaskComment = {
 };
 
 export type TaskFilter = {
+  completed?: boolean;
   priority?: TaskPriority;
   assigneeId?: number;
   dueFrom?: string;
@@ -54,9 +55,13 @@ export type SaveTaskRequest = {
 };
 
 export type TaskRecommendation = {
+  id?: number;
+  specDocumentId?: number;
   title: string;
-  description: string;
+  description: string | null;
   priority: TaskPriority;
+  dueDate?: string;
+  accepted?: boolean;
   reason?: string;
 };
 

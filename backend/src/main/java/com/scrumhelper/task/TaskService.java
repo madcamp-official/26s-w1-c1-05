@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -62,15 +63,30 @@ public class TaskService {
 	public List<TaskResponse> getTasks(
 			Long currentUserId,
 			Long teamId,
+			Boolean completed,
 			TaskPriority priority,
 			Long assigneeId,
 			LocalDate dueFrom,
 			LocalDate dueTo
 	) {
 		requireMembership(teamId, currentUserId);
-		return taskRepository.findAll(buildSpecification(teamId, priority, assigneeId, dueFrom, dueTo)).stream()
+		return taskRepository.findAll(buildSpecification(teamId, completed, priority, dueFrom, dueTo)).stream()
 				.filter(task -> assigneeId == null || taskAssigneeRepository.findByTaskId(task.getId()).stream()
 						.anyMatch(assignee -> assignee.getUser().getId().equals(assigneeId)))
+				.map(this::toResponse)
+				.toList();
+	}
+
+	@Transactional(readOnly = true)
+	public List<TaskResponse> getMyTasks(Long currentUserId, Long teamId, Boolean completed) {
+		requireMembership(teamId, currentUserId);
+		return taskAssigneeRepository.findByTeamIdAndUserId(teamId, currentUserId).stream()
+				.map(TaskAssignee::getTask)
+				.filter(task -> completed == null || task.isCompleted() == completed)
+				.sorted(Comparator
+						.comparing(Task::isCompleted)
+						.thenComparing(Task::getDueDate)
+						.thenComparing(Task::getCreatedAt))
 				.map(this::toResponse)
 				.toList();
 	}
@@ -141,8 +157,8 @@ public class TaskService {
 
 	private Specification<Task> buildSpecification(
 			Long teamId,
+			Boolean completed,
 			TaskPriority priority,
-			Long assigneeId,
 			LocalDate dueFrom,
 			LocalDate dueTo
 	) {
@@ -151,6 +167,9 @@ public class TaskService {
 			var predicate = criteriaBuilder.equal(root.get("team").get("id"), teamId);
 			if (priority != null) {
 				predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("priority"), priority));
+			}
+			if (completed != null) {
+				predicate = criteriaBuilder.and(predicate, criteriaBuilder.equal(root.get("completed"), completed));
 			}
 			if (dueFrom != null) {
 				predicate = criteriaBuilder.and(predicate, criteriaBuilder.greaterThanOrEqualTo(root.get("dueDate"), dueFrom));

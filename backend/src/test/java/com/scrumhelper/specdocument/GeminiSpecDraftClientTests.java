@@ -41,6 +41,7 @@ class GeminiSpecDraftClientTests {
 					"test-key",
 					"gemini-1.5-flash",
 					"gemini-2.5-flash",
+					baseUrl(server),
 					baseUrl(server)
 			);
 
@@ -73,6 +74,7 @@ class GeminiSpecDraftClientTests {
 					"test-key",
 					"gemini-2.5-flash",
 					"",
+					baseUrl(server),
 					baseUrl(server)
 			);
 
@@ -81,6 +83,73 @@ class GeminiSpecDraftClientTests {
 			assertThat(result).contains("[{\"title\":\"API 테스트\"}]");
 			assertThat(requestBody.get()).contains("\"generationConfig\"");
 			assertThat(requestBody.get()).contains("\"responseMimeType\":\"application/json\"");
+		} finally {
+			server.stop(0);
+		}
+	}
+
+	@Test
+	void transcribeAudioUploadsFileAndUsesFileUriInGenerateContent() throws Exception {
+		List<String> paths = Collections.synchronizedList(new ArrayList<>());
+		List<String> uploadCommands = Collections.synchronizedList(new ArrayList<>());
+		AtomicReference<String> generateBody = new AtomicReference<>();
+		HttpServer server = startServer(exchange -> {
+			paths.add(exchange.getRequestURI().getPath());
+			String uploadCommand = exchange.getRequestHeaders().getFirst("X-Goog-Upload-Command");
+			if (uploadCommand != null) {
+				uploadCommands.add(uploadCommand);
+			}
+
+			if (exchange.getRequestURI().getPath().equals("/files")) {
+				exchange.getRequestBody().readAllBytes();
+				exchange.getResponseHeaders().add(
+						"x-goog-upload-url",
+						"http://127.0.0.1:" + exchange.getLocalAddress().getPort() + "/upload-session"
+				);
+				send(exchange, 200, "{}");
+				return;
+			}
+			if (exchange.getRequestURI().getPath().equals("/upload-session")) {
+				byte[] bytes = exchange.getRequestBody().readAllBytes();
+				assertThat(bytes).containsExactly((byte) 1, (byte) 2, (byte) 3);
+				send(exchange, 200, """
+						{"file":{"uri":"gemini://uploaded/audio","name":"files/audio"}}
+						""");
+				return;
+			}
+
+			generateBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+			send(exchange, 200, """
+					{"candidates":[{"content":{"parts":[{"text":"Speaker 1: 테스트 회의입니다."}]}}]}
+					""");
+		});
+
+		try {
+			GeminiSpecDraftClient client = new GeminiSpecDraftClient(
+					objectMapper,
+					"test-key",
+					"gemini-2.5-flash",
+					"",
+					baseUrl(server),
+					baseUrl(server)
+			);
+
+			Optional<String> result = client.transcribeAudio(
+					"회의 녹음을 script로 변환해줘.",
+					new byte[] {1, 2, 3},
+					"audio/mpeg",
+					"meeting.mp3"
+			);
+
+			assertThat(result).contains("Speaker 1: 테스트 회의입니다.");
+			assertThat(paths).containsExactly(
+					"/files",
+					"/upload-session",
+					"/models/gemini-2.5-flash:generateContent"
+			);
+			assertThat(uploadCommands).containsExactly("start", "upload, finalize");
+			assertThat(generateBody.get()).contains("\"file_uri\":\"gemini://uploaded/audio\"");
+			assertThat(generateBody.get()).contains("\"mime_type\":\"audio/mpeg\"");
 		} finally {
 			server.stop(0);
 		}

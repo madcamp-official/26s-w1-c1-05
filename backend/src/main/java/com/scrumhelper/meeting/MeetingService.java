@@ -13,11 +13,14 @@ import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
 import com.scrumhelper.meeting.dto.MeetingResponse;
 import com.scrumhelper.meeting.dto.MeetingSummaryResponse;
+import com.scrumhelper.meeting.dto.MeetingTranscriptionResponse;
 import com.scrumhelper.meeting.dto.SaveMeetingRequest;
 import com.scrumhelper.specdocument.GeminiSpecDraftClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -67,6 +70,30 @@ public class MeetingService {
 				normalizeOptionalText(request.summary())
 		));
 		return MeetingResponse.from(meeting);
+	}
+
+	@Transactional(readOnly = true)
+	public MeetingTranscriptionResponse transcribeMeetingAudio(Long currentUserId, Long teamId, MultipartFile file) {
+		requireMembership(teamId, currentUserId);
+		if (file == null || file.isEmpty()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "녹음 파일을 업로드하세요.");
+		}
+
+		String originalFilename = file.getOriginalFilename();
+		String mimeType = normalizeMimeType(file.getContentType(), originalFilename);
+		byte[] audioBytes = readFileBytes(file);
+		String prompt = """
+				업로드된 회의 녹음 파일을 한국어 회의록 script로 변환해줘.
+				요구사항:
+				1. 가능한 경우 화자를 Speaker 1, Speaker 2처럼 구분해줘.
+				2. 가능한 경우 타임스탬프를 MM:SS 형식으로 포함해줘.
+				3. 들리지 않거나 확실하지 않은 부분은 [불명확]으로 표시해줘.
+				4. 요약이나 해석은 넣지 말고, 회의록 rawContent에 붙여넣기 좋은 script만 반환해줘.
+				""";
+
+		return geminiSpecDraftClient.transcribeAudio(prompt, audioBytes, mimeType, originalFilename)
+				.map(transcript -> new MeetingTranscriptionResponse(transcript, "GEMINI"))
+				.orElseGet(() -> new MeetingTranscriptionResponse(buildLocalTranscriptionFallback(originalFilename, file.getSize()), "LOCAL_FALLBACK"));
 	}
 
 	@Transactional(readOnly = true)
@@ -193,5 +220,52 @@ public class MeetingService {
 
 	private String nullToFallback(String value, String fallback) {
 		return value == null || value.isBlank() ? fallback : value.trim();
+	}
+
+	private byte[] readFileBytes(MultipartFile file) {
+		try {
+			return file.getBytes();
+		} catch (IOException exception) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "녹음 파일을 읽을 수 없습니다.");
+		}
+	}
+
+	private String normalizeMimeType(String contentType, String originalFilename) {
+		if (contentType != null && contentType.startsWith("audio/")) {
+			return contentType;
+		}
+		if (originalFilename != null) {
+			String lowerFilename = originalFilename.toLowerCase();
+			if (lowerFilename.endsWith(".mp3")) {
+				return "audio/mpeg";
+			}
+			if (lowerFilename.endsWith(".m4a")) {
+				return "audio/mp4";
+			}
+			if (lowerFilename.endsWith(".wav")) {
+				return "audio/wav";
+			}
+			if (lowerFilename.endsWith(".webm")) {
+				return "audio/webm";
+			}
+			if (lowerFilename.endsWith(".ogg")) {
+				return "audio/ogg";
+			}
+		}
+		return "audio/mpeg";
+	}
+
+	private String buildLocalTranscriptionFallback(String originalFilename, long fileSize) {
+		return """
+				[LOCAL_FALLBACK]
+				녹음 파일을 업로드했지만 Gemini API 키가 없거나 외부 transcription 호출에 실패해 자동 script 변환을 완료하지 못했습니다.
+				파일명: %s
+				파일 크기: %d bytes
+
+				회의 원문을 직접 입력하거나, Gemini API 키 설정 후 다시 업로드하세요.
+				""".formatted(
+				originalFilename == null || originalFilename.isBlank() ? "unknown" : originalFilename,
+				fileSize
+		);
 	}
 }

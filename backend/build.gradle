@@ -48,4 +48,5 @@ tasks.named('bootRun') {
 	environment 'GEMINI_MODEL', System.getenv('GEMINI_MODEL') ?: 'gemini-2.5-flash'
 	environment 'GEMINI_FALLBACK_MODELS', System.getenv('GEMINI_FALLBACK_MODELS') ?: 'gemini-2.5-flash,gemini-2.0-flash'
 	environment 'GEMINI_BASE_URL', System.getenv('GEMINI_BASE_URL') ?: 'https://generativelanguage.googleapis.com/v1beta'
+	environment 'GEMINI_UPLOAD_BASE_URL', System.getenv('GEMINI_UPLOAD_BASE_URL') ?: 'https://generativelanguage.googleapis.com/upload/v1beta'
 }

@@ -9,6 +9,8 @@ import java.util.List;
 public interface TaskAssigneeRepository extends JpaRepository<TaskAssignee, Long> {
 	List<TaskAssignee> findByTaskId(Long taskId);
 
+	List<TaskAssignee> findByTeamIdAndUserId(Long teamId, Long userId);
+
 	void deleteByTaskId(Long taskId);
 
 	void deleteByTeamIdAndUserId(Long teamId, Long userId);

@@ -32,19 +32,22 @@ public class GeminiSpecDraftClient {
 	private final String model;
 	private final List<String> modelCandidates;
 	private final String baseUrl;
+	private final String uploadBaseUrl;
 
 	public GeminiSpecDraftClient(
 			ObjectMapper objectMapper,
 			@Value("${app.gemini.api-key:}") String apiKey,
 			@Value("${app.gemini.model:gemini-2.5-flash}") String model,
 			@Value("${app.gemini.fallback-models:gemini-2.5-flash,gemini-2.0-flash}") String fallbackModels,
-			@Value("${app.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}") String baseUrl
+			@Value("${app.gemini.base-url:https://generativelanguage.googleapis.com/v1beta}") String baseUrl,
+			@Value("${app.gemini.upload-base-url:https://generativelanguage.googleapis.com/upload/v1beta}") String uploadBaseUrl
 	) {
 		this.objectMapper = objectMapper;
 		this.apiKey = apiKey;
 		this.model = model;
 		this.modelCandidates = buildModelCandidates(model, fallbackModels);
 		this.baseUrl = normalizeBaseUrl(baseUrl);
+		this.uploadBaseUrl = normalizeBaseUrl(uploadBaseUrl);
 		this.httpClient = HttpClient.newBuilder()
 				.connectTimeout(Duration.ofSeconds(5))
 				.build();
@@ -66,6 +69,20 @@ public class GeminiSpecDraftClient {
 
 	public Optional<String> generateJson(String prompt) {
 		return generate(prompt, "application/json");
+	}
+
+	public Optional<String> transcribeAudio(String prompt, byte[] audioBytes, String mimeType, String displayName) {
+		if (apiKey == null || apiKey.isBlank()) {
+			log.info("Gemini API key is not configured. Falling back to local audio transcription.");
+			return Optional.empty();
+		}
+		if (audioBytes == null || audioBytes.length == 0) {
+			log.warn("Gemini audio transcription requested with empty audio bytes.");
+			return Optional.empty();
+		}
+
+		return uploadFile(audioBytes, mimeType, displayName)
+				.flatMap(uploadedFile -> generateWithFile(prompt, uploadedFile, mimeType));
 	}
 
 	private Optional<String> generate(String prompt, String responseMimeType) {
@@ -106,6 +123,41 @@ public class GeminiSpecDraftClient {
 		return Optional.empty();
 	}
 
+	private Optional<String> generateWithFile(String prompt, UploadedFile uploadedFile, String mimeType) {
+		String body;
+		try {
+			Map<String, Object> requestBody = new LinkedHashMap<>();
+			requestBody.put(
+				"contents",
+				Lists.of(Map.of(
+					"parts",
+					Lists.of(
+						Map.of("text", prompt),
+						Map.of("file_data", Map.of(
+								"mime_type", mimeType,
+								"file_uri", uploadedFile.uri()
+						))
+					)
+				))
+			);
+			body = objectMapper.writeValueAsString(requestBody);
+		} catch (Exception exception) {
+			log.warn("Gemini file request body serialization failed.", exception);
+			return Optional.empty();
+		}
+
+		for (String candidateModel : modelCandidates) {
+			Optional<String> generated = generateWithModel(body, candidateModel);
+			if (generated.isPresent()) {
+				if (!candidateModel.equals(model)) {
+					log.info("Gemini file request succeeded with fallback model={}", candidateModel);
+				}
+				return generated;
+			}
+		}
+		return Optional.empty();
+	}
+
 	private Optional<String> generateWithModel(String body, String candidateModel) {
 		try {
 			HttpRequest request = HttpRequest.newBuilder()
@@ -135,6 +187,70 @@ public class GeminiSpecDraftClient {
 			return Optional.of(textNode.asText().trim());
 		} catch (Exception exception) {
 			log.warn("Gemini API request failed before receiving a usable response. model={}", candidateModel, exception);
+			return Optional.empty();
+		}
+	}
+
+	private Optional<UploadedFile> uploadFile(byte[] fileBytes, String mimeType, String displayName) {
+		try {
+			String startBody = objectMapper.writeValueAsString(Map.of(
+					"file",
+					Map.of("display_name", displayName == null || displayName.isBlank() ? "AUDIO" : displayName)
+			));
+			HttpRequest startRequest = HttpRequest.newBuilder()
+					.uri(URI.create(uploadBaseUrl + "/files"))
+					.timeout(Duration.ofSeconds(20))
+					.header("Content-Type", "application/json")
+					.header("x-goog-api-key", apiKey)
+					.header("X-Goog-Upload-Protocol", "resumable")
+					.header("X-Goog-Upload-Command", "start")
+					.header("X-Goog-Upload-Header-Content-Length", String.valueOf(fileBytes.length))
+					.header("X-Goog-Upload-Header-Content-Type", mimeType)
+					.POST(HttpRequest.BodyPublishers.ofString(startBody))
+					.build();
+			HttpResponse<String> startResponse = httpClient.send(startRequest, HttpResponse.BodyHandlers.ofString());
+			if (startResponse.statusCode() < 200 || startResponse.statusCode() >= 300) {
+				log.warn(
+						"Gemini file upload start failed. status={}, body={}",
+						startResponse.statusCode(),
+						truncateForLog(startResponse.body())
+				);
+				return Optional.empty();
+			}
+
+			Optional<String> uploadUrl = startResponse.headers().firstValue("x-goog-upload-url");
+			if (uploadUrl.isEmpty()) {
+				log.warn("Gemini file upload start did not return x-goog-upload-url.");
+				return Optional.empty();
+			}
+
+			HttpRequest uploadRequest = HttpRequest.newBuilder()
+					.uri(URI.create(uploadUrl.get()))
+					.timeout(Duration.ofSeconds(60))
+					.header("X-Goog-Upload-Offset", "0")
+					.header("X-Goog-Upload-Command", "upload, finalize")
+					.POST(HttpRequest.BodyPublishers.ofByteArray(fileBytes))
+					.build();
+			HttpResponse<String> uploadResponse = httpClient.send(uploadRequest, HttpResponse.BodyHandlers.ofString());
+			if (uploadResponse.statusCode() < 200 || uploadResponse.statusCode() >= 300) {
+				log.warn(
+						"Gemini file upload finalize failed. status={}, body={}",
+						uploadResponse.statusCode(),
+						truncateForLog(uploadResponse.body())
+				);
+				return Optional.empty();
+			}
+
+			JsonNode fileNode = objectMapper.readTree(uploadResponse.body()).path("file");
+			String uri = fileNode.path("uri").asText("");
+			String name = fileNode.path("name").asText("");
+			if (uri.isBlank()) {
+				log.warn("Gemini file upload finalize response did not include file.uri. body={}", truncateForLog(uploadResponse.body()));
+				return Optional.empty();
+			}
+			return Optional.of(new UploadedFile(uri, name));
+		} catch (Exception exception) {
+			log.warn("Gemini file upload failed before receiving a usable response.", exception);
 			return Optional.empty();
 		}
 	}
@@ -183,5 +299,8 @@ public class GeminiSpecDraftClient {
 		static <T> java.util.List<T> of(T... values) {
 			return java.util.List.of(values);
 		}
+	}
+
+	private record UploadedFile(String uri, String name) {
 	}
 }

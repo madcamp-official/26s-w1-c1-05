@@ -118,8 +118,9 @@ export function TaskNewPage() {
     setForm((current) => ({
       ...current,
       title: recommendation.title,
-      description: recommendation.description,
+      description: recommendation.description ?? '',
       priority: recommendation.priority,
+      dueDate: recommendation.dueDate ?? current.dueDate,
     }));
   }
 

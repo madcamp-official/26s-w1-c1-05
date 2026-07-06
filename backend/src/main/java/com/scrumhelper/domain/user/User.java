@@ -24,6 +24,12 @@ public class User {
 	@Column(nullable = false, unique = true, length = 255)
 	private String email;
 
+	@Column(length = 80)
+	private String title;
+
+	@Column(length = 500)
+	private String bio;
+
 	@Column(name = "password_hash", nullable = false, length = 255)
 	private String passwordHash;
 
@@ -70,6 +76,14 @@ public class User {
 		return email;
 	}
 
+	public String getTitle() {
+		return title;
+	}
+
+	public String getBio() {
+		return bio;
+	}
+
 	public String getPasswordHash() {
 		return passwordHash;
 	}
@@ -80,5 +94,11 @@ public class User {
 
 	public LocalDateTime getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public void updateProfile(String name, String title, String bio) {
+		this.name = name;
+		this.title = title;
+		this.bio = bio;
 	}
 }

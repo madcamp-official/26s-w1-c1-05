@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ListChecks, CalendarDays, FileText, RotateCcw, Users, Settings, ChevronsUpDown, LogOut, Workflow } from 'lucide-react';
+import { LayoutDashboard, ListChecks, CalendarDays, FileText, RotateCcw, Users, Settings, ChevronsUpDown, LogOut, Workflow, Trophy } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
 import * as meetingApi from '../../api/meetingApi';
 import * as specDocumentApi from '../../api/specDocumentApi';
 import { useAuth } from '../../auth/useAuth';
 import { Avatar, LoadingState } from '../ui';
+import { SidebarTodoList } from './SidebarTodoList';
 import { ApiError } from '../../types/api';
 import type { TeamDashboard, TeamDetail } from '../../types/team';
 
@@ -68,6 +69,7 @@ export function TeamLayout() {
     { to: basePath, end: true, label: 'Dashboard', icon: LayoutDashboard },
     { to: `${basePath}/tasks`, label: 'Task', icon: ListChecks, count: dashboard?.task.incompleteCount },
     { to: `${basePath}/dependencies`, label: 'Dependencies', icon: Workflow },
+    { to: `${basePath}/leaderboard`, label: 'Leaderboard', icon: Trophy },
     { to: `${basePath}/meetings`, label: 'Meetings', icon: CalendarDays, count: meetingCount },
     { to: `${basePath}/spec-documents`, label: 'Spec', icon: FileText, count: specCount },
     { to: `${basePath}/retrospectives`, label: 'Retro', icon: RotateCcw, count: dashboard?.retrospective.totalCount },
@@ -78,7 +80,11 @@ export function TeamLayout() {
   const activeItem = [...navItems].reverse().find((item) =>
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to),
   );
-  const crumbLabel = activeItem?.label ?? 'Dashboard';
+  const crumbLabel = location.pathname.includes('/profiles/')
+    ? 'Profile'
+    : location.pathname.endsWith('/todos')
+      ? 'Todo'
+      : activeItem?.label ?? 'Dashboard';
 
   if (isLoading && !team) {
     return <LoadingState label="Loading team…" />;
@@ -111,6 +117,8 @@ export function TeamLayout() {
             );
           })}
         </nav>
+
+        <SidebarTodoList teamId={numericTeamId} />
       </aside>
 
       <div className="app-main">
@@ -123,10 +131,10 @@ export function TeamLayout() {
             <span className="crumb-current">{crumbLabel}</span>
           </div>
           <div className="topbar-actions">
-            <div className="user-chip">
+            <Link to={user ? `${basePath}/profiles/${user.id}` : basePath} className="user-chip user-chip-link">
               <Avatar name={user?.name ?? 'You'} size="sm" />
               <span>{user?.name ?? 'You'}</span>
-            </div>
+            </Link>
             <button type="button" className="logout-btn" onClick={handleLogout}>
               <LogOut size={15} aria-hidden="true" />
               Log out

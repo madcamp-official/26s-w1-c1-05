@@ -11,6 +11,7 @@ import com.scrumhelper.domain.task.TaskDependencyRepository;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.task.TaskStatus;
+import com.scrumhelper.domain.task.UserTodoTaskRepository;
 import com.scrumhelper.domain.team.Team;
 import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.domain.team.TeamRepository;
@@ -34,6 +35,7 @@ public class TaskService {
 	private final TaskAssigneeRepository taskAssigneeRepository;
 	private final TaskCommentRepository taskCommentRepository;
 	private final TaskDependencyRepository taskDependencyRepository;
+	private final UserTodoTaskRepository userTodoTaskRepository;
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
@@ -44,6 +46,7 @@ public class TaskService {
 			TaskAssigneeRepository taskAssigneeRepository,
 			TaskCommentRepository taskCommentRepository,
 			TaskDependencyRepository taskDependencyRepository,
+			UserTodoTaskRepository userTodoTaskRepository,
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
 			UserRepository userRepository,
@@ -53,6 +56,7 @@ public class TaskService {
 		this.taskAssigneeRepository = taskAssigneeRepository;
 		this.taskCommentRepository = taskCommentRepository;
 		this.taskDependencyRepository = taskDependencyRepository;
+		this.userTodoTaskRepository = userTodoTaskRepository;
 		this.teamRepository = teamRepository;
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
@@ -152,6 +156,7 @@ public class TaskService {
 		taskDependencyRepository.deleteByPredecessorIdOrSuccessorId(taskId, taskId);
 		taskCommentRepository.deleteByTaskId(taskId);
 		taskAssigneeRepository.deleteByTaskId(taskId);
+		userTodoTaskRepository.deleteByTaskId(taskId);
 		taskRepository.delete(task);
 	}
 
@@ -182,10 +187,14 @@ public class TaskService {
 	}
 
 	private void replaceAssignees(Task task, Team team, List<Long> assigneeUserIds) {
+		List<Long> nextAssigneeIds = assigneeUserIds.stream().distinct().toList();
+		taskAssigneeRepository.findByTaskId(task.getId()).stream()
+				.map(assignee -> assignee.getUser().getId())
+				.filter(userId -> !nextAssigneeIds.contains(userId))
+				.forEach(userId -> userTodoTaskRepository.deleteByTeamIdAndUserIdAndTaskId(team.getId(), userId, task.getId()));
 		taskAssigneeRepository.deleteByTaskId(task.getId());
 		taskAssigneeRepository.flush();
-		assigneeUserIds.stream()
-				.distinct()
+		nextAssigneeIds.stream()
 				.map(this::findUser)
 				.map(user -> TaskAssignee.create(task, team, user))
 				.forEach(taskAssigneeRepository::save);

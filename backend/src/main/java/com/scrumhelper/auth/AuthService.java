@@ -3,6 +3,7 @@ package com.scrumhelper.auth;
 import com.scrumhelper.auth.dto.AuthResponse;
 import com.scrumhelper.auth.dto.LoginRequest;
 import com.scrumhelper.auth.dto.SignupRequest;
+import com.scrumhelper.auth.dto.UpdateProfileRequest;
 import com.scrumhelper.auth.dto.UserSummaryResponse;
 import com.scrumhelper.common.BusinessException;
 import com.scrumhelper.common.ErrorCode;
@@ -63,6 +64,18 @@ public class AuthService {
 		return UserSummaryResponse.from(user);
 	}
 
+	@Transactional
+	public UserSummaryResponse updateProfile(Long userId, UpdateProfileRequest request) {
+		User user = userRepository.findById(userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+		user.updateProfile(
+				request.name().trim(),
+				normalizeOptionalText(request.title()),
+				normalizeOptionalText(request.bio())
+		);
+		return UserSummaryResponse.from(user);
+	}
+
 	private AuthResponse createAuthResponse(User user) {
 		return new AuthResponse(
 				UserSummaryResponse.from(user),
@@ -72,5 +85,9 @@ public class AuthService {
 
 	private String normalizeEmail(String email) {
 		return email.trim().toLowerCase();
+	}
+
+	private String normalizeOptionalText(String value) {
+		return value == null || value.isBlank() ? null : value.trim();
 	}
 }

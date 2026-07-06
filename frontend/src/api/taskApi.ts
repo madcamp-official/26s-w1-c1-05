@@ -7,6 +7,8 @@ import type {
   TaskFilter,
   TaskStatus,
   TaskRecommendation,
+  TodoList,
+  SaveTodoListRequest,
 } from '../types/task';
 
 export function getTasks(teamId: number, params?: TaskFilter) {
@@ -92,4 +94,29 @@ export function deleteComment(commentId: number) {
   return request<null>(`/comments/${commentId}`, {
     method: 'DELETE',
   });
+}
+
+export function getTodoList(teamId: number) {
+  return request<WireTodoList>(`/teams/${teamId}/todos`).then(normalizeTodoList);
+}
+
+export function updateTodoList(teamId: number, data: SaveTodoListRequest) {
+  return request<WireTodoList>(`/teams/${teamId}/todos`, {
+    method: 'PATCH',
+    body: data,
+  }).then(normalizeTodoList);
+}
+
+type WireTodoList = {
+  selectedTasks: WireTask[];
+  candidateTasks: WireTask[];
+  recommendedTasks?: WireTask[];
+};
+
+function normalizeTodoList(todoList: WireTodoList): TodoList {
+  return {
+    selectedTasks: todoList.selectedTasks.map(normalizeTask),
+    candidateTasks: todoList.candidateTasks.map(normalizeTask),
+    recommendedTasks: (todoList.recommendedTasks ?? []).map(normalizeTask),
+  };
 }

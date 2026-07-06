@@ -11,6 +11,8 @@ public interface TaskAssigneeRepository extends JpaRepository<TaskAssignee, Long
 
 	List<TaskAssignee> findByTeamIdAndUserId(Long teamId, Long userId);
 
+	boolean existsByTaskIdAndUserId(Long taskId, Long userId);
+
 	void deleteByTaskId(Long taskId);
 
 	void deleteByTeamIdAndUserId(Long teamId, Long userId);
@@ -29,17 +31,27 @@ public interface TaskAssigneeRepository extends JpaRepository<TaskAssignee, Long
 	boolean existsSoleAssigneeTask(@Param("teamId") Long teamId, @Param("userId") Long userId);
 
 	@Query("""
-			select ta.user.id as userId, count(distinct ta.task.id) as completedTaskCount
+			select ta.user.id as userId,
+			       count(distinct ta.task.id) as completedTaskCount,
+			       coalesce(sum(
+			         case
+			           when ta.task.priority = com.scrumhelper.domain.task.TaskPriority.HIGH then 5
+			           when ta.task.priority = com.scrumhelper.domain.task.TaskPriority.MEDIUM then 3
+			           else 1
+			         end
+			       ), 0) as points
 			from TaskAssignee ta
 			where ta.team.id = :teamId
 			  and ta.task.completed = true
 			group by ta.user.id
 			""")
-	List<CompletedTaskCountView> countCompletedTasksByUserId(@Param("teamId") Long teamId);
+	List<CompletedTaskScoreView> scoreCompletedTasksByUserId(@Param("teamId") Long teamId);
 
-	interface CompletedTaskCountView {
+	interface CompletedTaskScoreView {
 		Long getUserId();
 
 		long getCompletedTaskCount();
+
+		long getPoints();
 	}
 }

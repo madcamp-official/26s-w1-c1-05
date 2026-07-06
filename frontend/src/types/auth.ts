@@ -2,6 +2,8 @@ export type UserSummary = {
   id: number;
   name: string;
   email: string;
+  title: string | null;
+  bio: string | null;
 };
 
 export type AuthResponse = {
@@ -18,4 +20,10 @@ export type SignupRequest = {
   name: string;
   email: string;
   password: string;
+};
+
+export type UpdateProfileRequest = {
+  name: string;
+  title?: string | null;
+  bio?: string | null;
 };

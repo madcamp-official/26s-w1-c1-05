@@ -13,6 +13,7 @@ import com.scrumhelper.domain.team.TeamRole;
 import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.task.TaskStatus;
+import com.scrumhelper.domain.task.UserTodoTaskRepository;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
 import com.scrumhelper.team.dto.CreateTeamRequest;
@@ -22,6 +23,7 @@ import com.scrumhelper.team.dto.TeamDashboardResponse;
 import com.scrumhelper.team.dto.TeamDetailResponse;
 import com.scrumhelper.team.dto.TeamInviteCodeResponse;
 import com.scrumhelper.team.dto.TeamLeaderboardResponse;
+import com.scrumhelper.team.dto.TeamMemberProfileResponse;
 import com.scrumhelper.team.dto.TeamMemberResponse;
 import com.scrumhelper.team.dto.TeamPasswordResponse;
 import com.scrumhelper.team.dto.TeamSummaryResponse;
@@ -52,6 +54,7 @@ public class TeamService {
 	private final RetrospectiveCollaboratorRepository retrospectiveCollaboratorRepository;
 	private final TaskRepository taskRepository;
 	private final TaskAssigneeRepository taskAssigneeRepository;
+	private final UserTodoTaskRepository userTodoTaskRepository;
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
 
@@ -62,6 +65,7 @@ public class TeamService {
 			RetrospectiveCollaboratorRepository retrospectiveCollaboratorRepository,
 			TaskRepository taskRepository,
 			TaskAssigneeRepository taskAssigneeRepository,
+			UserTodoTaskRepository userTodoTaskRepository,
 			UserRepository userRepository,
 			PasswordEncoder passwordEncoder
 	) {
@@ -71,6 +75,7 @@ public class TeamService {
 		this.retrospectiveCollaboratorRepository = retrospectiveCollaboratorRepository;
 		this.taskRepository = taskRepository;
 		this.taskAssigneeRepository = taskAssigneeRepository;
+		this.userTodoTaskRepository = userTodoTaskRepository;
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 	}
@@ -189,19 +194,46 @@ public class TeamService {
 	@Transactional(readOnly = true)
 	public List<TeamLeaderboardResponse> getLeaderboard(Long currentUserId, Long teamId) {
 		requireMembership(teamId, currentUserId);
-		Map<Long, Long> completedTaskCounts = taskAssigneeRepository.countCompletedTasksByUserId(teamId).stream()
+		return buildLeaderboard(teamId);
+	}
+
+	@Transactional(readOnly = true)
+	public TeamMemberProfileResponse getMemberProfile(Long currentUserId, Long teamId, Long userId) {
+		requireMembership(teamId, currentUserId);
+		TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, userId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.TARGET_NOT_TEAM_MEMBER));
+		TeamLeaderboardResponse leaderboardRow = buildLeaderboard(teamId).stream()
+				.filter(row -> row.user().id().equals(userId))
+				.findFirst()
+				.orElseThrow(() -> new BusinessException(ErrorCode.TARGET_NOT_TEAM_MEMBER));
+
+		return new TeamMemberProfileResponse(
+				UserSummaryResponse.from(member.getUser()),
+				member.getRole(),
+				member.getJoinedAt(),
+				leaderboardRow.completedTaskCount(),
+				leaderboardRow.points(),
+				leaderboardRow.rank(),
+				leaderboardRow.reputationLevel()
+		);
+	}
+
+	private List<TeamLeaderboardResponse> buildLeaderboard(Long teamId) {
+		Map<Long, TaskScore> taskScores = taskAssigneeRepository.scoreCompletedTasksByUserId(teamId).stream()
 				.collect(Collectors.toMap(
-						TaskAssigneeRepository.CompletedTaskCountView::getUserId,
-						TaskAssigneeRepository.CompletedTaskCountView::getCompletedTaskCount
+						TaskAssigneeRepository.CompletedTaskScoreView::getUserId,
+						score -> new TaskScore(score.getCompletedTaskCount(), score.getPoints())
 				));
 		List<TeamMember> members = teamMemberRepository.findByTeamIdOrderByRoleAscJoinedAtAsc(teamId);
 		List<LeaderboardRow> rows = members.stream()
 				.map(member -> new LeaderboardRow(
 						member.getUser(),
-						completedTaskCounts.getOrDefault(member.getUser().getId(), 0L)
+						taskScores.getOrDefault(member.getUser().getId(), TaskScore.EMPTY).completedTaskCount(),
+						taskScores.getOrDefault(member.getUser().getId(), TaskScore.EMPTY).points()
 				))
 				.sorted(Comparator
-						.comparingLong(LeaderboardRow::completedTaskCount).reversed()
+						.comparingLong(LeaderboardRow::points).reversed()
+						.thenComparing(Comparator.comparingLong(LeaderboardRow::completedTaskCount).reversed())
 						.thenComparing(row -> row.user().getName(), String.CASE_INSENSITIVE_ORDER)
 						.thenComparing(row -> row.user().getId()))
 				.toList();
@@ -210,8 +242,9 @@ public class TeamService {
 				.map(row -> new TeamLeaderboardResponse(
 						UserSummaryResponse.from(row.user()),
 						row.completedTaskCount(),
+						row.points(),
 						row.rank(),
-						reputationLevel(row.completedTaskCount())
+						reputationLevel(row.points())
 				))
 				.toList();
 	}
@@ -294,6 +327,7 @@ public class TeamService {
 		}
 
 		taskAssigneeRepository.deleteByTeamIdAndUserId(teamId, target.getUser().getId());
+		userTodoTaskRepository.deleteByTeamIdAndUserId(teamId, target.getUser().getId());
 		retrospectiveCollaboratorRepository.deleteByTeamIdAndUserId(teamId, target.getUser().getId());
 		teamMemberRepository.delete(target);
 	}
@@ -379,34 +413,38 @@ public class TeamService {
 
 	private List<RankedLeaderboardRow> assignRanks(List<LeaderboardRow> rows) {
 		java.util.ArrayList<RankedLeaderboardRow> rankedRows = new java.util.ArrayList<>();
-		long previousCount = Long.MIN_VALUE;
+		long previousPoints = Long.MIN_VALUE;
 		int previousRank = 0;
 		for (int index = 0; index < rows.size(); index++) {
 			LeaderboardRow row = rows.get(index);
-			int rank = row.completedTaskCount() == previousCount ? previousRank : index + 1;
-			rankedRows.add(new RankedLeaderboardRow(row.user(), row.completedTaskCount(), rank));
-			previousCount = row.completedTaskCount();
+			int rank = row.points() == previousPoints ? previousRank : index + 1;
+			rankedRows.add(new RankedLeaderboardRow(row.user(), row.completedTaskCount(), row.points(), rank));
+			previousPoints = row.points();
 			previousRank = rank;
 		}
 		return rankedRows;
 	}
 
-	private String reputationLevel(long completedTaskCount) {
-		if (completedTaskCount >= 10) {
+	private String reputationLevel(long points) {
+		if (points >= 35) {
 			return "OAK";
 		}
-		if (completedTaskCount >= 5) {
+		if (points >= 15) {
 			return "SAPLING";
 		}
-		if (completedTaskCount >= 1) {
+		if (points >= 1) {
 			return "SPROUT";
 		}
 		return "SEED";
 	}
 
-	private record LeaderboardRow(User user, long completedTaskCount) {
+	private record TaskScore(long completedTaskCount, long points) {
+		private static final TaskScore EMPTY = new TaskScore(0, 0);
 	}
 
-	private record RankedLeaderboardRow(User user, long completedTaskCount, int rank) {
+	private record LeaderboardRow(User user, long completedTaskCount, long points) {
+	}
+
+	private record RankedLeaderboardRow(User user, long completedTaskCount, long points, int rank) {
 	}
 }

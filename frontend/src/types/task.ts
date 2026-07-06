@@ -68,3 +68,13 @@ export type TaskRecommendation = {
 export type SaveCommentRequest = {
   content: string;
 };
+
+export type TodoList = {
+  selectedTasks: Task[];
+  candidateTasks: Task[];
+  recommendedTasks: Task[];
+};
+
+export type SaveTodoListRequest = {
+  taskIds: number[];
+};

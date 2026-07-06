@@ -55,8 +55,14 @@ export type TeamDashboard = {
 export type TeamLeaderboardRow = {
   user: UserSummary;
   completedTaskCount: number;
+  points: number;
   rank: number;
   reputationLevel: 'SEED' | 'SPROUT' | 'SAPLING' | 'OAK' | string;
+};
+
+export type TeamMemberProfile = TeamLeaderboardRow & {
+  role: TeamRole;
+  joinedAt: string;
 };
 
 export type CreateTeamRequest = {

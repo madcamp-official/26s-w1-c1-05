@@ -7,6 +7,7 @@ import type {
   TeamDetail,
   TeamInviteCodeStatus,
   TeamLeaderboardRow,
+  TeamMemberProfile,
   TeamMember,
   TeamPasswordStatus,
   TeamSummary,
@@ -38,6 +39,10 @@ export function getDashboard(teamId: number) {
 
 export function getLeaderboard(teamId: number) {
   return request<TeamLeaderboardRow[]>(`/teams/${teamId}/leaderboard`);
+}
+
+export function getMemberProfile(teamId: number, userId: number) {
+  return request<TeamMemberProfile>(`/teams/${teamId}/profiles/${userId}`);
 }
 
 export function joinTeam(teamId: number, data?: JoinTeamRequest) {

@@ -38,7 +38,7 @@ class TeamLeaderboardServiceTests {
 	private TaskService taskService;
 
 	@Test
-	void leaderboardRanksMembersByCompletedAssignedTasks() {
+	void leaderboardRanksMembersByCompletedTaskPoints() {
 		String stamp = UUID.randomUUID().toString().substring(0, 8);
 		Long ownerId = signup("leaderboard-owner-" + stamp + "@test.com", "Owner " + stamp);
 		Long memberAId = signup("leaderboard-a-" + stamp + "@test.com", "Alice " + stamp);
@@ -51,10 +51,10 @@ class TeamLeaderboardServiceTests {
 		teamService.joinTeam(memberAId, team.id(), null);
 		teamService.joinTeam(memberBId, team.id(), null);
 
-		createCompletedTask(ownerId, team.id(), List.of(memberAId));
-		createCompletedTask(ownerId, team.id(), List.of(memberAId));
-		createCompletedTask(ownerId, team.id(), List.of(ownerId, memberAId));
-		createCompletedTask(ownerId, team.id(), List.of(memberBId));
+		createCompletedTask(ownerId, team.id(), List.of(memberAId), TaskPriority.LOW);
+		createCompletedTask(ownerId, team.id(), List.of(memberAId), TaskPriority.LOW);
+		createCompletedTask(ownerId, team.id(), List.of(ownerId, memberAId), TaskPriority.MEDIUM);
+		createCompletedTask(ownerId, team.id(), List.of(memberBId), TaskPriority.HIGH);
 		createIncompleteTask(ownerId, team.id(), List.of(memberBId));
 
 		List<TeamLeaderboardResponse> leaderboard = teamService.getLeaderboard(ownerId, team.id());
@@ -62,13 +62,16 @@ class TeamLeaderboardServiceTests {
 		assertThat(leaderboard).hasSize(3);
 		assertThat(leaderboard.get(0).user().id()).isEqualTo(memberAId);
 		assertThat(leaderboard.get(0).completedTaskCount()).isEqualTo(3);
+		assertThat(leaderboard.get(0).points()).isEqualTo(5);
 		assertThat(leaderboard.get(0).rank()).isEqualTo(1);
 		assertThat(leaderboard.get(0).reputationLevel()).isEqualTo("SPROUT");
 
 		assertThat(countOf(leaderboard, ownerId)).isEqualTo(1);
-		assertThat(rankOf(leaderboard, ownerId)).isEqualTo(2);
+		assertThat(pointsOf(leaderboard, ownerId)).isEqualTo(3);
+		assertThat(rankOf(leaderboard, ownerId)).isEqualTo(3);
 		assertThat(countOf(leaderboard, memberBId)).isEqualTo(1);
-		assertThat(rankOf(leaderboard, memberBId)).isEqualTo(2);
+		assertThat(pointsOf(leaderboard, memberBId)).isEqualTo(5);
+		assertThat(rankOf(leaderboard, memberBId)).isEqualTo(1);
 
 		assertThatThrownBy(() -> teamService.getLeaderboard(outsiderId, team.id()))
 				.isInstanceOf(BusinessException.class)
@@ -77,7 +80,7 @@ class TeamLeaderboardServiceTests {
 	}
 
 	@Test
-	void reputationLevelUsesCompletedTaskThresholds() {
+	void reputationLevelUsesCompletedTaskPointThresholds() {
 		String stamp = UUID.randomUUID().toString().substring(0, 8);
 		Long ownerId = signup("level-owner-" + stamp + "@test.com", "Level Owner " + stamp);
 		Long saplingUserId = signup("level-sapling-" + stamp + "@test.com", "Level Sapling " + stamp);
@@ -91,11 +94,11 @@ class TeamLeaderboardServiceTests {
 		teamService.joinTeam(oakUserId, team.id(), null);
 		teamService.joinTeam(seedUserId, team.id(), null);
 
-		for (int i = 0; i < 5; i++) {
-			createCompletedTask(ownerId, team.id(), List.of(saplingUserId));
+		for (int i = 0; i < 3; i++) {
+			createCompletedTask(ownerId, team.id(), List.of(saplingUserId), TaskPriority.HIGH);
 		}
-		for (int i = 0; i < 10; i++) {
-			createCompletedTask(ownerId, team.id(), List.of(oakUserId));
+		for (int i = 0; i < 7; i++) {
+			createCompletedTask(ownerId, team.id(), List.of(oakUserId), TaskPriority.HIGH);
 		}
 
 		List<TeamLeaderboardResponse> leaderboard = teamService.getLeaderboard(ownerId, team.id());
@@ -105,20 +108,25 @@ class TeamLeaderboardServiceTests {
 		assertThat(levelOf(leaderboard, seedUserId)).isEqualTo("SEED");
 	}
 
-	private TaskResponse createCompletedTask(Long currentUserId, Long teamId, List<Long> assigneeUserIds) {
-		TaskResponse task = taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds));
+	private TaskResponse createCompletedTask(
+			Long currentUserId,
+			Long teamId,
+			List<Long> assigneeUserIds,
+			TaskPriority priority
+	) {
+		TaskResponse task = taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds, priority));
 		return taskService.updateStatus(currentUserId, task.id(), new TaskStatusRequest(TaskStatus.DONE));
 	}
 
 	private TaskResponse createIncompleteTask(Long currentUserId, Long teamId, List<Long> assigneeUserIds) {
-		return taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds));
+		return taskService.createTask(currentUserId, teamId, taskRequest(assigneeUserIds, TaskPriority.MEDIUM));
 	}
 
-	private SaveTaskRequest taskRequest(List<Long> assigneeUserIds) {
+	private SaveTaskRequest taskRequest(List<Long> assigneeUserIds, TaskPriority priority) {
 		return new SaveTaskRequest(
-				"리더보드 집계 task",
-				"완료 task 집계 검증",
-				TaskPriority.MEDIUM,
+				"Leaderboard task",
+				"Completed task ranking verification",
+				priority,
 				LocalDate.of(2026, 7, 6),
 				assigneeUserIds
 		);
@@ -138,6 +146,14 @@ class TeamLeaderboardServiceTests {
 				.findFirst()
 				.orElseThrow()
 				.completedTaskCount();
+	}
+
+	private long pointsOf(List<TeamLeaderboardResponse> leaderboard, Long userId) {
+		return leaderboard.stream()
+				.filter(row -> row.user().id().equals(userId))
+				.findFirst()
+				.orElseThrow()
+				.points();
 	}
 
 	private int rankOf(List<TeamLeaderboardResponse> leaderboard, Long userId) {

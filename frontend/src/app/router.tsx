@@ -8,8 +8,11 @@ import { LoginPage } from '../pages/auth/LoginPage';
 import { SignupPage } from '../pages/auth/SignupPage';
 import { TeamListPage } from '../pages/teams/TeamListPage';
 import { TeamDashboardPage } from '../pages/teams/TeamDashboardPage';
+import { TeamLeaderboardPage } from '../pages/teams/TeamLeaderboardPage';
 import { TeamMembersPage } from '../pages/teams/TeamMembersPage';
+import { TeamProfilePage } from '../pages/teams/TeamProfilePage';
 import { TeamSettingsPage } from '../pages/teams/TeamSettingsPage';
+import { TeamTodoPage } from '../pages/teams/TeamTodoPage';
 import { TaskListPage } from '../pages/tasks/TaskListPage';
 import { TaskNewPage } from '../pages/tasks/TaskNewPage';
 import { TaskDetailPage } from '../pages/tasks/TaskDetailPage';
@@ -72,7 +75,10 @@ export const router = createBrowserRouter([
             element: <TeamLayout />,
             children: [
               { index: true, element: <TeamDashboardPage /> },
+              { path: 'leaderboard', element: <TeamLeaderboardPage /> },
               { path: 'members', element: <TeamMembersPage /> },
+              { path: 'profiles/:userId', element: <TeamProfilePage /> },
+              { path: 'todos', element: <TeamTodoPage /> },
               { path: 'settings', element: <TeamSettingsPage /> },
               { path: 'meetings', element: <MeetingListPage /> },
               { path: 'meetings/:meetingId', element: <MeetingDetailPage /> },

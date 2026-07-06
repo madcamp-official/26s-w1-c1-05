@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ArrowLeft, Trash2, X } from 'lucide-react';
-import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as taskDependencyApi from '../../api/taskDependencyApi';
 import * as teamApi from '../../api/teamApi';
@@ -489,7 +489,9 @@ export function TaskDetailPage() {
               const isEditing = editingCommentId === comment.id;
               return (
                 <div className="comment-item" key={comment.id}>
-                  <Avatar name={comment.author.name} />
+                  <Link to={`/teams/${numericTeamId}/profiles/${comment.author.id}`} className="comment-avatar-link">
+                    <Avatar name={comment.author.name} />
+                  </Link>
                   <div className="comment-body-wrap">
                     <div className="comment-head">
                       <span className="comment-author">{comment.author.name}</span>

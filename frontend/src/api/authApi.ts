@@ -3,6 +3,7 @@ import type {
   AuthResponse,
   LoginRequest,
   SignupRequest,
+  UpdateProfileRequest,
   UserSummary,
 } from '../types/auth';
 
@@ -30,4 +31,11 @@ export function logout() {
 
 export function getMe() {
   return request<UserSummary>('/me');
+}
+
+export function updateProfile(data: UpdateProfileRequest) {
+  return request<UserSummary>('/me', {
+    method: 'PATCH',
+    body: data,
+  });
 }

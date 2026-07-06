@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useOutletContext, useParams } from 'react-router-dom';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
 import { Alert, Avatar, Badge, Button, LoadingState, useConfirm } from '../../components/ui';
 import { ApiError } from '../../types/api';
@@ -96,11 +96,13 @@ export function TeamMembersPage() {
       <div className="members-list">
         {members.map((member) => (
           <div className="member-row" key={member.id}>
-            <Avatar name={member.user.name} size="lg" />
-            <div className="member-info">
-              <div className="member-name">{member.user.name}</div>
-              <div className="member-email">{member.user.email}</div>
-            </div>
+            <Link to={`/teams/${numericTeamId}/profiles/${member.user.id}`} className="member-profile-link">
+              <Avatar name={member.user.name} size="lg" />
+              <div className="member-info">
+                <div className="member-name">{member.user.name}</div>
+                <div className="member-email">{member.user.title || member.user.email}</div>
+              </div>
+            </Link>
             <Badge variant="outline">{member.role}</Badge>
             <div className="member-actions">
               {isLeader && member.role !== 'LEADER' && (

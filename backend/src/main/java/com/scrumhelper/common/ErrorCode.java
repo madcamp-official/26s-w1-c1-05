@@ -23,6 +23,7 @@ public enum ErrorCode {
 	ALREADY_LEADER(HttpStatus.CONFLICT, "이미 팀장인 사용자입니다."),
 	REASSIGN_TASK_REQUIRED(HttpStatus.CONFLICT, "제거 전에 해당 팀원이 유일 담당자인 task를 재배정해야 합니다."),
 	TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "task를 찾을 수 없습니다."),
+	TODO_TASK_NOT_ASSIGNED(HttpStatus.BAD_REQUEST, "Todo task must be assigned to you in this team."),
 	ASSIGNEE_REQUIRED(HttpStatus.BAD_REQUEST, "담당자를 1명 이상 선택하세요."),
 	ASSIGNEE_NOT_TEAM_MEMBER(HttpStatus.BAD_REQUEST, "담당자는 같은 팀의 팀원이어야 합니다."),
 	COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "댓글을 찾을 수 없습니다."),

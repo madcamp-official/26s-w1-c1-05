@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import type { Task, TodoList } from '../../types/task';
 import { Badge } from '../ui';
-import { dueLabel, priorityTone } from '../../utils/format';
+import { priorityTone } from '../../utils/format';
 
 type SidebarTodoListProps = {
   teamId: number;
@@ -67,7 +67,6 @@ export function SidebarTodoList({ teamId }: SidebarTodoListProps) {
 }
 
 function SidebarTodoPreview({ task, teamId }: { task: Task; teamId: number }) {
-  const due = dueLabel(task.dueDate, task.status === 'DONE');
   const priority = priorityTone(task.priority);
 
   return (
@@ -75,9 +74,6 @@ function SidebarTodoPreview({ task, teamId }: { task: Task; teamId: number }) {
       <div className="dashboard-todo-title-row">
         <span className="dashboard-todo-title">{task.title}</span>
         <Badge variant={priority.variant}>{priority.label}</Badge>
-      </div>
-      <div className="sidebar-todo-preview-meta">
-        <span className={due.tone === 'overdue' ? 'due-label due-label-overdue' : 'due-label'}>{due.label}</span>
       </div>
     </Link>
   );

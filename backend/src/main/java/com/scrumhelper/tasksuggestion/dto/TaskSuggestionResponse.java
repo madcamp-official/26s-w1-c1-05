@@ -3,7 +3,6 @@ package com.scrumhelper.tasksuggestion.dto;
 import com.scrumhelper.domain.tasksuggestion.TaskSuggestion;
 import com.scrumhelper.domain.task.TaskPriority;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record TaskSuggestionResponse(
@@ -13,7 +12,6 @@ public record TaskSuggestionResponse(
 		String title,
 		String description,
 		TaskPriority priority,
-		LocalDate dueDate,
 		boolean accepted,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt
@@ -26,7 +24,6 @@ public record TaskSuggestionResponse(
 				suggestion.getTitle(),
 				suggestion.getDescription(),
 				suggestion.getPriority(),
-				suggestion.getDueDate(),
 				suggestion.isAccepted(),
 				suggestion.getCreatedAt(),
 				suggestion.getUpdatedAt()

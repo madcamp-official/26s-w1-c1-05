@@ -48,29 +48,25 @@ class TaskSuggestionServiceTests {
 	private TaskSuggestionService taskSuggestionService;
 
 	@Test
-	void generateListAndAcceptTaskSuggestion() {
+	void settingMainSpecQueuesSuggestionsAndAcceptCreatesTask() {
 		TestContext context = createContext();
 
-		List<TaskSuggestionResponse> generatedSuggestions = taskSuggestionService.generateSuggestions(
+		specDocumentService.setMainSpecDocument(context.ownerId(), context.specDocument().id());
+
+		List<TaskSuggestionResponse> queued = taskSuggestionService.getQueuedSuggestions(
 				context.ownerId(),
-				context.specDocument().id()
+				context.team().id()
 		);
 
-		assertThat(generatedSuggestions).hasSize(5);
-		assertThat(generatedSuggestions)
+		assertThat(queued).hasSize(5);
+		assertThat(queued)
 				.allSatisfy(suggestion -> {
 					assertThat(suggestion.teamId()).isEqualTo(context.team().id());
 					assertThat(suggestion.specDocumentId()).isEqualTo(context.specDocument().id());
 					assertThat(suggestion.accepted()).isFalse();
 				});
 
-		List<TaskSuggestionResponse> savedSuggestions = taskSuggestionService.getSuggestions(
-				context.ownerId(),
-				context.specDocument().id()
-		);
-		assertThat(savedSuggestions).hasSize(5);
-
-		TaskSuggestionResponse target = savedSuggestions.get(0);
+		TaskSuggestionResponse target = queued.get(0);
 		assertThatThrownBy(() -> taskSuggestionService.acceptSuggestion(
 				context.ownerId(),
 				target.id(),
@@ -98,23 +94,41 @@ class TaskSuggestionServiceTests {
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")
 				.isEqualTo(ErrorCode.TASK_SUGGESTION_ALREADY_ACCEPTED);
+
+		List<TaskSuggestionResponse> remaining = taskSuggestionService.getQueuedSuggestions(
+				context.ownerId(),
+				context.team().id()
+		);
+		assertThat(remaining).hasSize(4);
+		assertThat(remaining).noneMatch(suggestion -> suggestion.id().equals(target.id()));
 	}
 
 	@Test
-	void outsiderCannotGenerateOrReadSuggestions() {
+	void settingMainSpecAgainDoesNotDuplicateAlreadyQueuedSuggestions() {
 		TestContext context = createContext();
 
-		assertThatThrownBy(() -> taskSuggestionService.generateSuggestions(
-				context.outsiderId(),
-				context.specDocument().id()
-		))
-				.isInstanceOf(BusinessException.class)
-				.extracting("errorCode")
-				.isEqualTo(ErrorCode.NOT_TEAM_MEMBER);
+		specDocumentService.setMainSpecDocument(context.ownerId(), context.specDocument().id());
+		assertThat(taskSuggestionService.getQueuedSuggestions(context.ownerId(), context.team().id())).hasSize(5);
 
-		assertThatThrownBy(() -> taskSuggestionService.getSuggestions(
+		SpecDocumentResponse secondSpec = specDocumentService.createSpecDocument(
+				context.ownerId(),
+				context.team().id(),
+				new SaveSpecDocumentRequest("두 번째 스펙", context.specDocument().content() + "\n추가 요구사항", List.of())
+		);
+		specDocumentService.setMainSpecDocument(context.ownerId(), secondSpec.id());
+
+		List<TaskSuggestionResponse> queued = taskSuggestionService.getQueuedSuggestions(context.ownerId(), context.team().id());
+		assertThat(queued).hasSize(5);
+		assertThat(queued).allMatch(suggestion -> suggestion.specDocumentId().equals(context.specDocument().id()));
+	}
+
+	@Test
+	void outsiderCannotReadQueuedSuggestions() {
+		TestContext context = createContext();
+
+		assertThatThrownBy(() -> taskSuggestionService.getQueuedSuggestions(
 				context.outsiderId(),
-				context.specDocument().id()
+				context.team().id()
 		))
 				.isInstanceOf(BusinessException.class)
 				.extracting("errorCode")

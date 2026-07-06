@@ -42,8 +42,6 @@ export type TeamDashboard = {
     incompleteCount: number;
     backlogCount: number;
     inProgressCount: number;
-    overdueCount: number;
-    dueSoonCount: number;
   };
   retrospective: {
     totalCount: number;

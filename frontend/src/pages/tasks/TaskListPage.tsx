@@ -1,11 +1,11 @@
 import { Fragment, useCallback, useEffect, useState, type DragEvent, type ReactNode } from 'react';
-import { ListTodo, Lock, Plus, Sparkles } from 'lucide-react';
+import { ListTodo, Plus, Sparkles } from 'lucide-react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 import * as taskApi from '../../api/taskApi';
-import * as taskDependencyApi from '../../api/taskDependencyApi';
+import { useAuth } from '../../auth/useAuth';
 import { Alert, Avatar, Badge, Button, Card, EmptyState, LoadingState, StatusDot } from '../../components/ui';
-import { dueLabel, priorityTone } from '../../utils/format';
+import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { AiTaskRecommendation, Task, TaskStatus } from '../../types/task';
 
@@ -13,7 +13,7 @@ export function TaskListPage() {
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [blockedTaskIds, setBlockedTaskIds] = useState<Set<number>>(new Set());
+  const [todoTaskIds, setTodoTaskIds] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
@@ -22,6 +22,7 @@ export function TaskListPage() {
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<{ status: TaskStatus; index: number } | null>(null);
   const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
+  const { user } = useAuth();
 
   const loadPage = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
@@ -33,18 +34,12 @@ export function TaskListPage() {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      const [taskData, dependencyData] = await Promise.all([
+      const [taskData, todoData] = await Promise.all([
         taskApi.getTasks(numericTeamId),
-        taskDependencyApi.getTeamDependencies(numericTeamId),
+        taskApi.getTodoList(numericTeamId).catch(() => null),
       ]);
       setTasks(taskData);
-      setBlockedTaskIds(
-        new Set(
-          dependencyData
-            .filter((dependency) => !dependency.predecessorCompleted)
-            .map((dependency) => dependency.successorTaskId),
-        ),
-      );
+      setTodoTaskIds(new Set((todoData?.selectedTasks ?? []).map((task) => task.id)));
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load the task board.');
     } finally {
@@ -195,7 +190,6 @@ export function TaskListPage() {
           <div className="task-card-desc">{aiRecommendation.task.description || 'No description.'}</div>
           {aiRecommendation.reason && <div className="task-card-desc">Reason: {aiRecommendation.reason}</div>}
           <div className="task-card-footer">
-            <span className="due-label">{dueLabel(aiRecommendation.task.dueDate, false).label}</span>
             <Button
               type="button"
               size="sm"
@@ -230,7 +224,8 @@ export function TaskListPage() {
             emptyLabel="Nothing in backlog."
             numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
-            blockedTaskIds={blockedTaskIds}
+            currentUserId={user?.id}
+            todoTaskIds={todoTaskIds}
             draggedTaskId={draggedTaskId}
             dropIndex={dropTarget?.status === 'BACKLOG' ? dropTarget.index : null}
             onDragStartTask={handleDragStart}
@@ -244,10 +239,11 @@ export function TaskListPage() {
             dot={<StatusDot variant="half" />}
             status="IN_PROGRESS"
             tasks={inProgressTasks}
-            emptyLabel="Nothing due soon."
+            emptyLabel="Nothing in progress."
             numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
-            blockedTaskIds={blockedTaskIds}
+            currentUserId={user?.id}
+            todoTaskIds={todoTaskIds}
             draggedTaskId={draggedTaskId}
             dropIndex={dropTarget?.status === 'IN_PROGRESS' ? dropTarget.index : null}
             onDragStartTask={handleDragStart}
@@ -264,7 +260,8 @@ export function TaskListPage() {
             emptyLabel="Nothing done yet."
             numericTeamId={numericTeamId}
             isSubmitting={isSubmitting}
-            blockedTaskIds={blockedTaskIds}
+            currentUserId={user?.id}
+            todoTaskIds={todoTaskIds}
             draggedTaskId={draggedTaskId}
             dropIndex={dropTarget?.status === 'DONE' ? dropTarget.index : null}
             onDragStartTask={handleDragStart}
@@ -287,7 +284,8 @@ type TaskColumnProps = {
   emptyLabel: string;
   numericTeamId: number;
   isSubmitting: boolean;
-  blockedTaskIds: Set<number>;
+  currentUserId: number | undefined;
+  todoTaskIds: Set<number>;
   draggedTaskId: number | null;
   dropIndex: number | null;
   onDragStartTask: (event: DragEvent<HTMLDivElement>, task: Task) => void;
@@ -304,7 +302,8 @@ function TaskColumn({
   emptyLabel,
   numericTeamId,
   isSubmitting,
-  blockedTaskIds,
+  currentUserId,
+  todoTaskIds,
   draggedTaskId,
   dropIndex,
   onDragStartTask,
@@ -328,9 +327,9 @@ function TaskColumn({
       </div>
       {tasks.map((task, index) => {
         const isDone = task.status === 'DONE';
-        const due = dueLabel(task.dueDate, isDone);
-        const isOverdue = !isDone && due.tone === 'overdue';
         const priority = priorityTone(task.priority);
+        const isMine = currentUserId != null && task.assignees.some((assignee) => assignee.id === currentUserId);
+        const inTodo = todoTaskIds.has(task.id);
         return (
           <Fragment key={task.id}>
             {dropIndex === index && <div className="board-drop-indicator" />}
@@ -340,7 +339,7 @@ function TaskColumn({
               onDragStart={(event) => onDragStartTask(event, task)}
               onDragEnd={onDragEndTask}
               onDragOver={(event) => onCardDragOver(event, index)}
-              className={`task-card${isDone ? ' task-card-done' : ''}${isOverdue ? ' task-card-overdue' : ''}${draggedTaskId === task.id ? ' task-card-dragging' : ''}`}
+              className={`task-card${isDone ? ' task-card-done' : ''}${isMine ? ' task-card-mine' : ''}${inTodo ? ' task-card-todo' : ''}${draggedTaskId === task.id ? ' task-card-dragging' : ''}`}
             >
               <Link
                 to={`/teams/${numericTeamId}/tasks/${task.id}`}
@@ -349,21 +348,12 @@ function TaskColumn({
               >
                 <div className="task-card-top">
                   <Badge variant={priority.variant}>{priority.label}</Badge>
-                  {blockedTaskIds.has(task.id) && (
-                    <Badge variant="outline">
-                      <Lock size={10} aria-hidden="true" />
-                      Blocked
-                    </Badge>
-                  )}
                   <span className="task-card-id mono">#{task.id}</span>
                 </div>
                 <div className={`task-card-title${isDone ? ' task-card-title-done' : ''}`}>{task.title}</div>
-                {!isDone && <div className="task-card-desc">{task.description || 'No description.'}</div>}
+                <div className="task-card-desc">{task.description || 'No description.'}</div>
               </Link>
               <div className="task-card-footer">
-                <span className={`due-label${due.tone === 'overdue' ? ' due-label-overdue' : due.tone === 'soon' ? ' due-label-soon' : ''}`}>
-                  {due.label}
-                </span>
                 <div className="task-card-actions">
                   {task.assignees[0] && <Avatar name={task.assignees[0].name} size="sm" />}
                 </div>

@@ -6,7 +6,7 @@ import * as taskApi from '../../api/taskApi';
 import { useAuth } from '../../auth/useAuth';
 import { Alert, Badge, LoadingState, StatTile } from '../../components/ui';
 import { GrowthTree } from '../../components/growth/GrowthTree';
-import { dueLabel, priorityTone } from '../../utils/format';
+import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Task, TodoList } from '../../types/task';
 import type { TeamDashboard, TeamDetail } from '../../types/team';
@@ -82,21 +82,11 @@ export function TeamDashboardPage() {
           <div className="kpi-row">
             <StatTile label="Active tasks" value={dashboard.task.incompleteCount} caption="Not yet completed" />
             <StatTile label="Completed" value={dashboard.task.completedCount} caption="This sprint" />
-            <StatTile
-              label="Upcoming deadlines"
-              value={dashboard.task.dueSoonCount}
-              caption={`${dashboard.task.overdueCount} overdue`}
-              valueColor={dashboard.task.overdueCount > 0 ? 'var(--danger)' : undefined}
-            />
             <StatTile label="Members" value={dashboard.memberCount} caption="On this team" />
           </div>
 
           <div className="dashboard-grid">
             <div className="growth-panel">
-              <div className="growth-panel-head">
-                <span className="eyebrow">Growth tree</span>
-                <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
-              </div>
               <div className="growth-progress-block">
                 <div className="progress-card-head">
                   <span className="eyebrow">Sprint progress</span>
@@ -110,6 +100,11 @@ export function TeamDashboardPage() {
                   <span>{dashboard.task.incompleteCount} to go</span>
                 </div>
               </div>
+              <div className="growth-divider" />
+              <div className="growth-panel-head">
+                <span className="eyebrow">Growth tree</span>
+                <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
+              </div>
               <div className="growth-tree-wrap">
                 <GrowthTree
                   backlogCount={dashboard.task.backlogCount}
@@ -118,6 +113,7 @@ export function TeamDashboardPage() {
                   totalCount={dashboard.task.totalCount}
                 />
               </div>
+              <div className="growth-divider" />
               <div className="growth-footer">
                 <span className="growth-caption">
                   {dashboard.task.totalCount === 0
@@ -194,7 +190,6 @@ function TodoDashboardCard({ todoList, teamId }: { todoList: TodoList | null; te
 }
 
 function TodoDashboardItem({ task, teamId }: { task: Task; teamId: number }) {
-  const due = dueLabel(task.dueDate, task.status === 'DONE');
   const priority = priorityTone(task.priority);
 
   return (
@@ -203,7 +198,6 @@ function TodoDashboardItem({ task, teamId }: { task: Task; teamId: number }) {
         <span className="dashboard-todo-title">{task.title}</span>
         <Badge variant={priority.variant}>{priority.label}</Badge>
       </div>
-      <span className={due.tone === 'overdue' ? 'due-label due-label-overdue' : 'due-label'}>{due.label}</span>
     </Link>
   );
 }

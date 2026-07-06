@@ -7,8 +7,6 @@ import com.scrumhelper.domain.task.Task;
 import com.scrumhelper.domain.task.TaskAssignee;
 import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskCommentRepository;
-import com.scrumhelper.domain.task.TaskDependency;
-import com.scrumhelper.domain.task.TaskDependencyRepository;
 import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.domain.task.UserTodoTask;
@@ -37,7 +35,6 @@ public class UserTodoService {
 	private final TaskRepository taskRepository;
 	private final TaskAssigneeRepository taskAssigneeRepository;
 	private final TaskCommentRepository taskCommentRepository;
-	private final TaskDependencyRepository taskDependencyRepository;
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
@@ -48,7 +45,6 @@ public class UserTodoService {
 			TaskRepository taskRepository,
 			TaskAssigneeRepository taskAssigneeRepository,
 			TaskCommentRepository taskCommentRepository,
-			TaskDependencyRepository taskDependencyRepository,
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
 			UserRepository userRepository,
@@ -58,7 +54,6 @@ public class UserTodoService {
 		this.taskRepository = taskRepository;
 		this.taskAssigneeRepository = taskAssigneeRepository;
 		this.taskCommentRepository = taskCommentRepository;
-		this.taskDependencyRepository = taskDependencyRepository;
 		this.teamRepository = teamRepository;
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
@@ -134,12 +129,9 @@ public class UserTodoService {
 		return taskAssigneeRepository.findByTeamIdAndUserId(teamId, userId).stream()
 				.map(TaskAssignee::getTask)
 				.filter(this::isTodoEligible)
-				.sorted(Comparator
-						.comparing(Task::getDueDate)
-						.thenComparing(Task::getCreatedAt))
+				.sorted(Comparator.comparing(Task::getCreatedAt))
 				.map(this::toResponse)
 				.sorted(Comparator.comparing((TaskResponse task) -> !selectedIds.contains(task.id()))
-						.thenComparing(TaskResponse::dueDate)
 						.thenComparing(TaskResponse::createdAt))
 				.toList();
 	}
@@ -153,18 +145,9 @@ public class UserTodoService {
 				.map(TaskAssignee::getTask)
 				.filter(this::isTodoEligible)
 				.filter(task -> !selectedIds.contains(task.getId()))
-				.filter(this::isUnblockedByCompletedDependencies)
-				.sorted(Comparator
-						.comparing(Task::getDueDate)
-						.thenComparing(Task::getCreatedAt))
+				.sorted(Comparator.comparing(Task::getCreatedAt))
 				.map(this::toResponse)
 				.toList();
-	}
-
-	private boolean isUnblockedByCompletedDependencies(Task task) {
-		List<TaskDependency> blockers = taskDependencyRepository.findBySuccessorId(task.getId());
-		return !blockers.isEmpty() && blockers.stream()
-				.allMatch(dependency -> dependency.getPredecessor().isCompleted());
 	}
 
 	private String buildCompletionPromptRequest(List<TaskResponse> selectedTasks) {
@@ -192,11 +175,10 @@ public class UserTodoService {
 
 	private String formatTasksForPrompt(List<TaskResponse> tasks) {
 		return tasks.stream()
-				.map(task -> "- #%d [%s] %s (due: %s)%s".formatted(
+				.map(task -> "- #%d [%s] %s%s".formatted(
 						task.id(),
 						task.priority(),
 						task.title(),
-						task.dueDate(),
 						task.description() == null || task.description().isBlank()
 								? ""
 								: "\n  description: " + compact(task.description(), 500)

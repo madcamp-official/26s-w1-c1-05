@@ -125,7 +125,6 @@ public class TeamService {
 	@Transactional(readOnly = true)
 	public TeamDashboardResponse getDashboard(Long currentUserId, Long teamId) {
 		requireMembership(teamId, currentUserId);
-		java.time.LocalDate today = java.time.LocalDate.now();
 		return new TeamDashboardResponse(
 				teamId,
 				teamMemberRepository.countByTeamId(teamId),
@@ -135,9 +134,7 @@ public class TeamService {
 						taskRepository.countByTeamIdAndCompleted(teamId, false),
 						taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.BACKLOG)
 								+ taskRepository.countByTeamIdAndStatusIsNullAndCompletedFalse(teamId),
-						taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.IN_PROGRESS),
-						taskRepository.countByTeamIdAndCompletedFalseAndDueDateBefore(teamId, today),
-						taskRepository.countByTeamIdAndCompletedFalseAndDueDateBetween(teamId, today, today.plusDays(2))
+						taskRepository.countByTeamIdAndStatus(teamId, TaskStatus.IN_PROGRESS)
 				),
 				new TeamDashboardResponse.RetrospectiveSummary(
 						retrospectiveRepository.countByTeamId(teamId),

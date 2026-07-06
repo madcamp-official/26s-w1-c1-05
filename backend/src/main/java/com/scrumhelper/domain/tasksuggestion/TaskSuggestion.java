@@ -17,7 +17,6 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -45,9 +44,6 @@ public class TaskSuggestion {
 	@Column(nullable = false, length = 20)
 	private TaskPriority priority;
 
-	@Column(name = "due_date", nullable = false)
-	private LocalDate dueDate;
-
 	@Column(nullable = false)
 	private boolean accepted;
 
@@ -65,15 +61,13 @@ public class TaskSuggestion {
 			SpecDocument specDocument,
 			String title,
 			String description,
-			TaskPriority priority,
-			LocalDate dueDate
+			TaskPriority priority
 	) {
 		this.team = team;
 		this.specDocument = specDocument;
 		this.title = title;
 		this.description = description;
 		this.priority = priority;
-		this.dueDate = dueDate;
 		this.accepted = false;
 	}
 
@@ -82,10 +76,9 @@ public class TaskSuggestion {
 			SpecDocument specDocument,
 			String title,
 			String description,
-			TaskPriority priority,
-			LocalDate dueDate
+			TaskPriority priority
 	) {
-		return new TaskSuggestion(team, specDocument, title, description, priority, dueDate);
+		return new TaskSuggestion(team, specDocument, title, description, priority);
 	}
 
 	@PrePersist
@@ -126,10 +119,6 @@ public class TaskSuggestion {
 
 	public TaskPriority getPriority() {
 		return priority;
-	}
-
-	public LocalDate getDueDate() {
-		return dueDate;
 	}
 
 	public boolean isAccepted() {

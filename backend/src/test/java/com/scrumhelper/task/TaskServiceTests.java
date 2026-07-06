@@ -21,7 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -117,7 +116,6 @@ class TaskServiceTests {
 						title,
 						"내 담당 task API 검증",
 						TaskPriority.MEDIUM,
-						LocalDate.of(2026, 7, 8),
 						assigneeUserIds
 				)
 		);

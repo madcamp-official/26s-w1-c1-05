@@ -247,8 +247,19 @@ public class MeetingService {
 	}
 
 	private String normalizeGeneratedSummary(String value) {
-		String normalized = value == null ? "" : value.trim();
+		String normalized = stripMarkdownFence(value == null ? "" : value.trim());
+		normalized = normalized.replaceFirst("(?is)^\\s*(다음은.*?요약입니다\\.?|회의 요약[:：]?).*?\\n+", "");
 		return normalized.isBlank() ? "회의 원문에서 요약할 수 있는 내용이 충분하지 않습니다." : normalized;
+	}
+
+	private String stripMarkdownFence(String value) {
+		String trimmed = value.trim();
+		if (!trimmed.startsWith("```")) {
+			return trimmed;
+		}
+		trimmed = trimmed.replaceFirst("(?s)^```[a-zA-Z0-9_-]*\\s*", "");
+		trimmed = trimmed.replaceFirst("(?s)\\s*```\\s*$", "");
+		return trimmed.trim();
 	}
 
 	private String buildLocalSummary(String title, String existingSummary, String rawContent) {

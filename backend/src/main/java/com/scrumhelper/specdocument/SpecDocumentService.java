@@ -80,7 +80,7 @@ public class SpecDocumentService {
 		return geminiSpecDraftClient.generate(prompt)
 				.map(content -> new SpecDraftResponse(
 						buildTitle(team),
-						content,
+						normalizeGeneratedDraft(content),
 						meetingIds,
 						"GEMINI"
 				))
@@ -314,6 +314,24 @@ public class SpecDocumentService {
 
 	private String nullToFallback(String value, String fallback) {
 		return value == null || value.isBlank() ? fallback : value.trim();
+	}
+
+	private String normalizeGeneratedDraft(String value) {
+		String normalized = stripMarkdownFence(value == null ? "" : value.trim());
+		normalized = normalized.replaceFirst("(?is)^\\s*(물론입니다|좋습니다|아래는|다음은).*?\\n+", "");
+		return normalized.isBlank()
+				? "회의록에서 스펙 문서 초안을 생성할 수 있는 내용이 충분하지 않습니다."
+				: normalized.trim();
+	}
+
+	private String stripMarkdownFence(String value) {
+		String trimmed = value.trim();
+		if (!trimmed.startsWith("```")) {
+			return trimmed;
+		}
+		trimmed = trimmed.replaceFirst("(?s)^```[a-zA-Z0-9_-]*\\s*", "");
+		trimmed = trimmed.replaceFirst("(?s)\\s*```\\s*$", "");
+		return trimmed.trim();
 	}
 
 	private String compactForPrompt(String value, int maxLength) {

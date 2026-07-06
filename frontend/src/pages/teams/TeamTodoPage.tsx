@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckSquare, Plus, Save, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowLeft, CheckSquare, Plus, Sparkles } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import { Alert, Badge, Button, EmptyState, LoadingState } from '../../components/ui';
@@ -14,12 +14,14 @@ export function TeamTodoPage() {
   const [todoList, setTodoList] = useState<TodoList | null>(null);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
   const [promptGeneratedBy, setPromptGeneratedBy] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const saveQueueRef = useRef(Promise.resolve());
+  const latestSaveIdsRef = useRef<number[]>([]);
 
   const loadTodoList = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
@@ -32,8 +34,10 @@ export function TeamTodoPage() {
       setIsLoading(true);
       setErrorMessage(null);
       const data = await taskApi.getTodoList(numericTeamId);
+      const nextSelectedIds = data.selectedTasks.map((task) => task.id);
       setTodoList(data);
-      setSelectedIds(data.selectedTasks.map((task) => task.id));
+      setSelectedIds(nextSelectedIds);
+      latestSaveIdsRef.current = nextSelectedIds;
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load your todo list.');
     } finally {
@@ -63,33 +67,50 @@ export function TeamTodoPage() {
   );
 
   function toggleTask(taskId: number) {
-    setSavedMessage(null);
-    setSelectedIds((current) =>
-      current.includes(taskId)
-        ? current.filter((id) => id !== taskId)
-        : [...current, taskId],
-    );
+    const currentIds = latestSaveIdsRef.current;
+    const nextIds = currentIds.includes(taskId)
+      ? currentIds.filter((id) => id !== taskId)
+      : [...currentIds, taskId];
+    persistSelectedIds(nextIds);
   }
 
   function addRecommendedTask(taskId: number) {
-    setSavedMessage(null);
-    setSelectedIds((current) => current.includes(taskId) ? current : [...current, taskId]);
+    const currentIds = latestSaveIdsRef.current;
+    if (currentIds.includes(taskId)) {
+      return;
+    }
+    persistSelectedIds([...currentIds, taskId]);
   }
 
-  async function handleSave() {
-    try {
-      setIsSaving(true);
-      setErrorMessage(null);
-      const data = await taskApi.updateTodoList(numericTeamId, { taskIds: selectedIds });
-      setTodoList(data);
-      setSelectedIds(data.selectedTasks.map((task) => task.id));
-      setSavedMessage('Todo list saved.');
-      window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
-    } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not save your todo list.');
-    } finally {
-      setIsSaving(false);
-    }
+  function persistSelectedIds(nextIds: number[]) {
+    setSelectedIds(nextIds);
+    setSavedMessage(null);
+    setErrorMessage(null);
+    setIsAutoSaving(true);
+    latestSaveIdsRef.current = nextIds;
+
+    saveQueueRef.current = saveQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        const data = await taskApi.updateTodoList(numericTeamId, { taskIds: nextIds });
+        if (sameIds(latestSaveIdsRef.current, nextIds)) {
+          setTodoList(data);
+          setSelectedIds(data.selectedTasks.map((task) => task.id));
+          setSavedMessage('Saved automatically.');
+          window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
+        }
+      })
+      .catch((error) => {
+        if (sameIds(latestSaveIdsRef.current, nextIds)) {
+          setErrorMessage(error instanceof ApiError ? error.message : 'Could not save your todo list.');
+          void loadTodoList();
+        }
+      })
+      .finally(() => {
+        if (sameIds(latestSaveIdsRef.current, nextIds)) {
+          setIsAutoSaving(false);
+        }
+      });
   }
 
   async function handleGeneratePrompt() {
@@ -130,14 +151,11 @@ export function TeamTodoPage() {
             <Sparkles size={14} aria-hidden="true" />
             Generate prompt
           </Button>
-          <Button type="button" onClick={() => void handleSave()} isLoading={isSaving}>
-            <Save size={14} aria-hidden="true" />
-            Save
-          </Button>
         </div>
       </div>
 
       <Alert message={errorMessage} />
+      {isAutoSaving && <div className="success-banner">Saving automatically...</div>}
       {savedMessage && <div className="success-banner">{savedMessage}</div>}
 
       {generatedPrompt && (
@@ -190,6 +208,10 @@ export function TeamTodoPage() {
       )}
     </div>
   );
+}
+
+function sameIds(left: number[], right: number[]) {
+  return left.length === right.length && left.every((id, index) => id === right[index]);
 }
 
 function RecommendedTodoTask({

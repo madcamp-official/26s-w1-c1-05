@@ -117,7 +117,7 @@ public class UserTodoService {
 			return new TodoPromptResponse(localPrompt, "LOCAL_FALLBACK");
 		}
 		return geminiSpecDraftClient.generate(buildCompletionPromptRequest(selectedTasks))
-				.map(prompt -> new TodoPromptResponse(prompt.trim(), "GEMINI"))
+				.map(prompt -> new TodoPromptResponse(normalizeGeneratedPrompt(prompt), "GEMINI"))
 				.orElseGet(() -> new TodoPromptResponse(localPrompt, "LOCAL_FALLBACK"));
 	}
 
@@ -160,25 +160,50 @@ public class UserTodoService {
 
 	private String buildCompletionPromptRequest(List<TaskResponse> selectedTasks) {
 		return """
-				다음 Scrum Helper Todo list의 모든 task를 완료하기 위해 사용할 수 있는 실행 프롬프트를 한국어로 작성해줘.
-				요구사항:
-				1. 사용자가 AI에게 그대로 붙여넣어도 되는 프롬프트 형태로 작성해.
-				2. task별 완료 기준, 작업 순서, 산출물, 주의할 점을 포함해.
-				3. 마크다운은 사용해도 되지만 불필요한 설명은 넣지 마.
-				4. task 목록에 없는 새 기능을 임의로 추가하지 마.
+				너는 Scrum Helper 프로젝트를 함께 진행하는 시니어 페어 개발자다.
+				아래 Todo task만 근거로 오늘 바로 실행할 수 있는 작업 브리프를 작성해줘.
 
-				Todo task 목록:
+				작성 원칙:
+				- "AI로서", "물론입니다", "아래와 같이" 같은 도입 문구는 쓰지 마.
+				- 새 기능을 임의로 추가하지 말고, 모르는 내용은 확인 질문으로 분리해.
+				- 과하게 장황한 설명보다 작업자가 바로 움직일 수 있는 구체적인 문장으로 써.
+				- 한국어로 작성하되 Task, API, PR, QA 같은 기술 용어는 자연스럽게 유지해.
+
+				출력 형식:
+				## 오늘의 목표
+				- Todo 전체를 하나의 목표 문장으로 요약
+
+				## 진행 순서
+				1. 선행 관계를 고려한 작업 순서
+
+				## Task별 실행 브리프
+				- 각 task마다 완료 기준, 구현 단계, 검증 방법, 주의할 점
+
+				## 확인 질문
+				- 진행 전에 팀에 확인해야 할 항목만 정리
+
+				Todo:
 				%s
 				""".formatted(formatTasksForPrompt(selectedTasks));
 	}
 
 	private String buildLocalCompletionPrompt(List<TaskResponse> selectedTasks) {
 		return """
-				아래 Todo task들을 모두 완료하기 위한 실행 계획을 세워줘.
-				각 task마다 완료 기준, 필요한 구현/검증 단계, 예상 리스크를 정리하고, 의존성이 있어 보이는 순서대로 진행 순서를 제안해줘.
+				## 오늘의 목표
+				선택한 Todo를 완료 가능한 순서로 정리하고, 각 task의 완료 기준과 검증 방법을 명확히 한다.
 
+				## 진행 순서
+				1. 영향 범위가 큰 task부터 완료 기준을 확인한다.
+				2. 구현 또는 문서 수정이 필요한 항목을 처리한다.
+				3. 마지막에 전체 흐름을 다시 실행해 회귀 여부를 확인한다.
+
+				## Task별 실행 브리프
 				%s
-				""".formatted(formatTasksForPrompt(selectedTasks));
+
+				## 확인 질문
+				- 각 task의 담당자와 완료 기준이 현재 팀 합의와 일치하는가?
+				- 완료 후 어떤 화면 또는 API로 검증할지 정해져 있는가?
+				""".formatted(formatTasksAsBrief(selectedTasks));
 	}
 
 	private String formatTasksForPrompt(List<TaskResponse> tasks) {
@@ -194,12 +219,49 @@ public class UserTodoService {
 				.collect(java.util.stream.Collectors.joining("\n"));
 	}
 
+	private String formatTasksAsBrief(List<TaskResponse> tasks) {
+		return tasks.stream()
+				.map(task -> """
+						### #%d %s
+						- 우선순위: %s
+						- 완료 기준: task 설명에 적힌 동작이 실제 화면 또는 API에서 재현 가능해야 한다.
+						- 실행 단계: 관련 코드/문서를 확인하고, 필요한 수정 후 해당 기능 흐름을 직접 검증한다.
+						- 검증 방법: 성공 케이스와 실패 케이스를 최소 1개씩 확인한다.%s
+						""".formatted(
+						task.id(),
+						task.title(),
+						task.priority(),
+						task.description() == null || task.description().isBlank()
+								? ""
+								: "\n- 참고 설명: " + compact(task.description(), 300)
+				))
+				.collect(java.util.stream.Collectors.joining("\n"));
+	}
+
 	private String compact(String value, int maxLength) {
 		String compact = value.replaceAll("\\s+", " ").trim();
 		if (compact.length() <= maxLength) {
 			return compact;
 		}
 		return compact.substring(0, maxLength) + "...";
+	}
+
+	private String normalizeGeneratedPrompt(String value) {
+		String normalized = stripMarkdownFence(value == null ? "" : value.trim());
+		normalized = normalized.replaceFirst("(?is)^\\s*(물론입니다|좋습니다|네[,!\\s]*|아래와 같이|다음은).*?\\n+", "");
+		return normalized.isBlank()
+				? "선택한 Todo를 완료하기 위한 작업 브리프를 생성하지 못했습니다. Todo 항목을 다시 확인하세요."
+				: normalized.trim();
+	}
+
+	private String stripMarkdownFence(String value) {
+		String trimmed = value.trim();
+		if (!trimmed.startsWith("```")) {
+			return trimmed;
+		}
+		trimmed = trimmed.replaceFirst("(?s)^```[a-zA-Z0-9_-]*\\s*", "");
+		trimmed = trimmed.replaceFirst("(?s)\\s*```\\s*$", "");
+		return trimmed.trim();
 	}
 
 	private boolean isTodoEligible(Task task) {

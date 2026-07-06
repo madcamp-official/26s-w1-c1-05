@@ -15,6 +15,7 @@ import com.scrumhelper.task.dto.SaveTaskRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.tasksuggestion.dto.AcceptTaskSuggestionRequest;
 import com.scrumhelper.tasksuggestion.dto.TaskSuggestionResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,19 +32,22 @@ public class TaskSuggestionService {
 	private final TaskService taskService;
 	private final GeminiSpecDraftClient geminiSpecDraftClient;
 	private final ObjectMapper objectMapper;
+	private final boolean remoteTaskSuggestionEnabled;
 
 	public TaskSuggestionService(
 			TaskSuggestionRepository taskSuggestionRepository,
 			TeamMemberRepository teamMemberRepository,
 			TaskService taskService,
 			GeminiSpecDraftClient geminiSpecDraftClient,
-			ObjectMapper objectMapper
+			ObjectMapper objectMapper,
+			@Value("${app.ai.task-suggestion.remote-enabled:false}") boolean remoteTaskSuggestionEnabled
 	) {
 		this.taskSuggestionRepository = taskSuggestionRepository;
 		this.teamMemberRepository = teamMemberRepository;
 		this.taskService = taskService;
 		this.geminiSpecDraftClient = geminiSpecDraftClient;
 		this.objectMapper = objectMapper;
+		this.remoteTaskSuggestionEnabled = remoteTaskSuggestionEnabled;
 	}
 
 	@Transactional
@@ -54,10 +58,12 @@ public class TaskSuggestionService {
 				.map(suggestion -> suggestion.getTitle().trim().toLowerCase())
 				.collect(Collectors.toSet());
 
-		List<SuggestionDraft> drafts = geminiSpecDraftClient.generateJson(buildComparisonPrompt(previousMain, newMain, pending))
-				.flatMap(this::parseDrafts)
-				.filter(parsedDrafts -> !parsedDrafts.isEmpty())
-				.orElseGet(() -> buildLocalDrafts(newMain));
+		List<SuggestionDraft> drafts = remoteTaskSuggestionEnabled
+				? geminiSpecDraftClient.generateJson(buildComparisonPrompt(previousMain, newMain, pending))
+						.flatMap(this::parseDrafts)
+						.filter(parsedDrafts -> !parsedDrafts.isEmpty())
+						.orElseGet(() -> buildLocalDrafts(newMain))
+				: buildLocalDrafts(newMain);
 
 		drafts.stream()
 				.filter(draft -> !pendingTitles.contains(draft.title().trim().toLowerCase()))
@@ -108,7 +114,7 @@ public class TaskSuggestionService {
 	}
 
 	private String buildComparisonPrompt(SpecDocument previousMain, SpecDocument newMain, List<TaskSuggestion> pending) {
-		String previousContent = previousMain == null ? "(이전 메인 스펙 없음)" : previousMain.getContent();
+		String previousContent = previousMain == null ? "(이전 메인 스펙 없음)" : compactForPrompt(previousMain.getContent(), 3000);
 		String pendingTitles = pending.isEmpty()
 				? "(아직 큐에 쌓인 task 후보 없음)"
 				: pending.stream().map(suggestion -> "- " + suggestion.getTitle()).collect(Collectors.joining("\n"));
@@ -130,7 +136,7 @@ public class TaskSuggestionService {
 
 				이미 큐에 있는 task 후보 목록:
 				%s
-				""".formatted(previousContent, newMain.getTitle(), newMain.getContent(), pendingTitles);
+				""".formatted(previousContent, newMain.getTitle(), compactForPrompt(newMain.getContent(), 5000), pendingTitles);
 	}
 
 	private Optional<List<SuggestionDraft>> parseDrafts(String content) {
@@ -212,6 +218,17 @@ public class TaskSuggestionService {
 			return compact;
 		}
 		return compact.substring(0, 140) + "...";
+	}
+
+	private String compactForPrompt(String value, int maxLength) {
+		if (value == null || value.isBlank()) {
+			return "";
+		}
+		String compact = value.replaceAll("\\s+", " ").trim();
+		if (compact.length() <= maxLength) {
+			return compact;
+		}
+		return compact.substring(0, maxLength) + "\n...(중략: 로컬 컨텍스트 절감)";
 	}
 
 	private String truncate(String value, int maxLength) {

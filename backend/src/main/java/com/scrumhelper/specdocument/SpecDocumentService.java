@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 @Service
 public class SpecDocumentService {
 	private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+	private static final int MEETING_SUMMARY_PROMPT_LIMIT = 1200;
+	private static final int MEETING_RAW_PROMPT_LIMIT = 1800;
 
 	private final SpecDocumentRepository specDocumentRepository;
 	private final MeetingRepository meetingRepository;
@@ -212,7 +214,9 @@ public class SpecDocumentService {
 		return """
 				다음 회의록들을 바탕으로 웹 기반 Scrum Helper 프로젝트의 스펙 문서 초안을 한국어 Markdown으로 작성해줘.
 				반드시 다음 섹션을 포함해줘: 프로젝트 목적, 예상 사용자, 핵심 기능, 화면 구성, 데이터 모델, API 후보, Task 후보, 남은 의사결정.
+				각 섹션은 3~5개의 bullet 위주로 작성하고, 전체 응답은 1,200자 안팎으로 간결하게 작성해줘.
 				과장하지 말고 회의록에서 확인할 수 있는 내용과 추론한 내용을 구분해줘.
+				마크다운 본문만 반환하고, 코드블록이나 불필요한 인사말은 넣지 마.
 
 				팀 이름: %s
 
@@ -231,8 +235,8 @@ public class SpecDocumentService {
 						""".formatted(
 						meeting.getTitle(),
 						meeting.getMeetingAt().format(DATE_TIME_FORMATTER),
-						nullToFallback(meeting.getSummary(), "요약 없음"),
-						nullToFallback(meeting.getRawContent(), "원문 없음")
+						compactForPrompt(nullToFallback(meeting.getSummary(), "요약 없음"), MEETING_SUMMARY_PROMPT_LIMIT),
+						compactForPrompt(nullToFallback(meeting.getRawContent(), "원문 없음"), MEETING_RAW_PROMPT_LIMIT)
 				))
 				.collect(Collectors.joining("\n"));
 	}
@@ -310,5 +314,16 @@ public class SpecDocumentService {
 
 	private String nullToFallback(String value, String fallback) {
 		return value == null || value.isBlank() ? fallback : value.trim();
+	}
+
+	private String compactForPrompt(String value, int maxLength) {
+		if (value == null || value.isBlank()) {
+			return "";
+		}
+		String compact = value.replaceAll("\\s+", " ").trim();
+		if (compact.length() <= maxLength) {
+			return compact;
+		}
+		return compact.substring(0, maxLength) + "\n...(중략: 프롬프트 크기 절감)";
 	}
 }

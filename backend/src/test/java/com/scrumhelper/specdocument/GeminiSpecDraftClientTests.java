@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -83,6 +84,99 @@ class GeminiSpecDraftClientTests {
 			assertThat(result).contains("[{\"title\":\"API 테스트\"}]");
 			assertThat(requestBody.get()).contains("\"generationConfig\"");
 			assertThat(requestBody.get()).contains("\"responseMimeType\":\"application/json\"");
+		} finally {
+			server.stop(0);
+		}
+	}
+
+	@Test
+	void cachesIdenticalTextGenerationRequests() throws Exception {
+		AtomicInteger requestCount = new AtomicInteger();
+		HttpServer server = startServer(exchange -> {
+			requestCount.incrementAndGet();
+			send(exchange, 200, """
+					{"candidates":[{"content":{"parts":[{"text":"cached success"}]}}]}
+					""");
+		});
+
+		try {
+			GeminiSpecDraftClient client = new GeminiSpecDraftClient(
+					objectMapper,
+					"test-key",
+					"gemini-2.5-flash",
+					"",
+					baseUrl(server),
+					baseUrl(server)
+			);
+
+			Optional<String> first = client.generate("같은 프롬프트");
+			Optional<String> second = client.generate("같은 프롬프트");
+
+			assertThat(first).contains("cached success");
+			assertThat(second).contains("cached success");
+			assertThat(requestCount.get()).isEqualTo(1);
+		} finally {
+			server.stop(0);
+		}
+	}
+
+	@Test
+	void doesNotCacheFailedGenerationRequests() throws Exception {
+		AtomicInteger requestCount = new AtomicInteger();
+		HttpServer server = startServer(exchange -> {
+			int count = requestCount.incrementAndGet();
+			if (count == 1) {
+				send(exchange, 500, "{\"error\":{\"message\":\"temporary failure\"}}");
+				return;
+			}
+			send(exchange, 200, """
+					{"candidates":[{"content":{"parts":[{"text":"second attempt success"}]}}]}
+					""");
+		});
+
+		try {
+			GeminiSpecDraftClient client = new GeminiSpecDraftClient(
+					objectMapper,
+					"test-key",
+					"gemini-2.5-flash",
+					"",
+					baseUrl(server),
+					baseUrl(server)
+			);
+
+			Optional<String> first = client.generate("일시 실패 후 같은 프롬프트");
+			Optional<String> second = client.generate("일시 실패 후 같은 프롬프트");
+
+			assertThat(first).isEmpty();
+			assertThat(second).contains("second attempt success");
+			assertThat(requestCount.get()).isEqualTo(2);
+		} finally {
+			server.stop(0);
+		}
+	}
+
+	@Test
+	void doesNotRetryFallbackModelForAuthorizationFailure() throws Exception {
+		List<String> paths = Collections.synchronizedList(new ArrayList<>());
+		HttpServer server = startServer(exchange -> {
+			paths.add(exchange.getRequestURI().getPath());
+			send(exchange, 401, "{\"error\":{\"message\":\"invalid api key\"}}");
+		});
+
+		try {
+			GeminiSpecDraftClient client = new GeminiSpecDraftClient(
+					objectMapper,
+					"test-key",
+					"gemini-2.5-flash",
+					"gemini-2.0-flash",
+					baseUrl(server),
+					baseUrl(server)
+			);
+
+			Optional<String> result = client.generate("인증 실패 테스트");
+
+			assertThat(result).isEmpty();
+			assertThat(paths).containsExactly("/models/gemini-2.5-flash:generateContent");
 		} finally {
 			server.stop(0);
 		}

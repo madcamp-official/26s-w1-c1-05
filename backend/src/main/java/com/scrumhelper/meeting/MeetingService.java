@@ -30,6 +30,9 @@ import java.util.stream.Collectors;
 
 @Service
 public class MeetingService {
+	private static final int SUMMARY_SOURCE_PROMPT_LIMIT = 6000;
+	private static final int EXISTING_SUMMARY_PROMPT_LIMIT = 1200;
+
 	private final MeetingRepository meetingRepository;
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
@@ -85,12 +88,14 @@ public class MeetingService {
 		String mimeType = normalizeMimeType(file.getContentType(), originalFilename);
 		byte[] audioBytes = readFileBytes(file);
 		String prompt = """
-				업로드된 회의 녹음 파일을 한국어 회의록 script로 변환해줘.
+				업로드된 회의 녹음 파일을 Scrum Helper에 저장할 한국어 회의록 script로 변환해줘.
 				요구사항:
 				1. 가능한 경우 화자를 Speaker 1, Speaker 2처럼 구분해줘.
 				2. 가능한 경우 타임스탬프를 MM:SS 형식으로 포함해줘.
 				3. 들리지 않거나 확실하지 않은 부분은 [불명확]으로 표시해줘.
-				4. 요약이나 해석은 넣지 말고, 회의록 rawContent에 붙여넣기 좋은 script만 반환해줘.
+				4. 영어 등 외국어 발화는 발음을 한글로 음차하지 말고, 의미를 자연스러운 한국어로 번역해 기록해줘.
+				5. 사람 이름, 서비스명, 기술명처럼 고유명사로 보이는 영어는 가능한 원문 표기(Alice, Bob, Scrum Helper, Todo, Task 등)를 유지해줘.
+				6. 요약이나 해석은 넣지 말고, 회의록 rawContent에 붙여넣기 좋은 script만 반환해줘.
 				""";
 
 		return geminiSpecDraftClient.transcribeAudio(prompt, audioBytes, mimeType, originalFilename)
@@ -202,6 +207,9 @@ public class MeetingService {
 				Summarize the following scrum meeting transcript in Korean for Scrum Helper.
 				Write 5 to 8 concise bullet points. Highlight decisions, owners, blockers, and next actions when present.
 				Do not invent facts that are not present in the transcript.
+				Only label something as a blocker when the transcript explicitly says it is blocked, blocking, 막힘, or 블로커.
+				If someone asks for help, write it as 지원 필요 or 확인 필요, not as a blocker.
+				Return bullet points only. Do not include headings, meeting title, meeting time, or preface text.
 
 				Meeting title: %s
 				Meeting time: %s
@@ -211,8 +219,8 @@ public class MeetingService {
 				""".formatted(
 				title,
 				meetingAt == null ? java.time.LocalDateTime.now() : meetingAt,
-				nullToFallback(summary, "none"),
-				nullToFallback(rawContent, "no transcript")
+				compactForPrompt(nullToFallback(summary, "none"), EXISTING_SUMMARY_PROMPT_LIMIT),
+				compactForPrompt(nullToFallback(rawContent, "no transcript"), SUMMARY_SOURCE_PROMPT_LIMIT)
 		);
 	}
 
@@ -221,6 +229,9 @@ public class MeetingService {
 				다음 회의록을 Scrum Helper의 회의 요약 필드에 저장할 수 있게 한국어로 요약해줘.
 				요약은 5~8개의 짧은 bullet로 작성하고, 결정사항/담당자/다음 액션이 있으면 명확히 드러내줘.
 				확인되지 않은 내용은 만들지 말고, 원문에 근거한 내용만 작성해줘.
+				원문에서 blocked, blocking, 막힘, 블로커라고 명시한 경우에만 블로커로 표기해줘.
+				도움이 필요하다는 표현은 블로커가 아니라 지원 필요 또는 확인 필요로 표기해줘.
+				제목, 회의 시간, 도입 문장 없이 bullet 목록만 반환해줘.
 
 				회의 제목: %s
 				회의 일시: %s
@@ -230,8 +241,8 @@ public class MeetingService {
 				""".formatted(
 				meeting.getTitle(),
 				meeting.getMeetingAt(),
-				nullToFallback(meeting.getSummary(), "없음"),
-				nullToFallback(meeting.getRawContent(), "원문 없음")
+				compactForPrompt(nullToFallback(meeting.getSummary(), "없음"), EXISTING_SUMMARY_PROMPT_LIMIT),
+				compactForPrompt(nullToFallback(meeting.getRawContent(), "원문 없음"), SUMMARY_SOURCE_PROMPT_LIMIT)
 		);
 	}
 
@@ -285,6 +296,17 @@ public class MeetingService {
 
 	private String nullToFallback(String value, String fallback) {
 		return value == null || value.isBlank() ? fallback : value.trim();
+	}
+
+	private String compactForPrompt(String value, int maxLength) {
+		if (value == null || value.isBlank()) {
+			return "";
+		}
+		String compact = value.replaceAll("\\s+", " ").trim();
+		if (compact.length() <= maxLength) {
+			return compact;
+		}
+		return compact.substring(0, maxLength) + "\n...(중략: 프롬프트 크기 절감)";
 	}
 
 	private byte[] readFileBytes(MultipartFile file) {

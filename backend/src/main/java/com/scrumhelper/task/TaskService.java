@@ -25,6 +25,7 @@ import com.scrumhelper.task.dto.AiTaskRecommendationResponse;
 import com.scrumhelper.task.dto.SaveTaskRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TaskStatusRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -46,6 +47,7 @@ public class TaskService {
 	private final UserRepository userRepository;
 	private final GeminiSpecDraftClient geminiSpecDraftClient;
 	private final ObjectMapper objectMapper;
+	private final boolean remoteTaskRecommendationEnabled;
 
 	public TaskService(
 			TaskRepository taskRepository,
@@ -56,7 +58,8 @@ public class TaskService {
 			TeamMemberRepository teamMemberRepository,
 			UserRepository userRepository,
 			GeminiSpecDraftClient geminiSpecDraftClient,
-			ObjectMapper objectMapper
+			ObjectMapper objectMapper,
+			@Value("${app.ai.task-recommendation.remote-enabled:false}") boolean remoteTaskRecommendationEnabled
 	) {
 		this.taskRepository = taskRepository;
 		this.taskAssigneeRepository = taskAssigneeRepository;
@@ -67,6 +70,7 @@ public class TaskService {
 		this.userRepository = userRepository;
 		this.geminiSpecDraftClient = geminiSpecDraftClient;
 		this.objectMapper = objectMapper;
+		this.remoteTaskRecommendationEnabled = remoteTaskRecommendationEnabled;
 	}
 
 	@Transactional(readOnly = true)
@@ -129,6 +133,9 @@ public class TaskService {
 		}
 
 		AiTaskRecommendationResponse localRecommendation = buildLocalAiTaskRecommendation(candidates);
+		if (!remoteTaskRecommendationEnabled) {
+			return localRecommendation;
+		}
 		return geminiSpecDraftClient.generateJson(buildAiTaskRecommendationPrompt(team, candidates))
 				.flatMap(content -> parseAiTaskRecommendation(content, candidates))
 				.orElse(localRecommendation);
@@ -318,7 +325,7 @@ public class TaskService {
 						task.getTitle(),
 						task.getDescription() == null || task.getDescription().isBlank()
 								? ""
-								: ", description=" + compact(task.getDescription(), 300)
+								: ", description=" + compact(task.getDescription(), 160)
 				))
 				.collect(java.util.stream.Collectors.joining("\n"));
 	}
@@ -329,6 +336,7 @@ public class TaskService {
 			return "- 아직 등록된 task가 없음";
 		}
 		return tasks.stream()
+				.limit(20)
 				.map(task -> "- #%d [%s/%s] %s, assignees=%s%s".formatted(
 						task.getId(),
 						task.getStatus(),
@@ -337,7 +345,7 @@ public class TaskService {
 						formatAssigneeNames(task.getId()),
 						task.getDescription() == null || task.getDescription().isBlank()
 								? ""
-								: ", description=" + compact(task.getDescription(), 300)
+								: ", description=" + compact(task.getDescription(), 160)
 				))
 				.collect(java.util.stream.Collectors.joining("\n"));
 	}
@@ -383,12 +391,36 @@ public class TaskService {
 	}
 
 	private AiTaskRecommendationResponse buildLocalAiTaskRecommendation(List<Task> candidates) {
-		Task source = candidates.get(0);
+		Task source = candidates.stream()
+				.min(Comparator
+						.comparingInt(this::statusRecommendationRank)
+						.thenComparingInt(this::priorityRecommendationRank)
+						.thenComparing(Task::getCreatedAt))
+				.orElse(candidates.get(0));
 		return new AiTaskRecommendationResponse(
 				toResponse(source),
-				"현재 Todo에 추가하기 좋은 기존 task입니다.",
+				buildLocalRecommendationReason(source),
 				"LOCAL_FALLBACK"
 		);
+	}
+
+	private int statusRecommendationRank(Task task) {
+		return task.getStatus() == TaskStatus.IN_PROGRESS ? 0 : 1;
+	}
+
+	private int priorityRecommendationRank(Task task) {
+		return switch (task.getPriority()) {
+			case HIGH -> 0;
+			case MEDIUM -> 1;
+			case LOW -> 2;
+		};
+	}
+
+	private String buildLocalRecommendationReason(Task task) {
+		String statusReason = task.getStatus() == TaskStatus.IN_PROGRESS
+				? "이미 진행 중인 task라 이어서 처리하기 좋습니다."
+				: "아직 Todo에 없는 미완료 task입니다.";
+		return "%s 중요도 %s 기준으로 우선 확인할 만합니다.".formatted(statusReason, task.getPriority());
 	}
 
 	private String extractJsonObject(String content) {

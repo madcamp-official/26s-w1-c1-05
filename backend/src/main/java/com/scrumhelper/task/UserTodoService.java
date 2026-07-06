@@ -21,6 +21,7 @@ import com.scrumhelper.task.dto.SaveTodoListRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TodoListResponse;
 import com.scrumhelper.task.dto.TodoPromptResponse;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +40,7 @@ public class UserTodoService {
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
 	private final GeminiSpecDraftClient geminiSpecDraftClient;
+	private final boolean remoteCompletionPromptEnabled;
 
 	public UserTodoService(
 			UserTodoTaskRepository userTodoTaskRepository,
@@ -48,7 +50,8 @@ public class UserTodoService {
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
 			UserRepository userRepository,
-			GeminiSpecDraftClient geminiSpecDraftClient
+			GeminiSpecDraftClient geminiSpecDraftClient,
+			@Value("${app.ai.todo-prompt.remote-enabled:false}") boolean remoteCompletionPromptEnabled
 	) {
 		this.userTodoTaskRepository = userTodoTaskRepository;
 		this.taskRepository = taskRepository;
@@ -58,6 +61,7 @@ public class UserTodoService {
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
 		this.geminiSpecDraftClient = geminiSpecDraftClient;
+		this.remoteCompletionPromptEnabled = remoteCompletionPromptEnabled;
 	}
 
 	@Transactional(readOnly = true)
@@ -108,6 +112,9 @@ public class UserTodoService {
 		}
 
 		String localPrompt = buildLocalCompletionPrompt(selectedTasks);
+		if (!remoteCompletionPromptEnabled) {
+			return new TodoPromptResponse(localPrompt, "LOCAL_FALLBACK");
+		}
 		return geminiSpecDraftClient.generate(buildCompletionPromptRequest(selectedTasks))
 				.map(prompt -> new TodoPromptResponse(prompt.trim(), "GEMINI"))
 				.orElseGet(() -> new TodoPromptResponse(localPrompt, "LOCAL_FALLBACK"));
@@ -181,7 +188,7 @@ public class UserTodoService {
 						task.title(),
 						task.description() == null || task.description().isBlank()
 								? ""
-								: "\n  description: " + compact(task.description(), 500)
+								: "\n  description: " + compact(task.description(), 300)
 				))
 				.collect(java.util.stream.Collectors.joining("\n"));
 	}

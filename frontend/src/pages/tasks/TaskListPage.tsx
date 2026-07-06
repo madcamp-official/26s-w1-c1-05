@@ -1,5 +1,5 @@
-import { Fragment, useCallback, useEffect, useState, type DragEvent, type ReactNode } from 'react';
-import { ListTodo, Plus, Sparkles } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useState, type DragEvent, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, ListTodo, Plus, Sparkles } from 'lucide-react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 import * as taskApi from '../../api/taskApi';
@@ -7,7 +7,7 @@ import { useAuth } from '../../auth/useAuth';
 import { Alert, Avatar, Badge, Button, Card, EmptyState, LoadingState, StatusDot } from '../../components/ui';
 import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
-import type { AiTaskRecommendation, Task, TaskStatus } from '../../types/task';
+import type { Task, TaskStatus } from '../../types/task';
 
 export function TaskListPage() {
   const { teamId } = useParams();
@@ -15,11 +15,9 @@ export function TaskListPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [todoTaskIds, setTodoTaskIds] = useState<Set<number>>(new Set());
   const [suggestionCount, setSuggestionCount] = useState(0);
+  const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
-  const [aiRecommendation, setAiRecommendation] = useState<AiTaskRecommendation | null>(null);
-  const [seenRecommendationIds, setSeenRecommendationIds] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<{ status: TaskStatus; index: number } | null>(null);
@@ -56,6 +54,26 @@ export function TaskListPage() {
   const backlogTasks = tasks.filter((task) => task.status === 'BACKLOG');
   const inProgressTasks = tasks.filter((task) => task.status === 'IN_PROGRESS');
   const completedTasks = tasks.filter((task) => task.status === 'DONE');
+
+  // Open tasks assigned to me that I haven't pinned to my focus yet.
+  const suggestionCandidates = useMemo(
+    () =>
+      tasks.filter(
+        (task) =>
+          task.status !== 'DONE' &&
+          user?.id != null &&
+          task.assignees.some((assignee) => assignee.id === user.id) &&
+          !todoTaskIds.has(task.id),
+      ),
+    [tasks, todoTaskIds, user?.id],
+  );
+
+  useEffect(() => {
+    setSuggestionIndex((index) => (index >= suggestionCandidates.length ? Math.max(0, suggestionCandidates.length - 1) : index));
+  }, [suggestionCandidates.length]);
+
+  const safeSuggestionIndex = suggestionCandidates.length > 0 ? Math.min(suggestionIndex, suggestionCandidates.length - 1) : 0;
+  const currentSuggestion = suggestionCandidates[safeSuggestionIndex];
 
   async function handleStatusChange(task: Task, status: TaskStatus, position?: number) {
     try {
@@ -122,53 +140,24 @@ export function TaskListPage() {
     void handleStatusChange(task, status, position);
   }
 
-  async function suggestNext(exclude: number[]) {
-    try {
-      setIsGeneratingRecommendation(true);
-      setErrorMessage(null);
-      const recommendation = await taskApi.generateAiTaskRecommendation(numericTeamId, exclude);
-      setAiRecommendation(recommendation);
-    } catch (error) {
-      if (exclude.length > 0) {
-        setErrorMessage('No more tasks to suggest right now.');
-      } else {
-        setAiRecommendation(null);
-        setErrorMessage(error instanceof ApiError ? error.message : 'Could not suggest a task.');
-      }
-    } finally {
-      setIsGeneratingRecommendation(false);
-    }
+  function showPrevSuggestion() {
+    setSuggestionIndex((index) => Math.max(0, index - 1));
   }
 
-  function handleSuggest() {
-    setSeenRecommendationIds([]);
-    void suggestNext([]);
+  function showNextSuggestion() {
+    setSuggestionIndex((index) => Math.min(suggestionCandidates.length - 1, index + 1));
   }
 
-  function handleShowAnother() {
-    if (!aiRecommendation) {
-      return;
-    }
-    const nextSeen = [...seenRecommendationIds, aiRecommendation.task.id];
-    setSeenRecommendationIds(nextSeen);
-    void suggestNext(nextSeen);
-  }
-
-  async function handleAcceptAiRecommendation() {
-    if (!aiRecommendation) {
-      return;
-    }
+  async function handleAddToFocus(task: Task) {
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
-      await taskApi.acceptAiTaskRecommendation(numericTeamId, aiRecommendation);
-      setAiRecommendation(null);
-      setSeenRecommendationIds([]);
+      await taskApi.acceptAiTaskRecommendation(numericTeamId, { task, reason: null, generatedBy: 'LOCAL_FALLBACK' });
       await loadPage();
       void refreshTeamChrome();
       window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the suggested task.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the task to your focus.');
     } finally {
       setIsSubmitting(false);
     }
@@ -186,16 +175,6 @@ export function TaskListPage() {
           <p className="page-subtitle">Backlog, in-progress, and completed work for this sprint.</p>
         </div>
         <div className="board-toolbar">
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleSuggest}
-            isLoading={isGeneratingRecommendation}
-            disabled={tasks.length === 0}
-          >
-            <Sparkles size={15} aria-hidden="true" />
-            Suggest next task
-          </Button>
           <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
             <Plus size={15} aria-hidden="true" />
             Add task
@@ -206,37 +185,69 @@ export function TaskListPage() {
 
       <Alert message={errorMessage} />
 
-      {aiRecommendation && (
-        <Card className="ai-recommendation-card">
-          <div className="task-card-top">
-            <Badge variant={priorityTone(aiRecommendation.task.priority).variant}>{priorityTone(aiRecommendation.task.priority).label}</Badge>
-            <span className="task-card-id mono">#{aiRecommendation.task.id}</span>
+      <Card className="suggestion-block">
+        <div className="suggestion-block-head">
+          <span className="side-card-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={13} aria-hidden="true" />
+            Suggested for you
+          </span>
+          {currentSuggestion && (
+            <span className="suggestion-block-counter mono">
+              {safeSuggestionIndex + 1} / {suggestionCandidates.length}
+            </span>
+          )}
+        </div>
+
+        {currentSuggestion ? (
+          <>
+            <div className="suggestion-block-body">
+              <div className="task-card-top">
+                <Badge variant={priorityTone(currentSuggestion.priority).variant}>{priorityTone(currentSuggestion.priority).label}</Badge>
+                <Link to={`/teams/${numericTeamId}/tasks/${currentSuggestion.id}`} className="task-card-id mono">
+                  #{currentSuggestion.id}
+                </Link>
+              </div>
+              <div className="task-card-title">{currentSuggestion.title}</div>
+              <div className="task-card-desc">{currentSuggestion.description || 'No description.'}</div>
+            </div>
+            <div className="suggestion-block-footer">
+              <div className="suggestion-block-nav">
+                <button
+                  type="button"
+                  className="suggestion-nav-btn"
+                  onClick={showPrevSuggestion}
+                  disabled={safeSuggestionIndex === 0}
+                  aria-label="Previous suggestion"
+                >
+                  <ChevronLeft size={16} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="suggestion-nav-btn"
+                  onClick={showNextSuggestion}
+                  disabled={safeSuggestionIndex >= suggestionCandidates.length - 1}
+                  aria-label="Next suggestion"
+                >
+                  <ChevronRight size={16} aria-hidden="true" />
+                </button>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleAddToFocus(currentSuggestion)}
+                isLoading={isSubmitting}
+              >
+                <Plus size={13} aria-hidden="true" />
+                Add to focus
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="suggestion-block-empty">
+            Nothing to pick up right now — you're all caught up on assigned tasks.
           </div>
-          <div className="task-card-title">{aiRecommendation.task.title}</div>
-          <div className="task-card-desc">{aiRecommendation.task.description || 'No description.'}</div>
-          {aiRecommendation.reason && <div className="task-card-desc">Reason: {aiRecommendation.reason}</div>}
-          <div className="task-card-footer">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={handleShowAnother}
-              disabled={isGeneratingRecommendation || isSubmitting}
-            >
-              Show another
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => void handleAcceptAiRecommendation()}
-              isLoading={isSubmitting}
-            >
-              <Plus size={13} aria-hidden="true" />
-              Add to Todo
-            </Button>
-          </div>
-        </Card>
-      )}
+        )}
+      </Card>
 
       {tasks.length === 0 ? (
         <EmptyState

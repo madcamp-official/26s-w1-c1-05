@@ -1170,8 +1170,71 @@ p {
   opacity: 0.4;
 }
 
-.ai-recommendation-card {
-  margin-bottom: 14px;
+.suggestion-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.suggestion-block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.suggestion-block-counter {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.suggestion-block-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.suggestion-block-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.suggestion-block-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.suggestion-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: var(--border-hairline);
+  border-radius: var(--radius-md);
+  background: var(--paper);
+  color: var(--gray-600);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.suggestion-nav-btn:hover:not(:disabled) {
+  border-color: var(--gray-500);
+  color: var(--ink);
+}
+
+.suggestion-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.suggestion-block-empty {
+  font-size: 13px;
+  color: var(--gray-500);
+  padding: 6px 0 4px;
 }
 
 .task-card-done {

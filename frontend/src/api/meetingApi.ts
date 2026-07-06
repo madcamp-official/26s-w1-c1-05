@@ -1,5 +1,12 @@
 import { request } from './client';
-import type { Meeting, MeetingSummary, MeetingTranscription, SaveMeetingRequest } from '../types/meeting';
+import type {
+  GenerateMeetingSummaryRequest,
+  Meeting,
+  MeetingSummary,
+  MeetingSummaryDraft,
+  MeetingTranscription,
+  SaveMeetingRequest,
+} from '../types/meeting';
 
 export function getMeetings(teamId: number) {
   return request<Meeting[]>(`/teams/${teamId}/meetings`);
@@ -26,6 +33,13 @@ export function updateMeeting(meetingId: number, data: SaveMeetingRequest) {
 export function generateMeetingSummary(meetingId: number) {
   return request<MeetingSummary>(`/meetings/${meetingId}/summary`, {
     method: 'POST',
+  });
+}
+
+export function generateMeetingSummaryDraft(teamId: number, data: GenerateMeetingSummaryRequest) {
+  return request<MeetingSummaryDraft>(`/teams/${teamId}/meetings/summary-draft`, {
+    method: 'POST',
+    body: data,
   });
 }
 

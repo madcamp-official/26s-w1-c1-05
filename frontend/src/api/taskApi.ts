@@ -115,8 +115,12 @@ type WireTodoList = {
 
 function normalizeTodoList(todoList: WireTodoList): TodoList {
   return {
-    selectedTasks: todoList.selectedTasks.map(normalizeTask),
-    candidateTasks: todoList.candidateTasks.map(normalizeTask),
-    recommendedTasks: (todoList.recommendedTasks ?? []).map(normalizeTask),
+    selectedTasks: todoList.selectedTasks.map(normalizeTask).filter(isTodoEligible),
+    candidateTasks: todoList.candidateTasks.map(normalizeTask).filter(isTodoEligible),
+    recommendedTasks: (todoList.recommendedTasks ?? []).map(normalizeTask).filter(isTodoEligible),
   };
+}
+
+function isTodoEligible(task: Task): boolean {
+  return task.status === 'BACKLOG' || task.status === 'IN_PROGRESS';
 }

@@ -1,7 +1,9 @@
 package com.scrumhelper.meeting;
 
 import com.scrumhelper.common.ApiResponse;
+import com.scrumhelper.meeting.dto.GenerateMeetingSummaryRequest;
 import com.scrumhelper.meeting.dto.MeetingResponse;
+import com.scrumhelper.meeting.dto.MeetingSummaryDraftResponse;
 import com.scrumhelper.meeting.dto.MeetingSummaryResponse;
 import com.scrumhelper.meeting.dto.MeetingTranscriptionResponse;
 import com.scrumhelper.meeting.dto.SaveMeetingRequest;
@@ -58,6 +60,15 @@ public class MeetingController {
 			Authentication authentication
 	) {
 		return ApiResponse.ok(meetingService.transcribeMeetingAudio(currentUserId(authentication), teamId, file));
+	}
+
+	@PostMapping("/teams/{teamId}/meetings/summary-draft")
+	public ApiResponse<MeetingSummaryDraftResponse> generateSummaryDraft(
+			@PathVariable Long teamId,
+			@Valid @RequestBody GenerateMeetingSummaryRequest request,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(meetingService.generateSummaryDraft(currentUserId(authentication), teamId, request));
 	}
 
 	@GetMapping("/meetings/{meetingId}")

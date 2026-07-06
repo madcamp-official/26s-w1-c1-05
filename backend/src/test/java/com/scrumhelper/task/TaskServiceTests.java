@@ -99,6 +99,22 @@ class TaskServiceTests {
 	}
 
 	@Test
+	void updatingSameTodoListTwiceDoesNotDuplicateRowsAndPromptStillWorks() {
+		TestContext context = createContext();
+		TaskResponse first = createTask(context.ownerId(), context.team().id(), "중복 저장 방지 task 1", List.of(context.memberId()));
+		TaskResponse second = createTask(context.ownerId(), context.team().id(), "중복 저장 방지 task 2", List.of(context.memberId()));
+		SaveTodoListRequest request = new SaveTodoListRequest(List.of(first.id(), second.id()));
+
+		TodoListResponse firstSave = userTodoService.updateTodoList(context.memberId(), context.team().id(), request);
+		TodoListResponse secondSave = userTodoService.updateTodoList(context.memberId(), context.team().id(), request);
+		TodoPromptResponse prompt = userTodoService.generateCompletionPrompt(context.memberId(), context.team().id());
+
+		assertThat(firstSave.selectedTasks()).extracting(TaskResponse::id).containsExactly(first.id(), second.id());
+		assertThat(secondSave.selectedTasks()).extracting(TaskResponse::id).containsExactly(first.id(), second.id());
+		assertThat(prompt.prompt()).contains("중복 저장 방지 task 1", "중복 저장 방지 task 2");
+	}
+
+	@Test
 	void outsiderCannotGetMyTasksForTeam() {
 		TestContext context = createContext();
 

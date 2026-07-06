@@ -97,6 +97,7 @@ public class UserTodoService {
 		}
 
 		userTodoTaskRepository.deleteByTeamIdAndUserId(teamId, currentUserId);
+		userTodoTaskRepository.flush();
 		for (int index = 0; index < taskIds.size(); index++) {
 			userTodoTaskRepository.save(UserTodoTask.create(team, user, findTask(taskIds.get(index)), index));
 		}

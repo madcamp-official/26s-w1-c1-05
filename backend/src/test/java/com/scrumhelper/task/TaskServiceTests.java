@@ -6,9 +6,13 @@ import com.scrumhelper.common.BusinessException;
 import com.scrumhelper.common.ErrorCode;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskStatus;
+import com.scrumhelper.task.dto.AcceptAiTaskRecommendationRequest;
 import com.scrumhelper.task.dto.SaveTaskRequest;
+import com.scrumhelper.task.dto.SaveTodoListRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TaskStatusRequest;
+import com.scrumhelper.task.dto.TodoListResponse;
+import com.scrumhelper.task.dto.TodoPromptResponse;
 import com.scrumhelper.team.TeamService;
 import com.scrumhelper.team.dto.CreateTeamRequest;
 import com.scrumhelper.team.dto.TeamDetailResponse;
@@ -36,6 +40,9 @@ class TaskServiceTests {
 	@Autowired
 	private TaskService taskService;
 
+	@Autowired
+	private UserTodoService userTodoService;
+
 	@Test
 	void getMyTasksReturnsOnlyTasksAssignedToCurrentUser() {
 		TestContext context = createContext();
@@ -51,6 +58,38 @@ class TaskServiceTests {
 		assertThat(myTasks).extracting(TaskResponse::id).containsExactly(mineIncomplete.id(), mineDone.id());
 		assertThat(incompleteTasks).extracting(TaskResponse::id).containsExactly(mineIncomplete.id());
 		assertThat(completedTasks).extracting(TaskResponse::id).containsExactly(mineDone.id());
+	}
+
+	@Test
+	void acceptAiTaskRecommendationCreatesTaskAssignedToCurrentUserAndAddsTodo() {
+		TestContext context = createContext();
+
+		TaskResponse created = taskService.acceptAiTaskRecommendation(
+				context.memberId(),
+				context.team().id(),
+				new AcceptAiTaskRecommendationRequest(
+						"AI 추천 task",
+						"추천 task를 Todo에 바로 반영한다.",
+						TaskPriority.HIGH,
+						LocalDate.of(2026, 7, 9)
+				)
+		);
+		TodoListResponse todoList = userTodoService.getTodoList(context.memberId(), context.team().id());
+
+		assertThat(created.assignees()).extracting("id").containsExactly(context.memberId());
+		assertThat(todoList.selectedTasks()).extracting(TaskResponse::id).containsExactly(created.id());
+	}
+
+	@Test
+	void generateCompletionPromptReturnsFallbackPromptWhenGeminiKeyIsMissing() {
+		TestContext context = createContext();
+		TaskResponse task = createTask(context.ownerId(), context.team().id(), "프롬프트 대상 task", List.of(context.memberId()));
+		userTodoService.updateTodoList(context.memberId(), context.team().id(), new SaveTodoListRequest(List.of(task.id())));
+
+		TodoPromptResponse response = userTodoService.generateCompletionPrompt(context.memberId(), context.team().id());
+
+		assertThat(response.generatedBy()).isEqualTo("LOCAL_FALLBACK");
+		assertThat(response.prompt()).contains("프롬프트 대상 task");
 	}
 
 	@Test

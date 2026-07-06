@@ -2,6 +2,8 @@ package com.scrumhelper.task;
 
 import com.scrumhelper.common.ApiResponse;
 import com.scrumhelper.domain.task.TaskPriority;
+import com.scrumhelper.task.dto.AcceptAiTaskRecommendationRequest;
+import com.scrumhelper.task.dto.AiTaskRecommendationResponse;
 import com.scrumhelper.task.dto.SaveTaskRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TaskStatusRequest;
@@ -61,6 +63,29 @@ public class TaskController {
 		return ResponseEntity
 				.status(HttpStatus.CREATED)
 				.body(ApiResponse.created(taskService.createTask(currentUserId(authentication), teamId, request)));
+	}
+
+	@PostMapping("/teams/{teamId}/tasks/ai-recommendation")
+	public ApiResponse<AiTaskRecommendationResponse> generateAiTaskRecommendation(
+			@PathVariable Long teamId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(taskService.generateAiTaskRecommendation(currentUserId(authentication), teamId));
+	}
+
+	@PostMapping("/teams/{teamId}/tasks/ai-recommendation/accept")
+	public ResponseEntity<ApiResponse<TaskResponse>> acceptAiTaskRecommendation(
+			@PathVariable Long teamId,
+			@Valid @RequestBody AcceptAiTaskRecommendationRequest request,
+			Authentication authentication
+	) {
+		return ResponseEntity
+				.status(HttpStatus.CREATED)
+				.body(ApiResponse.created(taskService.acceptAiTaskRecommendation(
+						currentUserId(authentication),
+						teamId,
+						request
+				)));
 	}
 
 	@GetMapping("/teams/{teamId}/tasks/my")

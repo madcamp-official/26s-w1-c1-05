@@ -7,6 +7,8 @@ import java.util.List;
 public interface UserTodoTaskRepository extends JpaRepository<UserTodoTask, Long> {
 	List<UserTodoTask> findByTeamIdAndUserIdOrderBySortOrderAscCreatedAtAsc(Long teamId, Long userId);
 
+	boolean existsByTeamIdAndUserIdAndTaskId(Long teamId, Long userId, Long taskId);
+
 	void deleteByTeamIdAndUserId(Long teamId, Long userId);
 
 	void deleteByTaskId(Long taskId);

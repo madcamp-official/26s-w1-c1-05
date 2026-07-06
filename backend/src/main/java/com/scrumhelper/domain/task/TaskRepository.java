@@ -4,8 +4,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificationExecutor<Task> {
+	List<Task> findByTeamIdOrderByCreatedAtAsc(Long teamId);
+
 	long countByTeamId(Long teamId);
 
 	long countByTeamIdAndCompleted(Long teamId, boolean completed);

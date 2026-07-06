@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, CheckSquare, Plus, Save } from 'lucide-react';
+import { ArrowLeft, CheckSquare, Plus, Save, Sparkles } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import { Alert, Badge, Button, EmptyState, LoadingState } from '../../components/ui';
@@ -15,6 +15,9 @@ export function TeamTodoPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
+  const [promptGeneratedBy, setPromptGeneratedBy] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
@@ -89,6 +92,22 @@ export function TeamTodoPage() {
     }
   }
 
+  async function handleGeneratePrompt() {
+    try {
+      setIsGeneratingPrompt(true);
+      setErrorMessage(null);
+      setGeneratedPrompt(null);
+      setPromptGeneratedBy(null);
+      const data = await taskApi.generateTodoPrompt(numericTeamId);
+      setGeneratedPrompt(data.prompt);
+      setPromptGeneratedBy(data.generatedBy);
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not generate a todo prompt.');
+    } finally {
+      setIsGeneratingPrompt(false);
+    }
+  }
+
   if (isLoading) {
     return <LoadingState label="Loading todo list..." />;
   }
@@ -106,14 +125,30 @@ export function TeamTodoPage() {
           <h1 className="page-title">Todo list</h1>
           <p className="page-subtitle">Choose assigned tasks to keep pinned in the lower-left sidebar.</p>
         </div>
-        <Button type="button" onClick={() => void handleSave()} isLoading={isSaving}>
-          <Save size={14} aria-hidden="true" />
-          Save
-        </Button>
+        <div className="board-toolbar">
+          <Button type="button" variant="secondary" onClick={() => void handleGeneratePrompt()} isLoading={isGeneratingPrompt}>
+            <Sparkles size={14} aria-hidden="true" />
+            Generate prompt
+          </Button>
+          <Button type="button" onClick={() => void handleSave()} isLoading={isSaving}>
+            <Save size={14} aria-hidden="true" />
+            Save
+          </Button>
+        </div>
       </div>
 
       <Alert message={errorMessage} />
       {savedMessage && <div className="success-banner">{savedMessage}</div>}
+
+      {generatedPrompt && (
+        <section className="todo-recommend-section">
+          <div className="todo-recommend-head">
+            <span className="eyebrow">Generated prompt</span>
+            {promptGeneratedBy && <span className="todo-recommend-copy">{promptGeneratedBy}</span>}
+          </div>
+          <pre className="generated-prompt-box">{generatedPrompt}</pre>
+        </section>
+      )}
 
       {recommendedTasks.length > 0 && (
         <section className="todo-recommend-section">

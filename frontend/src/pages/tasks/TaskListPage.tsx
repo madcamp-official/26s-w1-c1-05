@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, ListTodo, Lock, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ListTodo, Lock, Plus, Sparkles } from 'lucide-react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 import * as taskApi from '../../api/taskApi';
 import * as taskDependencyApi from '../../api/taskDependencyApi';
-import { Alert, Avatar, Badge, Card, EmptyState, IconButton, LoadingState, StatusDot } from '../../components/ui';
+import { Alert, Avatar, Badge, Button, Card, EmptyState, IconButton, LoadingState, StatusDot } from '../../components/ui';
 import { dueLabel, priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
-import type { Task, TaskStatus } from '../../types/task';
+import type { AiTaskRecommendation, Task, TaskStatus } from '../../types/task';
 
 export function TaskListPage() {
   const { teamId } = useParams();
@@ -16,6 +16,8 @@ export function TaskListPage() {
   const [blockedTaskIds, setBlockedTaskIds] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
+  const [aiRecommendation, setAiRecommendation] = useState<AiTaskRecommendation | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
 
@@ -68,6 +70,38 @@ export function TaskListPage() {
     }
   }
 
+  async function handleGenerateAiRecommendation() {
+    try {
+      setIsGeneratingRecommendation(true);
+      setErrorMessage(null);
+      const recommendation = await taskApi.generateAiTaskRecommendation(numericTeamId);
+      setAiRecommendation(recommendation);
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not generate a task recommendation.');
+    } finally {
+      setIsGeneratingRecommendation(false);
+    }
+  }
+
+  async function handleAcceptAiRecommendation() {
+    if (!aiRecommendation) {
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      setErrorMessage(null);
+      await taskApi.acceptAiTaskRecommendation(numericTeamId, aiRecommendation);
+      setAiRecommendation(null);
+      await loadPage();
+      void refreshTeamChrome();
+      window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the recommended task.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   if (isLoading) {
     return <LoadingState label="Loading task board…" />;
   }
@@ -80,6 +114,15 @@ export function TaskListPage() {
           <p className="page-subtitle">Backlog, in-progress, and completed work for this sprint.</p>
         </div>
         <div className="board-toolbar">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => void handleGenerateAiRecommendation()}
+            isLoading={isGeneratingRecommendation}
+          >
+            <Sparkles size={15} aria-hidden="true" />
+            AI recommend
+          </Button>
           <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
             <Plus size={15} aria-hidden="true" />
             Add task
@@ -88,6 +131,30 @@ export function TaskListPage() {
       </div>
 
       <Alert message={errorMessage} />
+
+      {aiRecommendation && (
+        <Card className="ai-recommendation-card">
+          <div className="task-card-top">
+            <Badge variant={priorityTone(aiRecommendation.priority).variant}>{priorityTone(aiRecommendation.priority).label}</Badge>
+            <span className="task-card-id mono">{aiRecommendation.generatedBy}</span>
+          </div>
+          <div className="task-card-title">{aiRecommendation.title}</div>
+          <div className="task-card-desc">{aiRecommendation.description || 'No description.'}</div>
+          {aiRecommendation.reason && <div className="task-card-desc">Reason: {aiRecommendation.reason}</div>}
+          <div className="task-card-footer">
+            <span className="due-label">{dueLabel(aiRecommendation.dueDate, false).label}</span>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void handleAcceptAiRecommendation()}
+              isLoading={isSubmitting}
+            >
+              <Plus size={13} aria-hidden="true" />
+              Add to Todo
+            </Button>
+          </div>
+        </Card>
+      )}
 
       {tasks.length === 0 ? (
         <EmptyState

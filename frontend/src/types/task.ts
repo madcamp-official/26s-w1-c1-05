@@ -65,6 +65,20 @@ export type TaskRecommendation = {
   reason?: string;
 };
 
+export type TodoPrompt = {
+  prompt: string;
+  generatedBy: 'GEMINI' | 'LOCAL_FALLBACK' | string;
+};
+
+export type AiTaskRecommendation = {
+  title: string;
+  description: string | null;
+  priority: TaskPriority;
+  dueDate: string;
+  reason: string | null;
+  generatedBy: 'GEMINI' | 'LOCAL_FALLBACK' | string;
+};
+
 export type SaveCommentRequest = {
   content: string;
 };

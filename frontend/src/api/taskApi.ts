@@ -7,6 +7,8 @@ import type {
   TaskFilter,
   TaskStatus,
   TaskRecommendation,
+  TodoPrompt,
+  AiTaskRecommendation,
   TodoList,
   SaveTodoListRequest,
 } from '../types/task';
@@ -27,6 +29,24 @@ export function createTask(teamId: number, data: SaveTaskRequest) {
   return request<WireTask>(`/teams/${teamId}/tasks`, {
     method: 'POST',
     body: data,
+  }).then(normalizeTask);
+}
+
+export function generateAiTaskRecommendation(teamId: number) {
+  return request<AiTaskRecommendation>(`/teams/${teamId}/tasks/ai-recommendation`, {
+    method: 'POST',
+  });
+}
+
+export function acceptAiTaskRecommendation(teamId: number, data: AiTaskRecommendation) {
+  return request<WireTask>(`/teams/${teamId}/tasks/ai-recommendation/accept`, {
+    method: 'POST',
+    body: {
+      title: data.title,
+      description: data.description ?? undefined,
+      priority: data.priority,
+      dueDate: data.dueDate,
+    },
   }).then(normalizeTask);
 }
 
@@ -105,6 +125,12 @@ export function updateTodoList(teamId: number, data: SaveTodoListRequest) {
     method: 'PATCH',
     body: data,
   }).then(normalizeTodoList);
+}
+
+export function generateTodoPrompt(teamId: number) {
+  return request<TodoPrompt>(`/teams/${teamId}/todos/prompt`, {
+    method: 'POST',
+  });
 }
 
 type WireTodoList = {

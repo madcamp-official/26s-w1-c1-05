@@ -17,9 +17,11 @@ import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.domain.team.TeamRepository;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
+import com.scrumhelper.specdocument.GeminiSpecDraftClient;
 import com.scrumhelper.task.dto.SaveTodoListRequest;
 import com.scrumhelper.task.dto.TaskResponse;
 import com.scrumhelper.task.dto.TodoListResponse;
+import com.scrumhelper.task.dto.TodoPromptResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class UserTodoService {
 	private final TeamRepository teamRepository;
 	private final TeamMemberRepository teamMemberRepository;
 	private final UserRepository userRepository;
+	private final GeminiSpecDraftClient geminiSpecDraftClient;
 
 	public UserTodoService(
 			UserTodoTaskRepository userTodoTaskRepository,
@@ -47,7 +50,8 @@ public class UserTodoService {
 			TaskDependencyRepository taskDependencyRepository,
 			TeamRepository teamRepository,
 			TeamMemberRepository teamMemberRepository,
-			UserRepository userRepository
+			UserRepository userRepository,
+			GeminiSpecDraftClient geminiSpecDraftClient
 	) {
 		this.userTodoTaskRepository = userTodoTaskRepository;
 		this.taskRepository = taskRepository;
@@ -57,6 +61,7 @@ public class UserTodoService {
 		this.teamRepository = teamRepository;
 		this.teamMemberRepository = teamMemberRepository;
 		this.userRepository = userRepository;
+		this.geminiSpecDraftClient = geminiSpecDraftClient;
 	}
 
 	@Transactional(readOnly = true)
@@ -94,6 +99,20 @@ public class UserTodoService {
 			userTodoTaskRepository.save(UserTodoTask.create(team, user, findTask(taskIds.get(index)), index));
 		}
 		return getTodoList(currentUserId, teamId);
+	}
+
+	@Transactional(readOnly = true)
+	public TodoPromptResponse generateCompletionPrompt(Long currentUserId, Long teamId) {
+		requireMembership(teamId, currentUserId);
+		List<TaskResponse> selectedTasks = getSelectedTasks(teamId, currentUserId);
+		if (selectedTasks.isEmpty()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Todo list에 task를 1개 이상 추가하세요.");
+		}
+
+		String localPrompt = buildLocalCompletionPrompt(selectedTasks);
+		return geminiSpecDraftClient.generate(buildCompletionPromptRequest(selectedTasks))
+				.map(prompt -> new TodoPromptResponse(prompt.trim(), "GEMINI"))
+				.orElseGet(() -> new TodoPromptResponse(localPrompt, "LOCAL_FALLBACK"));
 	}
 
 	private List<TaskResponse> getSelectedTasks(Long teamId, Long userId) {
@@ -142,6 +161,51 @@ public class UserTodoService {
 		List<TaskDependency> blockers = taskDependencyRepository.findBySuccessorId(task.getId());
 		return !blockers.isEmpty() && blockers.stream()
 				.allMatch(dependency -> dependency.getPredecessor().isCompleted());
+	}
+
+	private String buildCompletionPromptRequest(List<TaskResponse> selectedTasks) {
+		return """
+				다음 Scrum Helper Todo list의 모든 task를 완료하기 위해 사용할 수 있는 실행 프롬프트를 한국어로 작성해줘.
+				요구사항:
+				1. 사용자가 AI에게 그대로 붙여넣어도 되는 프롬프트 형태로 작성해.
+				2. task별 완료 기준, 작업 순서, 산출물, 주의할 점을 포함해.
+				3. 마크다운은 사용해도 되지만 불필요한 설명은 넣지 마.
+				4. task 목록에 없는 새 기능을 임의로 추가하지 마.
+
+				Todo task 목록:
+				%s
+				""".formatted(formatTasksForPrompt(selectedTasks));
+	}
+
+	private String buildLocalCompletionPrompt(List<TaskResponse> selectedTasks) {
+		return """
+				아래 Todo task들을 모두 완료하기 위한 실행 계획을 세워줘.
+				각 task마다 완료 기준, 필요한 구현/검증 단계, 예상 리스크를 정리하고, 의존성이 있어 보이는 순서대로 진행 순서를 제안해줘.
+
+				%s
+				""".formatted(formatTasksForPrompt(selectedTasks));
+	}
+
+	private String formatTasksForPrompt(List<TaskResponse> tasks) {
+		return tasks.stream()
+				.map(task -> "- #%d [%s] %s (due: %s)%s".formatted(
+						task.id(),
+						task.priority(),
+						task.title(),
+						task.dueDate(),
+						task.description() == null || task.description().isBlank()
+								? ""
+								: "\n  description: " + compact(task.description(), 500)
+				))
+				.collect(java.util.stream.Collectors.joining("\n"));
+	}
+
+	private String compact(String value, int maxLength) {
+		String compact = value.replaceAll("\\s+", " ").trim();
+		if (compact.length() <= maxLength) {
+			return compact;
+		}
+		return compact.substring(0, maxLength) + "...";
 	}
 
 	private TaskResponse toResponse(Task task) {

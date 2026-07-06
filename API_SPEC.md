@@ -1313,6 +1313,83 @@ Errors:
 |---|---:|---|
 | `TASK_DEPENDENCY_NOT_FOUND` | 404 | task 관계 없음 |
 
+### 6.11 Todo 완료 프롬프트 생성
+
+```http
+POST /api/teams/{teamId}/todos/prompt
+```
+
+권한: 팀원
+
+Response `200`:
+
+```json
+{
+  "prompt": "아래 Todo task들을 모두 완료하기 위한 실행 계획을 세워줘...",
+  "generatedBy": "GEMINI"
+}
+```
+
+정책:
+
+- 현재 로그인 사용자의 Todo list에 포함된 task를 기준으로 생성한다.
+- Todo list에 task가 없으면 `VALIDATION_ERROR`를 반환한다.
+- Gemini API 키가 없거나 호출이 실패하면 `LOCAL_FALLBACK` 프롬프트를 반환한다.
+
+### 6.12 연관성 기반 AI task 단건 추천
+
+```http
+POST /api/teams/{teamId}/tasks/ai-recommendation
+```
+
+권한: 팀원
+
+Response `200`:
+
+```json
+{
+  "title": "AI 추천 task",
+  "description": "기존 task와 연결되는 후속 작업입니다.",
+  "priority": "MEDIUM",
+  "dueDate": "2026-07-07",
+  "reason": "미완료 task와 dependency 흐름을 고려했습니다.",
+  "generatedBy": "GEMINI"
+}
+```
+
+정책:
+
+- 팀의 기존 task, 담당자, 상태, dependency 관계를 Gemini 프롬프트 맥락으로 넘겨 task 1개만 추천받는다.
+- 이 API는 task를 저장하지 않는다.
+- Gemini API 키가 없거나 JSON 파싱에 실패하면 `LOCAL_FALLBACK` 추천을 반환한다.
+
+### 6.13 AI 추천 task 수락 및 Todo 반영
+
+```http
+POST /api/teams/{teamId}/tasks/ai-recommendation/accept
+```
+
+권한: 팀원
+
+Request:
+
+```json
+{
+  "title": "AI 추천 task",
+  "description": "기존 task와 연결되는 후속 작업입니다.",
+  "priority": "MEDIUM",
+  "dueDate": "2026-07-07"
+}
+```
+
+Response `201`: `TaskResponse`
+
+정책:
+
+- 추천 내용을 실제 task로 생성한다.
+- 생성된 task의 담당자는 현재 로그인 사용자 1명으로 지정한다.
+- 생성된 task는 현재 로그인 사용자의 Todo list 마지막에 즉시 추가한다.
+
 ## 7. Task Comment API
 
 ### 7.1 댓글 목록 조회
@@ -1974,14 +2051,16 @@ Response `200`:
 
 1. `GET /api/teams/{teamId}/tasks`
 2. 내 담당 task: `GET /api/teams/{teamId}/tasks/my`
-3. 생성: `POST /api/teams/{teamId}/tasks`
-4. 수정: `PATCH /api/tasks/{taskId}`
-5. 완료 변경: `PATCH /api/tasks/{taskId}/status`
-6. 삭제: `DELETE /api/tasks/{taskId}`
-7. 댓글 조회: `GET /api/tasks/{taskId}/comments`
-8. 관계 조회: `GET /api/teams/{teamId}/task-dependencies`
-9. 선행 task 추가: `POST /api/tasks/{taskId}/dependencies`
-10. 선행 task 삭제: `DELETE /api/tasks/{taskId}/dependencies/{predecessorTaskId}`
+3. AI task 단건 추천: `POST /api/teams/{teamId}/tasks/ai-recommendation`
+4. AI 추천 task 추가 및 Todo 반영: `POST /api/teams/{teamId}/tasks/ai-recommendation/accept`
+5. 생성: `POST /api/teams/{teamId}/tasks`
+6. 수정: `PATCH /api/tasks/{taskId}`
+7. 완료 변경: `PATCH /api/tasks/{taskId}/status`
+8. 삭제: `DELETE /api/tasks/{taskId}`
+9. 댓글 조회: `GET /api/tasks/{taskId}/comments`
+10. Todo 완료 프롬프트 생성: `POST /api/teams/{teamId}/todos/prompt`
+
+Dependency 전용 탭은 프론트 내비게이션에서 제거한다. Dependency API는 task 추천 맥락, 차단 표시, 내부 데이터 유지를 위해 백엔드에 남긴다.
 
 ### 13.5 회의록 화면
 

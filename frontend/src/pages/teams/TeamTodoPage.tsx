@@ -171,7 +171,7 @@ export function TeamTodoPage() {
       {recommendedTasks.length > 0 && (
         <section className="todo-recommend-section">
           <div className="todo-recommend-head">
-            <span className="eyebrow">Recommended</span>
+            <span className="eyebrow">Suggested</span>
             <span className="todo-recommend-copy">Open tasks assigned to you.</span>
           </div>
           <div className="todo-recommend-list">

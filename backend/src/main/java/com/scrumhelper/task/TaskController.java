@@ -63,9 +63,14 @@ public class TaskController {
 	@PostMapping("/teams/{teamId}/tasks/ai-recommendation")
 	public ApiResponse<AiTaskRecommendationResponse> generateAiTaskRecommendation(
 			@PathVariable Long teamId,
+			@RequestParam(required = false) List<Long> excludeTaskIds,
 			Authentication authentication
 	) {
-		return ApiResponse.ok(taskService.generateAiTaskRecommendation(currentUserId(authentication), teamId));
+		return ApiResponse.ok(taskService.generateAiTaskRecommendation(
+				currentUserId(authentication),
+				teamId,
+				excludeTaskIds
+		));
 	}
 
 	@PostMapping("/teams/{teamId}/tasks/ai-recommendation/accept")

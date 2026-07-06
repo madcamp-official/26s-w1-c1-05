@@ -49,6 +49,15 @@ public class TaskSuggestionController {
 				)));
 	}
 
+	@PostMapping("/task-suggestions/{suggestionId}/dismiss")
+	public ApiResponse<Void> dismissSuggestion(
+			@PathVariable Long suggestionId,
+			Authentication authentication
+	) {
+		taskSuggestionService.dismissSuggestion(currentUserId(authentication), suggestionId);
+		return ApiResponse.deleted();
+	}
+
 	private Long currentUserId(Authentication authentication) {
 		return Long.valueOf(authentication.getName());
 	}

@@ -12,7 +12,6 @@ public record TaskSuggestionResponse(
 		String title,
 		String description,
 		TaskPriority priority,
-		boolean accepted,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt
 ) {
@@ -24,7 +23,6 @@ public record TaskSuggestionResponse(
 				suggestion.getTitle(),
 				suggestion.getDescription(),
 				suggestion.getPriority(),
-				suggestion.isAccepted(),
 				suggestion.getCreatedAt(),
 				suggestion.getUpdatedAt()
 		);

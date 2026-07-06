@@ -32,9 +32,10 @@ export function createTask(teamId: number, data: SaveTaskRequest) {
   }).then(normalizeTask);
 }
 
-export function generateAiTaskRecommendation(teamId: number) {
+export function generateAiTaskRecommendation(teamId: number, excludeTaskIds: number[] = []) {
   return request<AiTaskRecommendation>(`/teams/${teamId}/tasks/ai-recommendation`, {
     method: 'POST',
+    query: excludeTaskIds.length > 0 ? { excludeTaskIds: excludeTaskIds.join(',') } : undefined,
   });
 }
 
@@ -74,6 +75,12 @@ export function acceptTaskSuggestion(suggestionId: number, assigneeUserIds: numb
     method: 'POST',
     body: { assigneeUserIds },
   }).then(normalizeTask);
+}
+
+export function dismissTaskSuggestion(suggestionId: number) {
+  return request<null>(`/task-suggestions/${suggestionId}/dismiss`, {
+    method: 'POST',
+  });
 }
 
 type WireTask = Omit<Task, 'status'> & {

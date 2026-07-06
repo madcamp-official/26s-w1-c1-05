@@ -57,7 +57,7 @@ export function SidebarTodoList({ teamId }: SidebarTodoListProps) {
           <SidebarTodoPreview task={firstTask} teamId={teamId} />
         ) : (
           <Link to={`/teams/${teamId}/tasks`} className="sidebar-todo-empty-action">
-            <span>Get todo recommendations</span>
+            <span>Get task suggestions</span>
             <ArrowRight size={13} aria-hidden="true" />
           </Link>
         )}

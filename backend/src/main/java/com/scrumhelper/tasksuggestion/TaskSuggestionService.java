@@ -8,6 +8,7 @@ import com.scrumhelper.domain.specdocument.SpecDocument;
 import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.tasksuggestion.TaskSuggestion;
 import com.scrumhelper.domain.tasksuggestion.TaskSuggestionRepository;
+import com.scrumhelper.domain.tasksuggestion.TaskSuggestionStatus;
 import com.scrumhelper.domain.team.TeamMemberRepository;
 import com.scrumhelper.specdocument.GeminiSpecDraftClient;
 import com.scrumhelper.task.TaskService;
@@ -53,7 +54,7 @@ public class TaskSuggestionService {
 	@Transactional
 	public void generateForSpecFinalization(SpecDocument previousMain, SpecDocument newMain) {
 		List<TaskSuggestion> pending = taskSuggestionRepository
-				.findByTeamIdAndAcceptedFalseOrderByCreatedAtAsc(newMain.getTeam().getId());
+				.findByTeamIdAndStatusOrderByCreatedAtAsc(newMain.getTeam().getId(), TaskSuggestionStatus.PENDING);
 		Set<String> pendingTitles = pending.stream()
 				.map(suggestion -> suggestion.getTitle().trim().toLowerCase())
 				.collect(Collectors.toSet());
@@ -79,7 +80,7 @@ public class TaskSuggestionService {
 	@Transactional(readOnly = true)
 	public List<TaskSuggestionResponse> getQueuedSuggestions(Long currentUserId, Long teamId) {
 		requireMembership(teamId, currentUserId);
-		return taskSuggestionRepository.findByTeamIdAndAcceptedFalseOrderByCreatedAtAsc(teamId).stream()
+		return taskSuggestionRepository.findByTeamIdAndStatusOrderByCreatedAtAsc(teamId, TaskSuggestionStatus.PENDING).stream()
 				.map(TaskSuggestionResponse::from)
 				.toList();
 	}
@@ -89,7 +90,7 @@ public class TaskSuggestionService {
 		TaskSuggestion suggestion = taskSuggestionRepository.findById(suggestionId)
 				.orElseThrow(() -> new BusinessException(ErrorCode.TASK_SUGGESTION_NOT_FOUND));
 		requireMembership(suggestion.getTeam().getId(), currentUserId);
-		if (suggestion.isAccepted()) {
+		if (!suggestion.isPending()) {
 			throw new BusinessException(ErrorCode.TASK_SUGGESTION_ALREADY_ACCEPTED);
 		}
 
@@ -105,6 +106,16 @@ public class TaskSuggestionService {
 		);
 		suggestion.accept();
 		return task;
+	}
+
+	@Transactional
+	public void dismissSuggestion(Long currentUserId, Long suggestionId) {
+		TaskSuggestion suggestion = taskSuggestionRepository.findById(suggestionId)
+				.orElseThrow(() -> new BusinessException(ErrorCode.TASK_SUGGESTION_NOT_FOUND));
+		requireMembership(suggestion.getTeam().getId(), currentUserId);
+		if (suggestion.isPending()) {
+			suggestion.dismiss();
+		}
 	}
 
 	private void requireMembership(Long teamId, Long userId) {

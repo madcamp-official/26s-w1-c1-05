@@ -14,10 +14,12 @@ export function TaskListPage() {
   const numericTeamId = Number(teamId);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [todoTaskIds, setTodoTaskIds] = useState<Set<number>>(new Set());
+  const [suggestionCount, setSuggestionCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingRecommendation, setIsGeneratingRecommendation] = useState(false);
   const [aiRecommendation, setAiRecommendation] = useState<AiTaskRecommendation | null>(null);
+  const [seenRecommendationIds, setSeenRecommendationIds] = useState<number[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
   const [dropTarget, setDropTarget] = useState<{ status: TaskStatus; index: number } | null>(null);
@@ -34,12 +36,14 @@ export function TaskListPage() {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      const [taskData, todoData] = await Promise.all([
+      const [taskData, todoData, suggestions] = await Promise.all([
         taskApi.getTasks(numericTeamId),
         taskApi.getTodoList(numericTeamId).catch(() => null),
+        taskApi.getQueuedTaskSuggestions(numericTeamId).catch(() => []),
       ]);
       setTasks(taskData);
       setTodoTaskIds(new Set((todoData?.selectedTasks ?? []).map((task) => task.id)));
+      setSuggestionCount(suggestions.length);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load the task board.');
     } finally {
@@ -118,17 +122,36 @@ export function TaskListPage() {
     void handleStatusChange(task, status, position);
   }
 
-  async function handleGenerateAiRecommendation() {
+  async function suggestNext(exclude: number[]) {
     try {
       setIsGeneratingRecommendation(true);
       setErrorMessage(null);
-      const recommendation = await taskApi.generateAiTaskRecommendation(numericTeamId);
+      const recommendation = await taskApi.generateAiTaskRecommendation(numericTeamId, exclude);
       setAiRecommendation(recommendation);
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not generate a task recommendation.');
+      if (exclude.length > 0) {
+        setErrorMessage('No more tasks to suggest right now.');
+      } else {
+        setAiRecommendation(null);
+        setErrorMessage(error instanceof ApiError ? error.message : 'Could not suggest a task.');
+      }
     } finally {
       setIsGeneratingRecommendation(false);
     }
+  }
+
+  function handleSuggest() {
+    setSeenRecommendationIds([]);
+    void suggestNext([]);
+  }
+
+  function handleShowAnother() {
+    if (!aiRecommendation) {
+      return;
+    }
+    const nextSeen = [...seenRecommendationIds, aiRecommendation.task.id];
+    setSeenRecommendationIds(nextSeen);
+    void suggestNext(nextSeen);
   }
 
   async function handleAcceptAiRecommendation() {
@@ -140,11 +163,12 @@ export function TaskListPage() {
       setErrorMessage(null);
       await taskApi.acceptAiTaskRecommendation(numericTeamId, aiRecommendation);
       setAiRecommendation(null);
+      setSeenRecommendationIds([]);
       await loadPage();
       void refreshTeamChrome();
       window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the recommended task.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the suggested task.');
     } finally {
       setIsSubmitting(false);
     }
@@ -165,15 +189,17 @@ export function TaskListPage() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => void handleGenerateAiRecommendation()}
+            onClick={handleSuggest}
             isLoading={isGeneratingRecommendation}
+            disabled={tasks.length === 0}
           >
             <Sparkles size={15} aria-hidden="true" />
-            AI recommend
+            Suggest next task
           </Button>
           <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
             <Plus size={15} aria-hidden="true" />
             Add task
+            {suggestionCount > 0 && <span className="add-task-count">{suggestionCount}</span>}
           </Link>
         </div>
       </div>
@@ -184,12 +210,21 @@ export function TaskListPage() {
         <Card className="ai-recommendation-card">
           <div className="task-card-top">
             <Badge variant={priorityTone(aiRecommendation.task.priority).variant}>{priorityTone(aiRecommendation.task.priority).label}</Badge>
-            <span className="task-card-id mono">{aiRecommendation.generatedBy}</span>
+            <span className="task-card-id mono">#{aiRecommendation.task.id}</span>
           </div>
           <div className="task-card-title">{aiRecommendation.task.title}</div>
           <div className="task-card-desc">{aiRecommendation.task.description || 'No description.'}</div>
           {aiRecommendation.reason && <div className="task-card-desc">Reason: {aiRecommendation.reason}</div>}
           <div className="task-card-footer">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleShowAnother}
+              disabled={isGeneratingRecommendation || isSubmitting}
+            >
+              Show another
+            </Button>
             <Button
               type="button"
               size="sm"

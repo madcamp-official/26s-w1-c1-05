@@ -63,7 +63,6 @@ class TaskSuggestionServiceTests {
 				.allSatisfy(suggestion -> {
 					assertThat(suggestion.teamId()).isEqualTo(context.team().id());
 					assertThat(suggestion.specDocumentId()).isEqualTo(context.specDocument().id());
-					assertThat(suggestion.accepted()).isFalse();
 				});
 
 		TaskSuggestionResponse target = queued.get(0);
@@ -101,6 +100,36 @@ class TaskSuggestionServiceTests {
 		);
 		assertThat(remaining).hasSize(4);
 		assertThat(remaining).noneMatch(suggestion -> suggestion.id().equals(target.id()));
+	}
+
+	@Test
+	void dismissingSuggestionRemovesItFromQueueAndBlocksAccept() {
+		TestContext context = createContext();
+		specDocumentService.setMainSpecDocument(context.ownerId(), context.specDocument().id());
+
+		List<TaskSuggestionResponse> queued = taskSuggestionService.getQueuedSuggestions(
+				context.ownerId(),
+				context.team().id()
+		);
+		TaskSuggestionResponse target = queued.get(0);
+
+		taskSuggestionService.dismissSuggestion(context.ownerId(), target.id());
+
+		List<TaskSuggestionResponse> remaining = taskSuggestionService.getQueuedSuggestions(
+				context.ownerId(),
+				context.team().id()
+		);
+		assertThat(remaining).hasSize(4);
+		assertThat(remaining).noneMatch(suggestion -> suggestion.id().equals(target.id()));
+
+		assertThatThrownBy(() -> taskSuggestionService.acceptSuggestion(
+				context.ownerId(),
+				target.id(),
+				new AcceptTaskSuggestionRequest(List.of(context.ownerId()))
+		))
+				.isInstanceOf(BusinessException.class)
+				.extracting("errorCode")
+				.isEqualTo(ErrorCode.TASK_SUGGESTION_ALREADY_ACCEPTED);
 	}
 
 	@Test

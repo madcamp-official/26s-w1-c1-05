@@ -80,7 +80,7 @@ class TaskServiceTests {
 		TestContext context = createContext();
 		TaskResponse existing = createTask(context.ownerId(), context.team().id(), "AI가 고를 기존 task", List.of(context.memberId()));
 
-		var recommendation = taskService.generateAiTaskRecommendation(context.memberId(), context.team().id());
+		var recommendation = taskService.generateAiTaskRecommendation(context.memberId(), context.team().id(), List.of());
 
 		assertThat(recommendation.generatedBy()).isEqualTo("LOCAL_FALLBACK");
 		assertThat(recommendation.task().id()).isEqualTo(existing.id());

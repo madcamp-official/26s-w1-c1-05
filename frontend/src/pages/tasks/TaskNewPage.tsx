@@ -1,10 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Sparkles, X } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
 import * as specDocumentApi from '../../api/specDocumentApi';
-import { Alert, Button, Field, FieldInput, FieldSelect, FieldTextarea, LoadingState, useToast } from '../../components/ui';
+import { Alert, Badge, Button, Field, FieldInput, FieldSelect, FieldTextarea, LoadingState, useToast } from '../../components/ui';
+import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { TaskPriority, TaskRecommendation } from '../../types/task';
 import type { TeamMember } from '../../types/team';
@@ -124,6 +125,25 @@ export function TaskNewPage() {
     }));
   }
 
+  async function handleDismiss(suggestionId: number) {
+    setRecommendations((current) => current.filter((item) => item.id !== suggestionId));
+    if (selectedSuggestionId === suggestionId) {
+      setSelectedSuggestionId(null);
+    }
+    try {
+      await taskApi.dismissTaskSuggestion(suggestionId);
+    } catch {
+      // If dismissing fails, re-sync with the real queue state.
+      void refreshRecommendations();
+    }
+  }
+
+  function handleClearForm() {
+    setSelectedSuggestionId(null);
+    setForm({ title: '', description: '', priority: 'MEDIUM', assigneeUserIds: [] });
+    setErrorMessage(null);
+  }
+
   function editField(update: Partial<typeof form>) {
     setSelectedSuggestionId(null);
     setForm((current) => ({ ...current, ...update }));
@@ -199,32 +219,59 @@ export function TaskNewPage() {
               ))}
             </div>
           </Field>
-          <div>
+          <div style={{ display: 'flex', gap: 8 }}>
             <Button type="submit" isLoading={isSubmitting}>
-              Create task
+              {selectedSuggestionId != null ? 'Add suggested task' : 'Create task'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleClearForm}>
+              Clear
             </Button>
           </div>
         </form>
 
         <aside className="recommend-panel">
-          <span className="side-card-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <Sparkles size={13} aria-hidden="true" />
-            Recommended from main spec
-          </span>
-          {!hasMainSpec && <div className="recommend-empty">Set a main spec to generate task recommendations.</div>}
-          {hasMainSpec && recommendations.length === 0 && <div className="recommend-empty">No new tasks to recommend.</div>}
-          {recommendations.map((item) => (
-            <button
-              className={selectedSuggestionId === item.id ? 'recommend-item active' : 'recommend-item'}
-              type="button"
-              key={item.id ?? item.title}
-              onClick={() => handleSelectRecommendation(item)}
-            >
-              <span className="recommend-item-title">{item.title}</span>
-              {item.description && <span className="recommend-item-description">{item.description}</span>}
-              <span className="recommend-item-meta">{item.priority}{item.reason ? ` · ${item.reason}` : ''}</span>
-            </button>
-          ))}
+          <div className="recommend-head">
+            <span className="side-card-title" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Sparkles size={13} aria-hidden="true" />
+              Suggested tasks
+            </span>
+            {hasMainSpec && recommendations.length > 0 && (
+              <span className="recommend-count">{recommendations.length}</span>
+            )}
+          </div>
+          {hasMainSpec && recommendations.length > 0 && (
+            <span className="recommend-source">From your main spec · tap one to fill the form</span>
+          )}
+          {!hasMainSpec && <div className="recommend-empty">Set a main spec to generate task suggestions.</div>}
+          {hasMainSpec && recommendations.length === 0 && <div className="recommend-empty">No new suggestions right now.</div>}
+          {recommendations.map((item) => {
+            const priority = priorityTone(item.priority);
+            const id = item.id;
+            const isSelected = id != null && selectedSuggestionId === id;
+            return (
+              <div className={isSelected ? 'recommend-item active' : 'recommend-item'} key={id ?? item.title}>
+                <button type="button" className="recommend-item-main" onClick={() => handleSelectRecommendation(item)}>
+                  <span className="recommend-item-head">
+                    <Badge variant={priority.variant}>{priority.label}</Badge>
+                  </span>
+                  <span className="recommend-item-title">{item.title}</span>
+                  {item.description && <span className="recommend-item-description">{item.description}</span>}
+                  <span className="recommend-item-use">{isSelected ? 'Applied ✓' : 'Use →'}</span>
+                </button>
+                {id != null && (
+                  <button
+                    type="button"
+                    className="recommend-item-dismiss"
+                    title="Dismiss suggestion"
+                    aria-label="Dismiss suggestion"
+                    onClick={() => void handleDismiss(id)}
+                  >
+                    <X size={13} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </aside>
       </div>
     </div>

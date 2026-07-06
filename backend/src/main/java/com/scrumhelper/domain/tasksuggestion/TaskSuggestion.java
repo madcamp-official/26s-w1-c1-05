@@ -44,8 +44,9 @@ public class TaskSuggestion {
 	@Column(nullable = false, length = 20)
 	private TaskPriority priority;
 
-	@Column(nullable = false)
-	private boolean accepted;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 20)
+	private TaskSuggestionStatus status;
 
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
@@ -68,7 +69,7 @@ public class TaskSuggestion {
 		this.title = title;
 		this.description = description;
 		this.priority = priority;
-		this.accepted = false;
+		this.status = TaskSuggestionStatus.PENDING;
 	}
 
 	public static TaskSuggestion create(
@@ -94,7 +95,11 @@ public class TaskSuggestion {
 	}
 
 	public void accept() {
-		this.accepted = true;
+		this.status = TaskSuggestionStatus.ACCEPTED;
+	}
+
+	public void dismiss() {
+		this.status = TaskSuggestionStatus.DISMISSED;
 	}
 
 	public Long getId() {
@@ -121,8 +126,12 @@ public class TaskSuggestion {
 		return priority;
 	}
 
-	public boolean isAccepted() {
-		return accepted;
+	public TaskSuggestionStatus getStatus() {
+		return status;
+	}
+
+	public boolean isPending() {
+		return status == TaskSuggestionStatus.PENDING;
 	}
 
 	public LocalDateTime getCreatedAt() {

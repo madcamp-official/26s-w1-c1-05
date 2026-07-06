@@ -45,7 +45,6 @@ export type TaskRecommendation = {
   title: string;
   description: string | null;
   priority: TaskPriority;
-  accepted?: boolean;
   reason?: string;
 };
 

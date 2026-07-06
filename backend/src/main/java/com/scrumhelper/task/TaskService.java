@@ -124,10 +124,12 @@ public class TaskService {
 	}
 
 	@Transactional(readOnly = true)
-	public AiTaskRecommendationResponse generateAiTaskRecommendation(Long currentUserId, Long teamId) {
+	public AiTaskRecommendationResponse generateAiTaskRecommendation(Long currentUserId, Long teamId, List<Long> excludeTaskIds) {
 		Team team = findTeam(teamId);
 		requireMembership(teamId, currentUserId);
-		List<Task> candidates = getTodoRecommendationCandidates(teamId, currentUserId);
+		List<Task> candidates = getTodoRecommendationCandidates(teamId, currentUserId).stream()
+				.filter(task -> excludeTaskIds == null || !excludeTaskIds.contains(task.getId()))
+				.toList();
 		if (candidates.isEmpty()) {
 			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Todo에 추가할 수 있는 기존 task가 없습니다.");
 		}

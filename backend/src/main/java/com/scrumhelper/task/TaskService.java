@@ -132,10 +132,14 @@ public class TaskService {
 	public AiTaskRecommendationResponse generateAiTaskRecommendation(Long currentUserId, Long teamId) {
 		Team team = findTeam(teamId);
 		requireMembership(teamId, currentUserId);
+		List<Task> candidates = getTodoRecommendationCandidates(teamId, currentUserId);
+		if (candidates.isEmpty()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Todo에 추가할 수 있는 기존 task가 없습니다.");
+		}
 
-		AiTaskRecommendationResponse localRecommendation = buildLocalAiTaskRecommendation(team);
-		return geminiSpecDraftClient.generateJson(buildAiTaskRecommendationPrompt(team))
-				.flatMap(this::parseAiTaskRecommendation)
+		AiTaskRecommendationResponse localRecommendation = buildLocalAiTaskRecommendation(candidates);
+		return geminiSpecDraftClient.generateJson(buildAiTaskRecommendationPrompt(team, candidates))
+				.flatMap(content -> parseAiTaskRecommendation(content, candidates))
 				.orElse(localRecommendation);
 	}
 
@@ -145,19 +149,16 @@ public class TaskService {
 			Long teamId,
 			AcceptAiTaskRecommendationRequest request
 	) {
-		TaskResponse task = createTask(
-				currentUserId,
-				teamId,
-				new SaveTaskRequest(
-						request.title(),
-						request.description(),
-						request.priority(),
-						request.dueDate(),
-						List.of(currentUserId)
-				)
-		);
-		addTaskToTodo(teamId, currentUserId, task.id());
-		return task;
+		requireMembership(teamId, currentUserId);
+		Task task = findTask(request.taskId());
+		if (!task.getTeam().getId().equals(teamId) || !taskAssigneeRepository.existsByTaskIdAndUserId(task.getId(), currentUserId)) {
+			throw new BusinessException(ErrorCode.TODO_TASK_NOT_ASSIGNED);
+		}
+		if (task.isCompleted()) {
+			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "완료된 task는 Todo에 추가할 수 없습니다.");
+		}
+		addTaskToTodo(teamId, currentUserId, task.getId());
+		return toResponse(task);
 	}
 
 	@Transactional(readOnly = true)
@@ -253,6 +254,9 @@ public class TaskService {
 		Team team = findTeam(teamId);
 		User user = findUser(userId);
 		Task task = findTask(taskId);
+		if (!task.getTeam().getId().equals(teamId) || !taskAssigneeRepository.existsByTaskIdAndUserId(taskId, userId)) {
+			throw new BusinessException(ErrorCode.TODO_TASK_NOT_ASSIGNED);
+		}
 		int sortOrder = userTodoTaskRepository.findByTeamIdAndUserIdOrderBySortOrderAscCreatedAtAsc(teamId, userId).size();
 		userTodoTaskRepository.save(UserTodoTask.create(team, user, task, sortOrder));
 	}
@@ -276,28 +280,60 @@ public class TaskService {
 		return TaskResponse.from(task, assignees, taskCommentRepository.countByTaskId(task.getId()));
 	}
 
-	private String buildAiTaskRecommendationPrompt(Team team) {
+	private String buildAiTaskRecommendationPrompt(Team team, List<Task> candidates) {
 		return """
-				다음 Scrum Helper 팀의 기존 task와 task 관계를 고려해서 지금 추가하면 좋은 task를 정확히 1개만 추천해줘.
+				다음 Scrum Helper 팀의 기존 task 후보 중에서 지금 Todo list에 추가하면 좋은 task를 정확히 1개만 추천해줘.
 				응답은 JSON 객체 하나만 반환해. 설명이나 마크다운은 넣지 마.
 				JSON 필드:
-				- title: 200자 이하
-				- description: 추천 이유와 완료 기준을 포함한 짧은 설명
-				- priority: LOW, MEDIUM, HIGH 중 하나
-				- dueDate: 오늘 이후 YYYY-MM-DD
-				- reason: 기존 task와의 연관성 또는 추천 근거
+				- taskId: 후보 목록에 있는 기존 task id 중 하나
+				- reason: 해당 기존 task를 추천한 근거
+
+				중요:
+				- 후보 목록에 없는 task를 새로 만들거나 상상하지 마.
+				- taskId는 반드시 후보 목록의 id와 정확히 일치해야 해.
 
 				팀명: %s
-				기존 task:
+				Todo 추가 가능 후보:
+				%s
+
+				팀 전체 task 맥락:
 				%s
 
 				task 관계:
 				%s
 				""".formatted(
 				team.getName(),
+				formatCandidateTaskContext(candidates),
 				formatTaskContext(team.getId()),
 				formatDependencyContext(team.getId())
 		);
+	}
+
+	private List<Task> getTodoRecommendationCandidates(Long teamId, Long userId) {
+		return taskAssigneeRepository.findByTeamIdAndUserId(teamId, userId).stream()
+				.map(TaskAssignee::getTask)
+				.filter(task -> !task.isCompleted())
+				.filter(task -> !userTodoTaskRepository.existsByTeamIdAndUserIdAndTaskId(teamId, userId, task.getId()))
+				.sorted(Comparator
+						.comparing(this::hasIncompleteBlockers)
+						.thenComparing(Task::getDueDate)
+						.thenComparing(Task::getCreatedAt))
+				.toList();
+	}
+
+	private String formatCandidateTaskContext(List<Task> tasks) {
+		return tasks.stream()
+				.map(task -> "- taskId=%d [%s/%s] %s, due=%s%s".formatted(
+						task.getId(),
+						task.getStatus(),
+						task.getPriority(),
+						task.getTitle(),
+						task.getDueDate(),
+						task.getDescription() == null || task.getDescription().isBlank()
+								? ""
+								: ", description=" + compact(task.getDescription(), 300)
+				))
+				.collect(java.util.stream.Collectors.joining("\n"));
 	}
 
 	private String formatTaskContext(Long teamId) {
@@ -342,51 +378,51 @@ public class TaskService {
 				.collect(java.util.stream.Collectors.joining("\n"));
 	}
 
-	private Optional<AiTaskRecommendationResponse> parseAiTaskRecommendation(String content) {
+	private Optional<AiTaskRecommendationResponse> parseAiTaskRecommendation(String content, List<Task> candidates) {
 		try {
 			JsonNode root = objectMapper.readTree(extractJsonObject(content));
-			String title = root.path("title").asText("").trim();
-			if (title.isBlank()) {
+			Long taskId = parseTaskId(root.path("taskId"));
+			if (taskId == null) {
 				return Optional.empty();
 			}
-			String description = root.path("description").asText("").trim();
 			String reason = root.path("reason").asText("").trim();
-			return Optional.of(new AiTaskRecommendationResponse(
-					truncate(title, 200),
-					description.isBlank() ? null : description,
-					parsePriority(root.path("priority").asText("")),
-					parseDueDate(root.path("dueDate").asText("")),
-					reason.isBlank() ? null : reason,
-					"GEMINI"
-			));
+			return candidates.stream()
+					.filter(task -> task.getId().equals(taskId))
+					.findFirst()
+					.map(task -> new AiTaskRecommendationResponse(
+							toResponse(task),
+							reason.isBlank() ? "기존 task 목록과 dependency 맥락을 고려해 추천했습니다." : reason,
+							"GEMINI"
+					));
 		} catch (Exception ignored) {
 			return Optional.empty();
 		}
 	}
 
-	private AiTaskRecommendationResponse buildLocalAiTaskRecommendation(Team team) {
-		List<Task> openTasks = taskRepository.findByTeamIdOrderByCreatedAtAsc(team.getId()).stream()
-				.filter(task -> !task.isCompleted())
-				.toList();
-		if (openTasks.isEmpty()) {
-			return new AiTaskRecommendationResponse(
-					"MVP 다음 작업 정의",
-					"현재 열린 task가 없으므로 다음 구현 범위와 완료 기준을 정리한다.",
-					TaskPriority.MEDIUM,
-					LocalDate.now().plusDays(1),
-					"등록된 미완료 task가 없어 프로젝트 진행을 위한 시작 task를 추천했습니다.",
-					"LOCAL_FALLBACK"
-			);
+	private Long parseTaskId(JsonNode node) {
+		if (node.canConvertToLong()) {
+			return node.asLong();
 		}
-		Task source = openTasks.get(0);
+		try {
+			String value = node.asText("").trim();
+			return value.isBlank() ? null : Long.valueOf(value);
+		} catch (Exception ignored) {
+			return null;
+		}
+	}
+
+	private AiTaskRecommendationResponse buildLocalAiTaskRecommendation(List<Task> candidates) {
+		Task source = candidates.get(0);
 		return new AiTaskRecommendationResponse(
-				truncate(source.getTitle() + " 완료 기준 점검", 200),
-				"기존 task와 연결되는 검증/마무리 작업입니다. 구현 상태를 확인하고 누락된 테스트와 문서를 보강합니다.",
-				source.getPriority(),
-				source.getDueDate().isBefore(LocalDate.now()) ? LocalDate.now().plusDays(1) : source.getDueDate(),
-				"미완료 task #" + source.getId() + "와 직접 연결되는 후속 작업입니다.",
+				toResponse(source),
+				"마감일과 dependency 상태를 기준으로 현재 Todo에 추가하기 좋은 기존 task입니다.",
 				"LOCAL_FALLBACK"
 		);
+	}
+
+	private boolean hasIncompleteBlockers(Task task) {
+		return taskDependencyRepository.findBySuccessorId(task.getId()).stream()
+				.anyMatch(dependency -> !dependency.getPredecessor().isCompleted());
 	}
 
 	private String extractJsonObject(String content) {
@@ -398,36 +434,12 @@ public class TaskService {
 		return content.substring(start, end + 1);
 	}
 
-	private TaskPriority parsePriority(String value) {
-		try {
-			return TaskPriority.valueOf(value.trim().toUpperCase());
-		} catch (Exception ignored) {
-			return TaskPriority.MEDIUM;
-		}
-	}
-
-	private LocalDate parseDueDate(String value) {
-		try {
-			LocalDate parsed = LocalDate.parse(value.trim());
-			return parsed.isBefore(LocalDate.now()) ? LocalDate.now().plusDays(1) : parsed;
-		} catch (Exception ignored) {
-			return LocalDate.now().plusDays(1);
-		}
-	}
-
 	private String compact(String value, int maxLength) {
 		String compact = value.replaceAll("\\s+", " ").trim();
 		if (compact.length() <= maxLength) {
 			return compact;
 		}
 		return compact.substring(0, maxLength) + "...";
-	}
-
-	private String truncate(String value, int maxLength) {
-		if (value.length() <= maxLength) {
-			return value;
-		}
-		return value.substring(0, maxLength);
 	}
 
 	private Team findTeam(Long teamId) {

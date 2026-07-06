@@ -74,18 +74,16 @@ public class TaskController {
 	}
 
 	@PostMapping("/teams/{teamId}/tasks/ai-recommendation/accept")
-	public ResponseEntity<ApiResponse<TaskResponse>> acceptAiTaskRecommendation(
+	public ApiResponse<TaskResponse> acceptAiTaskRecommendation(
 			@PathVariable Long teamId,
 			@Valid @RequestBody AcceptAiTaskRecommendationRequest request,
 			Authentication authentication
 	) {
-		return ResponseEntity
-				.status(HttpStatus.CREATED)
-				.body(ApiResponse.created(taskService.acceptAiTaskRecommendation(
-						currentUserId(authentication),
-						teamId,
-						request
-				)));
+		return ApiResponse.ok(taskService.acceptAiTaskRecommendation(
+				currentUserId(authentication),
+				teamId,
+				request
+		));
 	}
 
 	@GetMapping("/teams/{teamId}/tasks/my")

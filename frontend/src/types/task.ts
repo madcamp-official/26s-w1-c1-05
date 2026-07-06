@@ -71,10 +71,7 @@ export type TodoPrompt = {
 };
 
 export type AiTaskRecommendation = {
-  title: string;
-  description: string | null;
-  priority: TaskPriority;
-  dueDate: string;
+  task: Task;
   reason: string | null;
   generatedBy: 'GEMINI' | 'LOCAL_FALLBACK' | string;
 };

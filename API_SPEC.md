@@ -1348,10 +1348,16 @@ Response `200`:
 
 ```json
 {
-  "title": "AI 추천 task",
-  "description": "기존 task와 연결되는 후속 작업입니다.",
-  "priority": "MEDIUM",
-  "dueDate": "2026-07-07",
+  "task": {
+    "id": 100,
+    "teamId": 1,
+    "title": "로그인 화면 구현",
+    "description": "회원가입과 로그인 폼 구현",
+    "priority": "HIGH",
+    "dueDate": "2026-07-05",
+    "status": "BACKLOG",
+    "assignees": []
+  },
   "reason": "미완료 task와 dependency 흐름을 고려했습니다.",
   "generatedBy": "GEMINI"
 }
@@ -1359,7 +1365,8 @@ Response `200`:
 
 정책:
 
-- 팀의 기존 task, 담당자, 상태, dependency 관계를 Gemini 프롬프트 맥락으로 넘겨 task 1개만 추천받는다.
+- 현재 로그인 사용자에게 배정된 기존 미완료 task 중 아직 Todo list에 없는 task만 추천 후보가 된다.
+- 팀의 기존 task, 담당자, 상태, dependency 관계를 Gemini 프롬프트 맥락으로 넘겨 기존 task 1개만 추천받는다.
 - 이 API는 task를 저장하지 않는다.
 - Gemini API 키가 없거나 JSON 파싱에 실패하면 `LOCAL_FALLBACK` 추천을 반환한다.
 
@@ -1375,20 +1382,17 @@ Request:
 
 ```json
 {
-  "title": "AI 추천 task",
-  "description": "기존 task와 연결되는 후속 작업입니다.",
-  "priority": "MEDIUM",
-  "dueDate": "2026-07-07"
+  "taskId": 100
 }
 ```
 
-Response `201`: `TaskResponse`
+Response `200`: `TaskResponse`
 
 정책:
 
-- 추천 내용을 실제 task로 생성한다.
-- 생성된 task의 담당자는 현재 로그인 사용자 1명으로 지정한다.
-- 생성된 task는 현재 로그인 사용자의 Todo list 마지막에 즉시 추가한다.
+- 기존 task를 새로 생성하지 않는다.
+- `taskId`는 현재 로그인 사용자에게 배정된 같은 팀의 미완료 task여야 한다.
+- 해당 기존 task를 현재 로그인 사용자의 Todo list 마지막에 즉시 추가한다.
 
 ## 7. Task Comment API
 

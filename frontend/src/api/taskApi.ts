@@ -42,10 +42,7 @@ export function acceptAiTaskRecommendation(teamId: number, data: AiTaskRecommend
   return request<WireTask>(`/teams/${teamId}/tasks/ai-recommendation/accept`, {
     method: 'POST',
     body: {
-      title: data.title,
-      description: data.description ?? undefined,
-      priority: data.priority,
-      dueDate: data.dueDate,
+      taskId: data.task.id,
     },
   }).then(normalizeTask);
 }

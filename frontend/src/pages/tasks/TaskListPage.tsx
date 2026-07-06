@@ -135,14 +135,14 @@ export function TaskListPage() {
       {aiRecommendation && (
         <Card className="ai-recommendation-card">
           <div className="task-card-top">
-            <Badge variant={priorityTone(aiRecommendation.priority).variant}>{priorityTone(aiRecommendation.priority).label}</Badge>
+            <Badge variant={priorityTone(aiRecommendation.task.priority).variant}>{priorityTone(aiRecommendation.task.priority).label}</Badge>
             <span className="task-card-id mono">{aiRecommendation.generatedBy}</span>
           </div>
-          <div className="task-card-title">{aiRecommendation.title}</div>
-          <div className="task-card-desc">{aiRecommendation.description || 'No description.'}</div>
+          <div className="task-card-title">{aiRecommendation.task.title}</div>
+          <div className="task-card-desc">{aiRecommendation.task.description || 'No description.'}</div>
           {aiRecommendation.reason && <div className="task-card-desc">Reason: {aiRecommendation.reason}</div>}
           <div className="task-card-footer">
-            <span className="due-label">{dueLabel(aiRecommendation.dueDate, false).label}</span>
+            <span className="due-label">{dueLabel(aiRecommendation.task.dueDate, false).label}</span>
             <Button
               type="button"
               size="sm"

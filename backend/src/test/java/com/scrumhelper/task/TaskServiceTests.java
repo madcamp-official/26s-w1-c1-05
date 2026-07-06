@@ -61,23 +61,30 @@ class TaskServiceTests {
 	}
 
 	@Test
-	void acceptAiTaskRecommendationCreatesTaskAssignedToCurrentUserAndAddsTodo() {
+	void acceptAiTaskRecommendationAddsExistingAssignedTaskToTodo() {
 		TestContext context = createContext();
+		TaskResponse existing = createTask(context.ownerId(), context.team().id(), "기존 추천 대상 task", List.of(context.memberId()));
 
-		TaskResponse created = taskService.acceptAiTaskRecommendation(
+		TaskResponse added = taskService.acceptAiTaskRecommendation(
 				context.memberId(),
 				context.team().id(),
-				new AcceptAiTaskRecommendationRequest(
-						"AI 추천 task",
-						"추천 task를 Todo에 바로 반영한다.",
-						TaskPriority.HIGH,
-						LocalDate.of(2026, 7, 9)
-				)
+				new AcceptAiTaskRecommendationRequest(existing.id())
 		);
 		TodoListResponse todoList = userTodoService.getTodoList(context.memberId(), context.team().id());
 
-		assertThat(created.assignees()).extracting("id").containsExactly(context.memberId());
-		assertThat(todoList.selectedTasks()).extracting(TaskResponse::id).containsExactly(created.id());
+		assertThat(added.id()).isEqualTo(existing.id());
+		assertThat(todoList.selectedTasks()).extracting(TaskResponse::id).containsExactly(existing.id());
+	}
+
+	@Test
+	void generateAiTaskRecommendationReturnsExistingAssignedTask() {
+		TestContext context = createContext();
+		TaskResponse existing = createTask(context.ownerId(), context.team().id(), "AI가 고를 기존 task", List.of(context.memberId()));
+
+		var recommendation = taskService.generateAiTaskRecommendation(context.memberId(), context.team().id());
+
+		assertThat(recommendation.generatedBy()).isEqualTo("LOCAL_FALLBACK");
+		assertThat(recommendation.task().id()).isEqualTo(existing.id());
 	}
 
 	@Test

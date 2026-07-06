@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { CalendarDays, FileAudio, Plus } from 'lucide-react';
+import { CalendarDays, FileAudio, Plus, Sparkles } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import { Alert, Button, Card, EmptyState, Field, FieldInput, FieldTextarea, LoadingState, useToast } from '../../components/ui';
@@ -18,6 +18,7 @@ export function MeetingListPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -91,6 +92,29 @@ export function MeetingListPage() {
     }
   }
 
+  async function handleGenerateSummary() {
+    if (!form.rawContent.trim()) {
+      setErrorMessage('Enter a raw transcript first.');
+      return;
+    }
+
+    try {
+      setIsGeneratingSummary(true);
+      setErrorMessage(null);
+      const result = await meetingApi.generateMeetingSummaryDraft(numericTeamId, {
+        title: form.title || undefined,
+        meetingAt: form.meetingAt ? toApiDateTime(form.meetingAt) : undefined,
+        rawContent: form.rawContent,
+        summary: form.summary || undefined,
+      });
+      setForm((current) => ({ ...current, summary: result.summary }));
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not generate the meeting summary.');
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }
+
   if (isLoading) {
     return <LoadingState label="Loading meetings…" />;
   }
@@ -139,7 +163,21 @@ export function MeetingListPage() {
                 onChange={(event) => setForm((current) => ({ ...current, rawContent: event.target.value }))}
               />
             </Field>
-            <Field label="Summary">
+            <Field>
+              <div className="meeting-summary-toolbar">
+                <span className="ds-field-label">Summary</span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  disabled={!form.rawContent.trim()}
+                  isLoading={isGeneratingSummary}
+                  onClick={() => void handleGenerateSummary()}
+                >
+                  <Sparkles size={14} aria-hidden="true" />
+                  Generate summary
+                </Button>
+              </div>
               <FieldTextarea value={form.summary} onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))} />
             </Field>
             <div style={{ display: 'flex', gap: 8 }}>

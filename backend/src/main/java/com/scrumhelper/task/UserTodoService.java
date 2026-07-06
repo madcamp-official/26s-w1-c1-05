@@ -10,6 +10,7 @@ import com.scrumhelper.domain.task.TaskCommentRepository;
 import com.scrumhelper.domain.task.TaskDependency;
 import com.scrumhelper.domain.task.TaskDependencyRepository;
 import com.scrumhelper.domain.task.TaskRepository;
+import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.domain.task.UserTodoTask;
 import com.scrumhelper.domain.task.UserTodoTaskRepository;
 import com.scrumhelper.domain.team.Team;
@@ -89,7 +90,9 @@ public class UserTodoService {
 
 		for (Long taskId : taskIds) {
 			Task task = findTask(taskId);
-			if (!task.getTeam().getId().equals(teamId) || !taskAssigneeRepository.existsByTaskIdAndUserId(taskId, currentUserId)) {
+			if (!task.getTeam().getId().equals(teamId)
+					|| !taskAssigneeRepository.existsByTaskIdAndUserId(taskId, currentUserId)
+					|| !isTodoEligible(task)) {
 				throw new BusinessException(ErrorCode.TODO_TASK_NOT_ASSIGNED);
 			}
 		}
@@ -119,6 +122,7 @@ public class UserTodoService {
 		return userTodoTaskRepository.findByTeamIdAndUserIdOrderBySortOrderAscCreatedAtAsc(teamId, userId).stream()
 				.map(UserTodoTask::getTask)
 				.filter(task -> taskAssigneeRepository.existsByTaskIdAndUserId(task.getId(), userId))
+				.filter(this::isTodoEligible)
 				.map(this::toResponse)
 				.toList();
 	}
@@ -129,7 +133,7 @@ public class UserTodoService {
 				.collect(java.util.stream.Collectors.toSet());
 		return taskAssigneeRepository.findByTeamIdAndUserId(teamId, userId).stream()
 				.map(TaskAssignee::getTask)
-				.filter(task -> !task.isCompleted())
+				.filter(this::isTodoEligible)
 				.sorted(Comparator
 						.comparing(Task::getDueDate)
 						.thenComparing(Task::getCreatedAt))
@@ -147,7 +151,7 @@ public class UserTodoService {
 
 		return taskAssigneeRepository.findByTeamIdAndUserId(teamId, userId).stream()
 				.map(TaskAssignee::getTask)
-				.filter(task -> !task.isCompleted())
+				.filter(this::isTodoEligible)
 				.filter(task -> !selectedIds.contains(task.getId()))
 				.filter(this::isUnblockedByCompletedDependencies)
 				.sorted(Comparator
@@ -206,6 +210,11 @@ public class UserTodoService {
 			return compact;
 		}
 		return compact.substring(0, maxLength) + "...";
+	}
+
+	private boolean isTodoEligible(Task task) {
+		TaskStatus status = task.getStatus();
+		return status == TaskStatus.BACKLOG || status == TaskStatus.IN_PROGRESS;
 	}
 
 	private TaskResponse toResponse(Task task) {

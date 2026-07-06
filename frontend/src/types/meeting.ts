@@ -19,6 +19,11 @@ export type MeetingSummary = {
   meeting: Meeting;
 };
 
+export type MeetingSummaryDraft = {
+  summary: string;
+  generatedBy: 'GEMINI' | 'LOCAL_FALLBACK' | string;
+};
+
 export type MeetingTranscription = {
   transcript: string;
   generatedBy: 'GEMINI' | string;
@@ -28,5 +33,12 @@ export type SaveMeetingRequest = {
   title: string;
   meetingAt: string;
   rawContent?: string;
+  summary?: string;
+};
+
+export type GenerateMeetingSummaryRequest = {
+  title?: string;
+  meetingAt?: string;
+  rawContent: string;
   summary?: string;
 };

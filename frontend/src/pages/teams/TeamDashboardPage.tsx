@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CalendarDays, Plus, Sprout } from 'lucide-react';
 import * as teamApi from '../../api/teamApi';
+import * as taskApi from '../../api/taskApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, LoadingState, StatTile } from '../../components/ui';
+import { Alert, Badge, LoadingState, StatTile } from '../../components/ui';
 import { GrowthTree } from '../../components/growth/GrowthTree';
+import { dueLabel, priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
+import type { Task, TodoList } from '../../types/task';
 import type { TeamDashboard, TeamDetail } from '../../types/team';
 
 export function TeamDashboardPage() {
@@ -14,6 +17,7 @@ export function TeamDashboardPage() {
   const { user } = useAuth();
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [dashboard, setDashboard] = useState<TeamDashboard | null>(null);
+  const [todoList, setTodoList] = useState<TodoList | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -27,12 +31,14 @@ export function TeamDashboardPage() {
 
       try {
         setIsLoading(true);
-        const [teamData, dashboardData] = await Promise.all([
+        const [teamData, dashboardData, todoData] = await Promise.all([
           teamApi.getTeam(numericTeamId),
           teamApi.getDashboard(numericTeamId),
+          taskApi.getTodoList(numericTeamId).catch(() => null),
         ]);
         setTeam(teamData);
         setDashboard(dashboardData);
+        setTodoList(todoData);
       } catch (error) {
         setErrorMessage(error instanceof ApiError ? error.message : 'Could not load the dashboard.');
       } finally {
@@ -52,7 +58,6 @@ export function TeamDashboardPage() {
       ? Math.round((dashboard.task.completedCount / dashboard.task.totalCount) * 100)
       : 0;
   const greeting = timeOfDayGreeting();
-  const upcomingItems = getUpcomingLabels(dashboard);
 
   return (
     <div className="page-container">
@@ -92,6 +97,19 @@ export function TeamDashboardPage() {
                 <span className="eyebrow">Growth tree</span>
                 <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
               </div>
+              <div className="growth-progress-block">
+                <div className="progress-card-head">
+                  <span className="eyebrow">Sprint progress</span>
+                  <span className="progress-value">{completionRate}%</span>
+                </div>
+                <div className="progress-track">
+                  <div className="progress-fill" style={{ width: `${completionRate}%` }} />
+                </div>
+                <div className="progress-footer">
+                  <span>{dashboard.task.completedCount} done</span>
+                  <span>{dashboard.task.incompleteCount} to go</span>
+                </div>
+              </div>
               <div className="growth-tree-wrap">
                 <GrowthTree
                   backlogCount={dashboard.task.backlogCount}
@@ -124,35 +142,7 @@ export function TeamDashboardPage() {
             </div>
 
             <div className="dashboard-side">
-              <div className="progress-card">
-                <div className="progress-card-head">
-                  <span className="eyebrow">Sprint progress</span>
-                  <span className="progress-value">{completionRate}%</span>
-                </div>
-                <div className="progress-track">
-                  <div className="progress-fill" style={{ width: `${completionRate}%` }} />
-                </div>
-                <div className="progress-footer">
-                  <span>{dashboard.task.completedCount} done</span>
-                  <span>{dashboard.task.incompleteCount} to go</span>
-                </div>
-              </div>
-
-              <div className="side-card">
-                <span className="side-card-title">Calendar</span>
-                <div className="calendar-grid-mini" aria-label="Mini calendar">
-                  {Array.from({ length: 14 }, (_, index) => (
-                    <span className={index === 6 ? 'calendar-day active' : 'calendar-day'} key={index}>
-                      {index + 1}
-                    </span>
-                  ))}
-                </div>
-                <div className="calendar-mini-list">
-                  {upcomingItems.map((item) => (
-                    <span key={item}>{item}</span>
-                  ))}
-                </div>
-              </div>
+              <TodoDashboardCard todoList={todoList} teamId={numericTeamId} />
 
               <div className="side-card">
                 <span className="side-card-title">Quick actions</span>
@@ -179,6 +169,45 @@ export function TeamDashboardPage() {
   );
 }
 
+function TodoDashboardCard({ todoList, teamId }: { todoList: TodoList | null; teamId: number }) {
+  const tasks = todoList?.selectedTasks ?? [];
+
+  return (
+    <div className="side-card dashboard-todo-card">
+      <div className="dashboard-todo-head">
+        <span className="side-card-title">Todo</span>
+        <Link to={`/teams/${teamId}/todos`} className="todo-editor-task-link">
+          Edit
+        </Link>
+      </div>
+      {tasks.length === 0 ? (
+        <div className="dashboard-todo-empty">No pinned todo tasks.</div>
+      ) : (
+        <div className="dashboard-todo-list">
+          {tasks.map((task) => (
+            <TodoDashboardItem task={task} teamId={teamId} key={task.id} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TodoDashboardItem({ task, teamId }: { task: Task; teamId: number }) {
+  const due = dueLabel(task.dueDate, task.status === 'DONE');
+  const priority = priorityTone(task.priority);
+
+  return (
+    <Link to={`/teams/${teamId}/tasks/${task.id}`} className="dashboard-todo-item">
+      <div className="dashboard-todo-title-row">
+        <span className="dashboard-todo-title">{task.title}</span>
+        <Badge variant={priority.variant}>{priority.label}</Badge>
+      </div>
+      <span className={due.tone === 'overdue' ? 'due-label due-label-overdue' : 'due-label'}>{due.label}</span>
+    </Link>
+  );
+}
+
 function timeOfDayGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) {
@@ -188,14 +217,4 @@ function timeOfDayGreeting() {
     return 'Good afternoon';
   }
   return 'Good evening';
-}
-
-function getUpcomingLabels(dashboard: TeamDashboard | null) {
-  if (!dashboard) {
-    return ['No upcoming deadlines'];
-  }
-  if (dashboard.task.dueSoonCount === 0 && dashboard.task.overdueCount === 0) {
-    return ['No upcoming deadlines'];
-  }
-  return [`Due within 2 days: ${dashboard.task.dueSoonCount}`, `Overdue: ${dashboard.task.overdueCount}`];
 }

@@ -11,7 +11,9 @@ import com.scrumhelper.domain.team.TeamRepository;
 import com.scrumhelper.domain.team.TeamRole;
 import com.scrumhelper.domain.user.User;
 import com.scrumhelper.domain.user.UserRepository;
+import com.scrumhelper.meeting.dto.GenerateMeetingSummaryRequest;
 import com.scrumhelper.meeting.dto.MeetingResponse;
+import com.scrumhelper.meeting.dto.MeetingSummaryDraftResponse;
 import com.scrumhelper.meeting.dto.MeetingSummaryResponse;
 import com.scrumhelper.meeting.dto.MeetingTranscriptionResponse;
 import com.scrumhelper.meeting.dto.SaveMeetingRequest;
@@ -121,14 +123,40 @@ public class MeetingService {
 		Meeting meeting = findMeeting(meetingId);
 		requireAuthorOrLeader(meeting, currentUserId);
 
-		Optional<String> generatedSummary = geminiSpecDraftClient.generate(buildSummaryPrompt(meeting));
+		Optional<String> generatedSummary = geminiSpecDraftClient.generate(buildSummaryPrompt(
+				meeting.getTitle(),
+				meeting.getMeetingAt(),
+				meeting.getSummary(),
+				meeting.getRawContent()
+		));
 		String generatedBy = generatedSummary.isPresent() ? "GEMINI" : "LOCAL_FALLBACK";
 		String summary = generatedSummary
 				.map(this::normalizeGeneratedSummary)
-				.orElseGet(() -> buildLocalSummary(meeting));
+				.orElseGet(() -> buildLocalSummary(meeting.getTitle(), meeting.getSummary(), meeting.getRawContent()));
 
 		meeting.updateSummary(summary);
 		return MeetingSummaryResponse.of(MeetingResponse.from(meeting), summary, generatedBy);
+	}
+
+	@Transactional(readOnly = true)
+	public MeetingSummaryDraftResponse generateSummaryDraft(
+			Long currentUserId,
+			Long teamId,
+			GenerateMeetingSummaryRequest request
+	) {
+		requireMembership(teamId, currentUserId);
+		String title = request.title() == null || request.title().isBlank() ? "Untitled meeting" : request.title().trim();
+		Optional<String> generatedSummary = geminiSpecDraftClient.generate(buildSummaryPrompt(
+				title,
+				request.meetingAt(),
+				request.summary(),
+				request.rawContent()
+		));
+		String generatedBy = generatedSummary.isPresent() ? "GEMINI" : "LOCAL_FALLBACK";
+		String summary = generatedSummary
+				.map(this::normalizeGeneratedSummary)
+				.orElseGet(() -> buildLocalSummary(title, request.summary(), request.rawContent()));
+		return new MeetingSummaryDraftResponse(summary, generatedBy);
 	}
 
 	@Transactional
@@ -169,6 +197,25 @@ public class MeetingService {
 		return value == null || value.isBlank() ? null : value.trim();
 	}
 
+	private String buildSummaryPrompt(String title, java.time.LocalDateTime meetingAt, String summary, String rawContent) {
+		return """
+				Summarize the following scrum meeting transcript in Korean for Scrum Helper.
+				Write 5 to 8 concise bullet points. Highlight decisions, owners, blockers, and next actions when present.
+				Do not invent facts that are not present in the transcript.
+
+				Meeting title: %s
+				Meeting time: %s
+				Existing summary: %s
+				Transcript:
+				%s
+				""".formatted(
+				title,
+				meetingAt == null ? java.time.LocalDateTime.now() : meetingAt,
+				nullToFallback(summary, "none"),
+				nullToFallback(rawContent, "no transcript")
+		);
+	}
+
 	private String buildSummaryPrompt(Meeting meeting) {
 		return """
 				다음 회의록을 Scrum Helper의 회의 요약 필드에 저장할 수 있게 한국어로 요약해줘.
@@ -191,6 +238,24 @@ public class MeetingService {
 	private String normalizeGeneratedSummary(String value) {
 		String normalized = value == null ? "" : value.trim();
 		return normalized.isBlank() ? "회의 원문에서 요약할 수 있는 내용이 충분하지 않습니다." : normalized;
+	}
+
+	private String buildLocalSummary(String title, String existingSummary, String rawContent) {
+		String source = nullToFallback(rawContent, existingSummary);
+		if (source == null || source.isBlank()) {
+			return "- 회의 제목: %s\n- 회의 원문이 없어 기본 요약을 생성했습니다.".formatted(title);
+		}
+
+		List<String> points = Arrays.stream(source.split("[\\r\\n]+|(?<=[.!?。！？])\\s+"))
+				.map(String::trim)
+				.filter(line -> !line.isBlank())
+				.limit(6)
+				.map(line -> "- " + truncate(line, 180))
+				.collect(Collectors.toList());
+		if (points.isEmpty()) {
+			return "- " + truncate(source.replaceAll("\\s+", " ").trim(), 180);
+		}
+		return String.join("\n", points);
 	}
 
 	private String buildLocalSummary(Meeting meeting) {

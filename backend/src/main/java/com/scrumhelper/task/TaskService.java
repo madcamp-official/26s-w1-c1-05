@@ -191,6 +191,7 @@ public class TaskService {
 		requireMembership(task.getTeam().getId(), currentUserId);
 		task.updateStatus(request.status());
 		if (request.status() == TaskStatus.DONE) {
+			userTodoTaskRepository.deleteByTaskId(taskId);
 			notificationEventService.createDependencyReadyEvents(task);
 		}
 		return toResponse(task);

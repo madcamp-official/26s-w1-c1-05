@@ -2459,3 +2459,164 @@ p {
     flex-wrap: wrap;
   }
 }
+
+/* ── Wrap-up: sprint retrospective report ─────────────────────────── */
+
+.wrap-leaf {
+  display: inline-block;
+  border-radius: 0 60% 0 60%;
+}
+
+.wrap-leaf-row {
+  display: flex;
+  gap: 8px;
+}
+
+.wrapup-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.wrapup-grid .ds-card {
+  min-width: 0;
+}
+
+.wrap-col-full {
+  grid-column: 1 / -1;
+}
+
+.wrap-col-7 {
+  grid-column: span 7;
+}
+
+.wrap-col-5 {
+  grid-column: span 5;
+}
+
+@media (max-width: 900px) {
+  .wrap-col-7,
+  .wrap-col-5 {
+    grid-column: 1 / -1;
+  }
+}
+
+.wrap-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: var(--border-hairline);
+}
+
+.wrap-stat-row:last-child {
+  border-bottom: none;
+}
+
+.wrap-note {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.wrap-pair-card {
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  padding: 14px;
+  display: grid;
+  gap: 8px;
+}
+
+/* First-visit stepped intro: one insight at a time, wheel/arrow to advance */
+.wrap-intro-stage {
+  position: relative;
+  height: calc(100vh - var(--topbar-height) - 56px);
+  overflow: hidden;
+}
+
+.wrap-step {
+  position: absolute;
+  inset: 12px 8px;
+  margin: 0 auto;
+  width: min(780px, 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+  pointer-events: none;
+}
+
+.wrap-step .ds-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.wrap-step.wrap-focus {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.wrap-step.wrap-passed {
+  transform: translateY(-36px);
+}
+
+@keyframes cueBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+
+.wrap-scroll-cue {
+  animation: cueBounce 1.6s ease-in-out infinite;
+}
+
+/* Celebration transition: dashboard tree tint + green circle wipe */
+.growth-celebrate-tint {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, oklch(0.94 0.06 145), transparent 72%);
+  opacity: 0;
+  transition: opacity 0.9s ease;
+  pointer-events: none;
+}
+
+.growth-celebrate-tint.on {
+  opacity: 1;
+}
+
+.retro-circle-overlay {
+  position: fixed;
+  border-radius: 50%;
+  background: oklch(0.62 0.13 145);
+  z-index: 80;
+  pointer-events: none;
+  transition: transform 0.7s cubic-bezier(0.3, 0.7, 0.3, 1), opacity 0.55s ease;
+}
+
+.wrap-arrival-overlay {
+  position: fixed;
+  inset: 0;
+  background: oklch(0.62 0.13 145);
+  z-index: 80;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wrap-step,
+  .retro-circle-overlay,
+  .wrap-arrival-overlay,
+  .growth-celebrate-tint {
+    transition: none;
+  }
+
+  .wrap-scroll-cue {
+    animation: none;
+  }
+}

@@ -13,6 +13,7 @@ import { TeamMembersPage } from '../pages/teams/TeamMembersPage';
 import { TeamProfilePage } from '../pages/teams/TeamProfilePage';
 import { TeamSettingsPage } from '../pages/teams/TeamSettingsPage';
 import { TeamTodoPage } from '../pages/teams/TeamTodoPage';
+import { TeamWrapUpPage } from '../pages/teams/TeamWrapUpPage';
 import { TaskListPage } from '../pages/tasks/TaskListPage';
 import { TaskNewPage } from '../pages/tasks/TaskNewPage';
 import { TaskDetailPage } from '../pages/tasks/TaskDetailPage';
@@ -78,6 +79,7 @@ export const router = createBrowserRouter([
               { path: 'members', element: <TeamMembersPage /> },
               { path: 'profiles/:userId', element: <TeamProfilePage /> },
               { path: 'todos', element: <TeamTodoPage /> },
+              { path: 'wrapup', element: <TeamWrapUpPage /> },
               { path: 'settings', element: <TeamSettingsPage /> },
               { path: 'meetings', element: <MeetingListPage /> },
               { path: 'meetings/:meetingId', element: <MeetingDetailPage /> },

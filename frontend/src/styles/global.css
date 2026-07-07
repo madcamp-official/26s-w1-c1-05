@@ -567,6 +567,7 @@ p {
   border-radius: var(--radius-lg);
   background: var(--paper);
   color: var(--ink);
+  cursor: pointer;
 }
 
 .sidebar-todo-tab:hover {
@@ -607,6 +608,11 @@ p {
   border-radius: var(--radius-lg);
   background: var(--bg);
   min-width: 0;
+  cursor: pointer;
+}
+
+.sidebar-todo-preview-card .ds-btn {
+  align-self: flex-start;
 }
 
 .sidebar-todo-preview-card:hover {
@@ -633,9 +639,12 @@ p {
 
 .sidebar-todo-more {
   flex: none;
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  color: var(--gray-400);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--gray-500);
   white-space: nowrap;
 }
 
@@ -810,19 +819,6 @@ p {
   font-size: 12.5px;
   color: var(--gray-600);
   margin-bottom: 22px;
-}
-
-.success-banner {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 10px 12px;
-  background: var(--bg);
-  border: var(--border-hairline);
-  border-radius: var(--radius-lg);
-  font-size: 12.5px;
-  color: var(--gray-700);
-  margin-bottom: 16px;
 }
 
 .app-content {
@@ -2106,6 +2102,27 @@ p {
   color: var(--gray-500);
 }
 
+.todo-recommend-head-toggle {
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.todo-recommend-head-toggle.collapsed {
+  margin-bottom: 0;
+}
+
+.todo-recommend-head-toggle .todo-recommend-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .generated-prompt-box {
   margin: 0;
   padding: 12px;
@@ -2114,9 +2131,19 @@ p {
   background: var(--paper);
   color: var(--gray-700);
   font-family: var(--font-sans);
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 12.5px;
+  line-height: 1.5;
   white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.dashboard-todo-title .ds-badge,
+.todo-editor-title .ds-badge {
+  height: 15px;
+  padding: 0 5px;
+  font-size: 9px;
+  vertical-align: middle;
 }
 
 .todo-recommend-list {
@@ -2142,25 +2169,23 @@ p {
 
 .todo-editor-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 14px 16px;
   background: var(--paper);
+  cursor: pointer;
 }
 
 .todo-editor-row + .todo-editor-row {
   border-top: 1px solid var(--gray-100);
 }
 
-.todo-editor-row-selected {
-  background: var(--bg);
+.todo-editor-row:not(.todo-editor-row-selected):hover {
+  background: var(--gray-100);
 }
 
-.todo-editor-row input {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  margin-top: 3px;
+.todo-editor-row-selected {
+  background: var(--gray-200);
 }
 
 .todo-editor-main {

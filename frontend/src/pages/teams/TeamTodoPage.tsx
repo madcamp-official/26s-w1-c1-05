@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, CheckSquare, Plus, Sparkles } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Check, CheckSquare, ChevronDown, ChevronUp, Copy, Plus, Sparkles } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import { Alert, Badge, Button, EmptyState, LoadingState } from '../../components/ui';
@@ -12,16 +12,15 @@ export function TeamTodoPage() {
   const numericTeamId = Number(teamId);
   const navigate = useNavigate();
   const [todoList, setTodoList] = useState<TodoList | null>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [promptTaskIds, setPromptTaskIds] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
-  const [promptGeneratedBy, setPromptGeneratedBy] = useState<string | null>(null);
+  const [isPromptCopied, setIsPromptCopied] = useState(false);
+  const [isSuggestedOpen, setIsSuggestedOpen] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const saveQueueRef = useRef(Promise.resolve());
-  const latestSaveIdsRef = useRef<number[]>([]);
+  const latestTodoIdsRef = useRef<number[]>([]);
 
   const loadTodoList = useCallback(async () => {
     if (!Number.isFinite(numericTeamId)) {
@@ -34,10 +33,10 @@ export function TeamTodoPage() {
       setIsLoading(true);
       setErrorMessage(null);
       const data = await taskApi.getTodoList(numericTeamId);
-      const nextSelectedIds = data.selectedTasks.map((task) => task.id);
+      const todoIds = data.selectedTasks.map((task) => task.id);
       setTodoList(data);
-      setSelectedIds(nextSelectedIds);
-      latestSaveIdsRef.current = nextSelectedIds;
+      setPromptTaskIds((prev) => prev.filter((id) => todoIds.includes(id)));
+      latestTodoIdsRef.current = todoIds;
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load your todo list.');
     } finally {
@@ -47,70 +46,53 @@ export function TeamTodoPage() {
 
   useEffect(() => void loadTodoList(), [loadTodoList]);
 
-  const tasks = useMemo(() => {
-    const byId = new Map<number, Task>();
-    todoList?.selectedTasks.forEach((task) => byId.set(task.id, task));
-    todoList?.candidateTasks.forEach((task) => byId.set(task.id, task));
-    return Array.from(byId.values()).sort((a, b) => {
-      const aSelected = selectedIds.includes(a.id);
-      const bSelected = selectedIds.includes(b.id);
-      if (aSelected !== bSelected) {
-        return aSelected ? -1 : 1;
-      }
-      return a.createdAt.localeCompare(b.createdAt);
-    });
-  }, [selectedIds, todoList]);
+  const tasks = todoList?.selectedTasks ?? [];
+  const recommendedTasks = todoList?.recommendedTasks ?? [];
 
-  const recommendedTasks = useMemo(
-    () => (todoList?.recommendedTasks ?? []).filter((task) => !selectedIds.includes(task.id)),
-    [selectedIds, todoList],
-  );
-
-  function toggleTask(taskId: number) {
-    const currentIds = latestSaveIdsRef.current;
-    const nextIds = currentIds.includes(taskId)
-      ? currentIds.filter((id) => id !== taskId)
-      : [...currentIds, taskId];
-    persistSelectedIds(nextIds);
+  function togglePromptTask(taskId: number) {
+    setPromptTaskIds((prev) =>
+      prev.includes(taskId) ? prev.filter((id) => id !== taskId) : [...prev, taskId],
+    );
   }
 
   function addRecommendedTask(taskId: number) {
-    const currentIds = latestSaveIdsRef.current;
+    const currentIds = latestTodoIdsRef.current;
     if (currentIds.includes(taskId)) {
       return;
     }
-    persistSelectedIds([...currentIds, taskId]);
+    persistTodoIds([...currentIds, taskId]);
   }
 
-  function persistSelectedIds(nextIds: number[]) {
-    setSelectedIds(nextIds);
-    setSavedMessage(null);
+  function persistTodoIds(nextIds: number[]) {
     setErrorMessage(null);
-    setIsAutoSaving(true);
-    latestSaveIdsRef.current = nextIds;
+    latestTodoIdsRef.current = nextIds;
 
     saveQueueRef.current = saveQueueRef.current
       .catch(() => undefined)
       .then(async () => {
         const data = await taskApi.updateTodoList(numericTeamId, { taskIds: nextIds });
-        if (sameIds(latestSaveIdsRef.current, nextIds)) {
+        if (sameIds(latestTodoIdsRef.current, nextIds)) {
           setTodoList(data);
-          setSelectedIds(data.selectedTasks.map((task) => task.id));
-          setSavedMessage('Saved automatically.');
+          latestTodoIdsRef.current = data.selectedTasks.map((task) => task.id);
           window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
         }
       })
       .catch((error) => {
-        if (sameIds(latestSaveIdsRef.current, nextIds)) {
+        if (sameIds(latestTodoIdsRef.current, nextIds)) {
           setErrorMessage(error instanceof ApiError ? error.message : 'Could not save your todo list.');
           void loadTodoList();
         }
-      })
-      .finally(() => {
-        if (sameIds(latestSaveIdsRef.current, nextIds)) {
-          setIsAutoSaving(false);
-        }
       });
+  }
+
+  async function markTaskDone(taskId: number) {
+    try {
+      await taskApi.updateTaskStatus(taskId, 'DONE');
+      window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
+      void loadTodoList();
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not mark this task done.');
+    }
   }
 
   async function handleGeneratePrompt() {
@@ -118,14 +100,26 @@ export function TeamTodoPage() {
       setIsGeneratingPrompt(true);
       setErrorMessage(null);
       setGeneratedPrompt(null);
-      setPromptGeneratedBy(null);
-      const data = await taskApi.generateTodoPrompt(numericTeamId);
+      setIsPromptCopied(false);
+      const data = await taskApi.generateTodoPrompt(numericTeamId, promptTaskIds);
       setGeneratedPrompt(data.prompt);
-      setPromptGeneratedBy(data.generatedBy);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not generate a todo prompt.');
     } finally {
       setIsGeneratingPrompt(false);
+    }
+  }
+
+  async function handleCopyPrompt() {
+    if (!generatedPrompt) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(generatedPrompt);
+      setIsPromptCopied(true);
+      setTimeout(() => setIsPromptCopied(false), 1500);
+    } catch (error) {
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not copy the prompt.');
     }
   }
 
@@ -144,7 +138,9 @@ export function TeamTodoPage() {
         <div>
           <span className="eyebrow">Personal focus</span>
           <h1 className="page-title">Todo list</h1>
-          <p className="page-subtitle">Choose assigned tasks to keep pinned in the lower-left sidebar.</p>
+          <p className="page-subtitle">
+            Click tasks to select them for prompt generation — with none selected, the whole list is used.
+          </p>
         </div>
         <div className="board-toolbar">
           <Button type="button" variant="secondary" onClick={() => void handleGeneratePrompt()} isLoading={isGeneratingPrompt}>
@@ -155,14 +151,15 @@ export function TeamTodoPage() {
       </div>
 
       <Alert message={errorMessage} />
-      {isAutoSaving && <div className="success-banner">Saving automatically...</div>}
-      {savedMessage && <div className="success-banner">{savedMessage}</div>}
 
       {generatedPrompt && (
         <section className="todo-recommend-section">
           <div className="todo-recommend-head">
             <span className="eyebrow">Generated prompt</span>
-            {promptGeneratedBy && <span className="todo-recommend-copy">{promptGeneratedBy}</span>}
+            <Button type="button" variant="secondary" size="sm" onClick={() => void handleCopyPrompt()}>
+              <Copy size={13} aria-hidden="true" />
+              {isPromptCopied ? 'Copied!' : 'Copy'}
+            </Button>
           </div>
           <pre className="generated-prompt-box">{generatedPrompt}</pre>
         </section>
@@ -170,36 +167,51 @@ export function TeamTodoPage() {
 
       {recommendedTasks.length > 0 && (
         <section className="todo-recommend-section">
-          <div className="todo-recommend-head">
-            <span className="eyebrow">Suggested</span>
-            <span className="todo-recommend-copy">Open tasks assigned to you.</span>
-          </div>
-          <div className="todo-recommend-list">
-            {recommendedTasks.map((task) => (
-              <RecommendedTodoTask
-                task={task}
-                onAdd={() => addRecommendedTask(task.id)}
-                teamId={numericTeamId}
-                key={task.id}
-              />
-            ))}
-          </div>
+          <button
+            type="button"
+            className={isSuggestedOpen ? 'todo-recommend-head todo-recommend-head-toggle' : 'todo-recommend-head todo-recommend-head-toggle collapsed'}
+            aria-expanded={isSuggestedOpen}
+            onClick={() => setIsSuggestedOpen((open) => !open)}
+          >
+            <span className="eyebrow">Suggested ({recommendedTasks.length})</span>
+            <span className="todo-recommend-copy">
+              Open tasks assigned to you.{' '}
+              {isSuggestedOpen ? (
+                <ChevronUp size={14} aria-hidden="true" />
+              ) : (
+                <ChevronDown size={14} aria-hidden="true" />
+              )}
+            </span>
+          </button>
+          {isSuggestedOpen && (
+            <div className="todo-recommend-list">
+              {recommendedTasks.map((task) => (
+                <RecommendedTodoTask
+                  task={task}
+                  onAdd={() => addRecommendedTask(task.id)}
+                  teamId={numericTeamId}
+                  key={task.id}
+                />
+              ))}
+            </div>
+          )}
         </section>
       )}
 
       {tasks.length === 0 ? (
         <EmptyState
           icon={<CheckSquare size={20} aria-hidden="true" />}
-          title="No assigned open tasks."
-          description="Tasks assigned to you will appear here."
+          title="Your todo list is empty."
+          description="Add assigned tasks from the suggestions above."
         />
       ) : (
         <div className="todo-editor-list">
           {tasks.map((task) => (
             <TodoEditorRow
               task={task}
-              checked={selectedIds.includes(task.id)}
-              onToggle={() => toggleTask(task.id)}
+              checked={promptTaskIds.includes(task.id)}
+              onToggle={() => togglePromptTask(task.id)}
+              onMarkDone={() => void markTaskDone(task.id)}
               teamId={numericTeamId}
               key={task.id}
             />
@@ -229,8 +241,9 @@ function RecommendedTodoTask({
     <div className="todo-recommend-row">
       <div className="todo-recommend-main">
         <div className="todo-editor-title-row">
-          <span className="todo-editor-title">{task.title}</span>
-          <Badge variant={priority.variant}>{priority.label}</Badge>
+          <span className="todo-editor-title">
+            {task.title} <Badge variant={priority.variant}>{priority.label}</Badge>
+          </span>
         </div>
         <div className="todo-editor-meta">
           <Link to={`/teams/${teamId}/tasks/${task.id}`} className="todo-editor-task-link">
@@ -250,25 +263,55 @@ function TodoEditorRow({
   task,
   checked,
   onToggle,
+  onMarkDone,
   teamId,
 }: {
   task: Task;
   checked: boolean;
   onToggle: () => void;
+  onMarkDone: () => void;
   teamId: number;
 }) {
   const priority = priorityTone(task.priority);
 
   return (
-    <div className={checked ? 'todo-editor-row todo-editor-row-selected' : 'todo-editor-row'}>
-      <input type="checkbox" checked={checked} onChange={onToggle} />
+    <div
+      className={checked ? 'todo-editor-row todo-editor-row-selected' : 'todo-editor-row'}
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggle();
+        }
+      }}
+    >
       <div className="todo-editor-main">
         <div className="todo-editor-title-row">
-          <span className="todo-editor-title">{task.title}</span>
-          <Badge variant={priority.variant}>{priority.label}</Badge>
+          <span className="todo-editor-title">
+            {task.title} <Badge variant={priority.variant}>{priority.label}</Badge>
+          </span>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={(event) => {
+              event.stopPropagation();
+              onMarkDone();
+            }}
+          >
+            <Check size={13} aria-hidden="true" />
+            Done
+          </Button>
         </div>
         <div className="todo-editor-meta">
-          <Link to={`/teams/${teamId}/tasks/${task.id}`} className="todo-editor-task-link">
+          <Link
+            to={`/teams/${teamId}/tasks/${task.id}`}
+            className="todo-editor-task-link"
+            onClick={(event) => event.stopPropagation()}
+          >
             Open task
           </Link>
         </div>

@@ -1,6 +1,7 @@
 package com.scrumhelper.task;
 
 import com.scrumhelper.common.ApiResponse;
+import com.scrumhelper.task.dto.GenerateTodoPromptRequest;
 import com.scrumhelper.task.dto.SaveTodoListRequest;
 import com.scrumhelper.task.dto.TodoListResponse;
 import com.scrumhelper.task.dto.TodoPromptResponse;
@@ -14,6 +15,8 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/teams/{teamId}/todos")
@@ -53,9 +56,11 @@ public class UserTodoController {
 	@PostMapping("/prompt")
 	public ApiResponse<TodoPromptResponse> generateCompletionPrompt(
 			@PathVariable Long teamId,
+			@RequestBody(required = false) GenerateTodoPromptRequest request,
 			Authentication authentication
 	) {
-		return ApiResponse.ok(userTodoService.generateCompletionPrompt(currentUserId(authentication), teamId));
+		List<Long> taskIds = request == null || request.taskIds() == null ? List.of() : request.taskIds();
+		return ApiResponse.ok(userTodoService.generateCompletionPrompt(currentUserId(authentication), teamId, taskIds));
 	}
 
 	private Long currentUserId(Authentication authentication) {

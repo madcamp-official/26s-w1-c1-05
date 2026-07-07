@@ -172,7 +172,7 @@ export function TaskListPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Task board</h1>
-          <p className="page-subtitle">Backlog, in-progress, and completed work for this sprint.</p>
+          <p className="page-subtitle">Backlog, in-progress, and completed work for this project.</p>
         </div>
         <div className="board-toolbar">
           <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
@@ -252,7 +252,7 @@ export function TaskListPage() {
       {tasks.length === 0 ? (
         <EmptyState
           icon={<ListTodo size={20} aria-hidden="true" />}
-          title="No tasks in this sprint yet."
+          title="No tasks in this project yet."
           description="Create the first task and it will grow a branch on the team's tree."
           action={
             <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">

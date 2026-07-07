@@ -81,7 +81,7 @@ export function TeamDashboardPage() {
 
           <div className="kpi-row">
             <StatTile label="Active tasks" value={dashboard.task.incompleteCount} caption="Not yet completed" />
-            <StatTile label="Completed" value={dashboard.task.completedCount} caption="This sprint" />
+            <StatTile label="Completed" value={dashboard.task.completedCount} caption="This project" />
             <StatTile label="Members" value={dashboard.memberCount} caption="On this team" />
           </div>
 
@@ -89,7 +89,7 @@ export function TeamDashboardPage() {
             <div className="growth-panel">
               <div className="growth-progress-block">
                 <div className="progress-card-head">
-                  <span className="eyebrow">Sprint progress</span>
+                  <span className="eyebrow">Project progress</span>
                   <span className="progress-value">{completionRate}%</span>
                 </div>
                 <div className="progress-track">

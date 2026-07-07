@@ -43,17 +43,14 @@ export function TaskNewPage() {
     try {
       setIsLoading(true);
       setErrorMessage(null);
-      const [memberData, taskData, specDocuments, queuedSuggestions] = await Promise.all([
+      const [memberData, specDocuments, queuedSuggestions] = await Promise.all([
         teamApi.getMembers(numericTeamId),
-        taskApi.getTasks(numericTeamId),
         specDocumentApi.getSpecDocuments(numericTeamId),
         taskApi.getQueuedTaskSuggestions(numericTeamId),
       ]);
       setMembers(memberData);
       setHasMainSpec(specDocuments.some((doc) => doc.isMain));
-
-      const existingTitles = new Set(taskData.map((task) => task.title.trim().toLowerCase()));
-      setRecommendations(queuedSuggestions.filter((item) => !existingTitles.has(item.title.trim().toLowerCase())));
+      setRecommendations(queuedSuggestions);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load this page.');
     } finally {
@@ -104,12 +101,8 @@ export function TaskNewPage() {
 
   async function refreshRecommendations() {
     try {
-      const [taskData, queuedSuggestions] = await Promise.all([
-        taskApi.getTasks(numericTeamId),
-        taskApi.getQueuedTaskSuggestions(numericTeamId),
-      ]);
-      const existingTitles = new Set(taskData.map((task) => task.title.trim().toLowerCase()));
-      setRecommendations(queuedSuggestions.filter((item) => !existingTitles.has(item.title.trim().toLowerCase())));
+      const queuedSuggestions = await taskApi.getQueuedTaskSuggestions(numericTeamId);
+      setRecommendations(queuedSuggestions);
     } catch {
       // Non-critical: keep the current recommendation list if the refresh fails.
     }

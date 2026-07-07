@@ -139,7 +139,7 @@ export function updateTodoList(teamId: number, data: SaveTodoListRequest) {
 export function generateTodoPrompt(teamId: number, taskIds: number[] = []) {
   return request<TodoPrompt>(`/teams/${teamId}/todos/prompt`, {
     method: 'POST',
-    body: { taskIds },
+    body: { taskIds, forceRemote: true },
   });
 }
 

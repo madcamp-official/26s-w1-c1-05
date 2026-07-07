@@ -123,7 +123,7 @@ class TeamLeaderboardServiceTests {
 
 	private SaveTaskRequest taskRequest(List<Long> assigneeUserIds, TaskPriority priority) {
 		return new SaveTaskRequest(
-				"Leaderboard task",
+				"Leaderboard task " + UUID.randomUUID().toString().substring(0, 8),
 				"Completed task ranking verification",
 				priority,
 				assigneeUserIds

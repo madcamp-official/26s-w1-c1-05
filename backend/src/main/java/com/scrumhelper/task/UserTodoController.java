@@ -60,7 +60,8 @@ public class UserTodoController {
 			Authentication authentication
 	) {
 		List<Long> taskIds = request == null || request.taskIds() == null ? List.of() : request.taskIds();
-		return ApiResponse.ok(userTodoService.generateCompletionPrompt(currentUserId(authentication), teamId, taskIds));
+		boolean forceRemote = request != null && request.shouldForceRemote();
+		return ApiResponse.ok(userTodoService.generateCompletionPrompt(currentUserId(authentication), teamId, taskIds, forceRemote));
 	}
 
 	private Long currentUserId(Authentication authentication) {

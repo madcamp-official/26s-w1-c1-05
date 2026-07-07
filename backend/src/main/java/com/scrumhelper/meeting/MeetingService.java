@@ -88,15 +88,59 @@ public class MeetingService {
 		String mimeType = normalizeMimeType(file.getContentType(), originalFilename);
 		byte[] audioBytes = readFileBytes(file);
 		String prompt = """
-				업로드된 회의 녹음 파일을 Scrum Helper에 저장할 한국어 회의록 script로 변환해줘.
-				요구사항:
-				1. 가능한 경우 화자를 Speaker 1, Speaker 2처럼 구분해줘.
-				2. 가능한 경우 타임스탬프를 MM:SS 형식으로 포함해줘.
-				3. 들리지 않거나 확실하지 않은 부분은 [불명확]으로 표시해줘.
-				4. 영어 등 외국어 발화는 발음을 한글로 음차하지 말고, 의미를 자연스러운 한국어로 번역해 기록해줘.
-				5. 사람 이름, 서비스명, 기술명처럼 고유명사로 보이는 영어는 가능한 원문 표기(Alice, Bob, Scrum Helper, Todo, Task 등)를 유지해줘.
-				6. 요약이나 해석은 넣지 말고, 회의록 rawContent에 붙여넣기 좋은 script만 반환해줘.
-				""";
+				당신은 한국어 회의 음성 전사 전문 작성자입니다.
+
+				업로드된 회의 녹음 파일을 회의록 원문 필드에 그대로 저장할 수 있는 한국어 회의록 스크립트로 변환하세요.
+
+				가장 중요한 원칙은 음성에 실제로 포함된 내용만 충실하게 기록하는 것입니다. 추측, 보완, 요약, 해석, 결론 추가를 절대 하지 마세요.
+
+				[전사 원칙]
+
+				1. 발화 내용을 가능한 한 원래 의미와 순서대로 기록하세요.
+				2. 음성에 없는 내용, 추정한 배경, 결정 사항, 할 일, 요약, 설명을 추가하지 마세요.
+				3. 잘 들리지 않거나 의미를 확신할 수 없는 구간은 임의로 추측하지 말고 반드시 `[불명확]`으로 표시하세요.
+				4. 일부 단어만 불명확한 경우에도, 확실하지 않은 단어만 `[불명확]`으로 표시하세요.
+				5. 긴 무음, 웃음, 박수, 잡음 등은 회의 맥락을 이해하는 데 의미가 있을 때만 `[침묵]`, `[웃음]`, `[잡음]`처럼 짧게 표시하세요.
+				6. 발화가 겹쳐 정확한 순서를 판단하기 어려우면, 가능한 범위에서 분리해 기록하고 분리가 불가능하면 `[동시 발화]`로 표시하세요.
+
+				[화자 규칙]
+
+				1. 화자를 구분할 수 있으면 `Speaker 1`, `Speaker 2` 형식으로 표기하세요.
+				2. 같은 화자는 녹음 전체에서 반드시 같은 번호를 유지하세요.
+				3. 화자 수나 발화자를 확신할 수 없으면 임의로 번호를 늘리거나 사람을 추정하지 말고 `화자 미상`으로 표기하세요.
+				4. 실제 이름을 음성에서 명확히 확인할 수 있더라도, 사용자가 별도로 화자 이름을 제공하지 않은 한 `Speaker N` 표기를 사용하세요.
+
+				[타임스탬프 규칙]
+
+				1. 시간 위치를 비교적 신뢰할 수 있을 때만 각 발화 또는 의미 있는 발화 묶음 앞에 `[MM:SS]` 형식의 타임스탬프를 넣으세요.
+				2. 정확한 시간 위치를 판단하기 어렵다면 타임스탬프를 억지로 만들지 말고 생략하세요.
+				3. 타임스탬프는 대략적인 발화 시작 시점 기준으로 표시하세요.
+				4. 모든 문장에 무조건 타임스탬프를 넣을 필요는 없습니다.
+
+				[언어 및 고유명사 규칙]
+
+				1. 영어 또는 다른 외국어로 말한 일반 문장은 자연스럽고 충실한 한국어로 번역해 기록하세요.
+				2. Alice, Bob 같은 사람 이름이나 회의에서 언급된 서비스명·제품명·기술명·코드 용어로 보이는 고유명사는 가능한 한 원문 표기를 유지하세요.
+				3. 외국어 발화를 한글 발음으로 음차하지 마세요.
+				4. 원문의 의미가 불명확해 번역을 확신할 수 없으면 번역하지 말고 `[불명확]`으로 처리하세요.
+
+				[출력 형식]
+
+				1. 아래 형식을 기본으로 사용하세요.
+
+				[MM:SS] Speaker 1: 발화 내용
+				[MM:SS] Speaker 2: 발화 내용
+
+				2. 타임스탬프를 알 수 없는 경우에는 아래처럼 작성하세요.
+
+				Speaker 1: 발화 내용
+				Speaker 2: 발화 내용
+
+				3. 발화 단위 사이에는 줄바꿈을 사용하세요.
+				4. 제목, 인사말, 요약, 분석, 회의 안건, 결정 사항, 액션 아이템, 마크다운 코드 블록, JSON, 설명문을 절대 포함하지 마세요.
+				5. 최종 응답에는 회의록 원문에 바로 붙여넣을 수 있는 전사 스크립트만 반환하세요.
+		"""
+;
 
 		return geminiSpecDraftClient.transcribeAudio(prompt, audioBytes, mimeType, originalFilename)
 				.map(transcript -> new MeetingTranscriptionResponse(transcript, "GEMINI"))
@@ -204,17 +248,70 @@ public class MeetingService {
 
 	private String buildSummaryPrompt(String title, java.time.LocalDateTime meetingAt, String summary, String rawContent) {
 		return """
-				Summarize the following scrum meeting transcript in Korean for Scrum Helper.
-				Write 5 to 8 concise bullet points. Highlight decisions, owners, and next actions when present.
-				Do not invent facts that are not present in the transcript.
-				Return bullet points only. Do not include headings, meeting title, meeting time, or preface text.
+			당신은 회의 원문을 근거 기반으로 정리하는 한국어 회의 요약 작성자입니다.
 
-				Meeting title: %s
-				Meeting time: %s
-				Existing summary: %s
-				Transcript:
-				%s
-				""".formatted(
+			아래 회의 transcript를 바탕으로, 참석자가 회의 직후 빠르게 확인하고 후속 작업으로 이어갈 수 있는 간결하고 정확한 요약을 작성하세요.
+
+			가장 중요한 원칙은 transcript에 실제로 포함된 정보만 사용하고, 불확실한 내용이나 누락된 정보를 추측해서 채우지 않는 것입니다.
+
+			[요약 원칙]
+
+			1. 반드시 한국어로 작성하세요.
+			2. transcript에 명시되었거나 명확하게 확인되는 내용만 요약하세요.
+			3. transcript에 없는 결정, 담당자, 일정, 마감일, 기능, 작업 항목을 절대 만들어내지 마세요.
+			4. 불명확하거나 논의만 되었을 뿐 결론이 나지 않은 내용은 결정된 것처럼 표현하지 마세요.
+			5. 기존 요약은 참고용입니다. 기존 요약에만 있고 transcript에서 확인되지 않는 내용은 포함하지 마세요.
+			6. 동일하거나 의미가 겹치는 내용은 하나의 bullet point로 합쳐 중복을 줄이세요.
+			7. 회의 내용이 부족한 경우 억지로 5개 이상 만들지 말고, 확인 가능한 핵심 내용만 작성하세요.
+			8. 발화의 세부 표현을 그대로 옮기기보다, 원래 의미를 유지한 자연스러운 업무 문장으로 정리하세요.
+			9. "Speaker 1", "Speaker 2" 같은 화자 표기는 필요할 때만 사용하고, 담당자가 명확히 언급된 경우에만 담당자로 기록하세요.
+			10. 사람의 이름, 서비스명, 기능명, 기술명 등 고유명사는 가능한 한 transcript의 원문 표기를 유지하세요.
+
+			[우선적으로 포함할 내용]
+
+			아래 항목이 transcript에 존재할 때만 우선순위 높게 반영하세요.
+
+			* 확정된 결정 사항
+			* 합의된 구현 방향 또는 변경 사항
+			* 담당자가 명시된 작업
+			* 다음 액션 또는 후속 작업
+			* 일정, 마감일, 배포 계획
+			* 해결해야 할 문제, 리스크, 미결 사항
+			* 검증 결과 또는 발견한 이슈
+
+			[표현 규칙]
+
+			1. 각 항목은 한 문장 또는 두 문장 이내로 간결하게 작성하세요.
+			2. 가능한 경우 아래 표현을 사용해 정보의 성격을 명확히 하세요.
+
+			* 결정: ...
+			* 작업: ...
+			* 담당: ...
+			* 일정: ...
+			* 이슈: ...
+			* 확인 필요: ...
+			3. 한 bullet point 안에 여러 성격의 정보가 있으면, 자연스럽게 이어 쓰되 사실 관계가 바뀌지 않게 작성하세요.
+			4. 담당자는 transcript에서 명확히 언급된 경우에만 `담당: 이름` 형식으로 표시하세요.
+			5. 마감일은 transcript에서 명확히 언급된 경우에만 포함하세요.
+			6. 논의 중이지만 결론이 없는 내용은 `확인 필요:` 또는 `논의:`로 표현하세요.
+			7. "회의에서 논의했다", "검토했다"처럼 정보 가치가 낮은 표현보다 실제 결정·작업·이슈를 중심으로 작성하세요.
+
+			[출력 형식]
+
+			1. 5~8개의 bullet point를 목표로 작성하세요.
+			2. transcript의 정보가 적다면 3~4개만 작성해도 됩니다.
+			3. 각 항목은 반드시 `- `로 시작하세요.
+			4. 제목, 회의명, 회의 시간, 인사말, 서론, 결론, 설명문, 마크다운 소제목, 코드 블록을 포함하지 마세요.
+			5. 최종 응답에는 bullet point 목록만 반환하세요.
+
+			Meeting title: %s
+			Meeting time: %s
+			Existing summary: %s
+
+			Transcript:
+			%s
+			"""
+.formatted(
 				title,
 				meetingAt == null ? java.time.LocalDateTime.now() : meetingAt,
 				compactForPrompt(nullToFallback(summary, "none"), EXISTING_SUMMARY_PROMPT_LIMIT),
@@ -224,7 +321,7 @@ public class MeetingService {
 
 	private String buildSummaryPrompt(Meeting meeting) {
 		return """
-				다음 회의록을 Scrum Helper의 회의 요약 필드에 저장할 수 있게 한국어로 요약해줘.
+				다음 회의록을 회의 요약 필드에 저장할 수 있게 한국어로 요약해줘.
 				요약은 5~8개의 짧은 bullet로 작성하고, 결정사항/담당자/다음 액션이 있으면 명확히 드러내줘.
 				확인되지 않은 내용은 만들지 말고, 원문에 근거한 내용만 작성해줘.
 				제목, 회의 시간, 도입 문장 없이 bullet 목록만 반환해줘.

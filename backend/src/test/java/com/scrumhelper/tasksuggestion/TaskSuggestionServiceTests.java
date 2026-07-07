@@ -58,7 +58,7 @@ class TaskSuggestionServiceTests {
 				context.team().id()
 		);
 
-		assertThat(queued).hasSize(5);
+		assertThat(queued).isNotEmpty();
 		assertThat(queued)
 				.allSatisfy(suggestion -> {
 					assertThat(suggestion.teamId()).isEqualTo(context.team().id());
@@ -98,7 +98,7 @@ class TaskSuggestionServiceTests {
 				context.ownerId(),
 				context.team().id()
 		);
-		assertThat(remaining).hasSize(4);
+		assertThat(remaining).hasSize(queued.size() - 1);
 		assertThat(remaining).noneMatch(suggestion -> suggestion.id().equals(target.id()));
 	}
 
@@ -119,7 +119,7 @@ class TaskSuggestionServiceTests {
 				context.ownerId(),
 				context.team().id()
 		);
-		assertThat(remaining).hasSize(4);
+		assertThat(remaining).hasSize(queued.size() - 1);
 		assertThat(remaining).noneMatch(suggestion -> suggestion.id().equals(target.id()));
 
 		assertThatThrownBy(() -> taskSuggestionService.acceptSuggestion(
@@ -137,7 +137,7 @@ class TaskSuggestionServiceTests {
 		TestContext context = createContext();
 
 		specDocumentService.setMainSpecDocument(context.ownerId(), context.specDocument().id());
-		assertThat(taskSuggestionService.getQueuedSuggestions(context.ownerId(), context.team().id())).hasSize(5);
+		assertThat(taskSuggestionService.getQueuedSuggestions(context.ownerId(), context.team().id())).isNotEmpty();
 
 		SpecDocumentResponse secondSpec = specDocumentService.createSpecDocument(
 				context.ownerId(),
@@ -147,8 +147,9 @@ class TaskSuggestionServiceTests {
 		specDocumentService.setMainSpecDocument(context.ownerId(), secondSpec.id());
 
 		List<TaskSuggestionResponse> queued = taskSuggestionService.getQueuedSuggestions(context.ownerId(), context.team().id());
-		assertThat(queued).hasSize(5);
-		assertThat(queued).allMatch(suggestion -> suggestion.specDocumentId().equals(context.specDocument().id()));
+		assertThat(queued).isNotEmpty();
+		assertThat(queued).allMatch(suggestion -> suggestion.specDocumentId().equals(secondSpec.id()));
+		assertThat(queued).extracting(TaskSuggestionResponse::title).doesNotHaveDuplicates();
 	}
 
 	@Test

@@ -72,7 +72,28 @@ class TaskServiceTests {
 		TodoListResponse todoList = userTodoService.getTodoList(context.memberId(), context.team().id());
 
 		assertThat(added.id()).isEqualTo(existing.id());
+		assertThat(added.status()).isEqualTo(TaskStatus.IN_PROGRESS);
 		assertThat(todoList.selectedTasks()).extracting(TaskResponse::id).containsExactly(existing.id());
+		assertThat(todoList.selectedTasks()).extracting(TaskResponse::status).containsExactly(TaskStatus.IN_PROGRESS);
+	}
+
+	@Test
+	void updatingTodoListMovesBacklogTasksToInProgress() {
+		TestContext context = createContext();
+		TaskResponse existing = createTask(context.ownerId(), context.team().id(), "TODO 등록 시 진행 중으로 이동", List.of(context.memberId()));
+
+		assertThat(existing.status()).isEqualTo(TaskStatus.BACKLOG);
+
+		TodoListResponse todoList = userTodoService.updateTodoList(
+				context.memberId(),
+				context.team().id(),
+				new SaveTodoListRequest(List.of(existing.id()))
+		);
+		TaskResponse updated = taskService.getTask(context.memberId(), existing.id());
+
+		assertThat(todoList.selectedTasks()).extracting(TaskResponse::id).containsExactly(existing.id());
+		assertThat(todoList.selectedTasks()).extracting(TaskResponse::status).containsExactly(TaskStatus.IN_PROGRESS);
+		assertThat(updated.status()).isEqualTo(TaskStatus.IN_PROGRESS);
 	}
 
 	@Test

@@ -100,11 +100,15 @@ public class GeminiSpecDraftClient {
 	}
 
 	public Optional<String> generate(String prompt) {
-		return generate(prompt, null);
+		return generate(prompt, null, false);
+	}
+
+	public Optional<String> generateFresh(String prompt) {
+		return generate(prompt, null, true);
 	}
 
 	public Optional<String> generateJson(String prompt) {
-		return generate(prompt, "application/json");
+		return generate(prompt, "application/json", false);
 	}
 
 	public Optional<String> transcribeAudio(String prompt, byte[] audioBytes, String mimeType, String displayName) {
@@ -121,7 +125,7 @@ public class GeminiSpecDraftClient {
 				.flatMap(uploadedFile -> generateWithFile(prompt, uploadedFile, mimeType));
 	}
 
-	private Optional<String> generate(String prompt, String responseMimeType) {
+	private Optional<String> generate(String prompt, String responseMimeType, boolean bypassCache) {
 		if (apiKey == null || apiKey.isBlank()) {
 			log.info("Gemini API key is not configured. Falling back to local generation.");
 			return Optional.empty();
@@ -146,9 +150,11 @@ public class GeminiSpecDraftClient {
 			return Optional.empty();
 		}
 
-		Optional<Optional<String>> cached = readGenerationCache(body, responseMimeType);
-		if (cached.isPresent()) {
-			return cached.get();
+		if (!bypassCache) {
+			Optional<Optional<String>> cached = readGenerationCache(body, responseMimeType);
+			if (cached.isPresent()) {
+				return cached.get();
+			}
 		}
 
 		for (String candidateModel : modelCandidates) {

@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as meetingApi from '../../api/meetingApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Button, useConfirm, useToast } from '../../components/ui';
+import { Alert, Button, MarkdownView, SegmentedControl, useConfirm, useToast } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Meeting } from '../../types/meeting';
@@ -26,6 +26,7 @@ export function MeetingDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [summaryView, setSummaryView] = useState<'preview' | 'edit'>('preview');
   const [audioFileName, setAudioFileName] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -210,19 +211,32 @@ export function MeetingDetailPage() {
             Summary
           </span>
           {canManage && (
-            <Button type="button" variant="secondary" size="sm" isLoading={isGeneratingSummary} onClick={() => void handleGenerateSummary()}>
-              <Sparkles size={14} aria-hidden="true" />
-              Generate summary
-            </Button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <SegmentedControl
+                options={[
+                  { value: 'preview', label: 'Preview' },
+                  { value: 'edit', label: 'Edit' },
+                ]}
+                value={summaryView}
+                onChange={setSummaryView}
+              />
+              <Button type="button" variant="secondary" size="sm" isLoading={isGeneratingSummary} onClick={() => void handleGenerateSummary()}>
+                <Sparkles size={14} aria-hidden="true" />
+                Generate summary
+              </Button>
+            </div>
           )}
         </div>
-        <textarea
-          className="doc-textarea"
-          style={{ minHeight: 140 }}
-          value={form.summary}
-          disabled={!canManage}
-          onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))}
-        />
+        {canManage && summaryView === 'edit' ? (
+          <textarea
+            className="doc-textarea"
+            style={{ minHeight: 140 }}
+            value={form.summary}
+            onChange={(event) => setForm((current) => ({ ...current, summary: event.target.value }))}
+          />
+        ) : (
+          <MarkdownView content={form.summary} emptyLabel="No summary yet — generate one or write it by hand." />
+        )}
 
         <div className="detail-section-label" style={{ margin: '24px 0 10px' }}>
           Raw transcript

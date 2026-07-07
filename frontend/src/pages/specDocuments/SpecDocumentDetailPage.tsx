@@ -4,7 +4,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as specDocumentApi from '../../api/specDocumentApi';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Badge, Button, LoadingState, useConfirm, useToast } from '../../components/ui';
+import { Alert, Badge, Button, LoadingState, MarkdownView, SegmentedControl, useConfirm, useToast } from '../../components/ui';
 import { formatDateTime } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { SpecDocument } from '../../types/specDocument';
@@ -26,6 +26,7 @@ export function SpecDocumentDetailPage() {
   const [body, setBody] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<'preview' | 'edit'>('preview');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => void loadPage(), [numericDocumentId, numericTeamId]);
@@ -160,13 +161,28 @@ export function SpecDocumentDetailPage() {
 
       <Alert message={errorMessage} />
 
-      <textarea
-        className="doc-textarea"
-        style={{ minHeight: 360 }}
-        value={body}
-        disabled={!canEdit}
-        onChange={(event) => setBody(event.target.value)}
-      />
+      {canEdit && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 10 }}>
+          <SegmentedControl
+            options={[
+              { value: 'preview', label: 'Preview' },
+              { value: 'edit', label: 'Edit' },
+            ]}
+            value={viewMode}
+            onChange={setViewMode}
+          />
+        </div>
+      )}
+      {canEdit && viewMode === 'edit' ? (
+        <textarea
+          className="doc-textarea"
+          style={{ minHeight: 360 }}
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+        />
+      ) : (
+        <MarkdownView content={body} emptyLabel="This spec doc is empty." />
+      )}
       {canEdit && (
         <div className="doc-save-row">
           <Button type="button" isLoading={isSubmitting} onClick={() => void handleSave()}>

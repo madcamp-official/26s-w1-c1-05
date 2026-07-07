@@ -71,7 +71,8 @@ public class AuthService {
 		user.updateProfile(
 				request.name().trim(),
 				normalizeOptionalText(request.title()),
-				normalizeOptionalText(request.bio())
+				normalizeOptionalText(request.bio()),
+				normalizeOptionalText(request.contact())
 		);
 		return UserSummaryResponse.from(user);
 	}

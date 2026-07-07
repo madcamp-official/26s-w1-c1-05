@@ -92,7 +92,7 @@ class TaskServiceTests {
 		TaskResponse task = createTask(context.ownerId(), context.team().id(), "프롬프트 대상 task", List.of(context.memberId()));
 		userTodoService.updateTodoList(context.memberId(), context.team().id(), new SaveTodoListRequest(List.of(task.id())));
 
-		TodoPromptResponse response = userTodoService.generateCompletionPrompt(context.memberId(), context.team().id(), List.of());
+		TodoPromptResponse response = userTodoService.generateCompletionPrompt(context.memberId(), context.team().id(), java.util.List.of());
 
 		assertThat(response.generatedBy()).isEqualTo("LOCAL_FALLBACK");
 		assertThat(response.prompt()).contains("프롬프트 대상 task");
@@ -107,7 +107,7 @@ class TaskServiceTests {
 
 		TodoListResponse firstSave = userTodoService.updateTodoList(context.memberId(), context.team().id(), request);
 		TodoListResponse secondSave = userTodoService.updateTodoList(context.memberId(), context.team().id(), request);
-		TodoPromptResponse prompt = userTodoService.generateCompletionPrompt(context.memberId(), context.team().id(), List.of());
+		TodoPromptResponse prompt = userTodoService.generateCompletionPrompt(context.memberId(), context.team().id(), java.util.List.of());
 
 		assertThat(firstSave.selectedTasks()).extracting(TaskResponse::id).containsExactly(first.id(), second.id());
 		assertThat(secondSave.selectedTasks()).extracting(TaskResponse::id).containsExactly(first.id(), second.id());

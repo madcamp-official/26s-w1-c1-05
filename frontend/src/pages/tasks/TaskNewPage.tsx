@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { ArrowLeft, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Sparkles, X } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as taskApi from '../../api/taskApi';
 import * as teamApi from '../../api/teamApi';
@@ -19,6 +19,7 @@ export function TaskNewPage() {
   const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [recommendations, setRecommendations] = useState<TaskRecommendation[]>([]);
+  const [suggestionPage, setSuggestionPage] = useState(0);
   const [hasMainSpec, setHasMainSpec] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,7 +94,9 @@ export function TaskNewPage() {
       void refreshTeamChrome();
       void refreshRecommendations();
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not create the task.');
+      const message = error instanceof ApiError ? error.message : 'Could not create the task.';
+      setErrorMessage(message);
+      toast(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -107,6 +110,14 @@ export function TaskNewPage() {
       // Non-critical: keep the current recommendation list if the refresh fails.
     }
   }
+
+  const SUGGESTION_PAGE_SIZE = 5;
+  const pageCount = Math.ceil(recommendations.length / SUGGESTION_PAGE_SIZE);
+  const safeSuggestionPage = pageCount === 0 ? 0 : Math.min(suggestionPage, pageCount - 1);
+  const visibleRecommendations = recommendations.slice(
+    safeSuggestionPage * SUGGESTION_PAGE_SIZE,
+    safeSuggestionPage * SUGGESTION_PAGE_SIZE + SUGGESTION_PAGE_SIZE,
+  );
 
   function handleSelectRecommendation(recommendation: TaskRecommendation) {
     setSelectedSuggestionId(recommendation.id ?? null);
@@ -237,7 +248,7 @@ export function TaskNewPage() {
           )}
           {!hasMainSpec && <div className="recommend-empty">Set a main spec to generate task suggestions.</div>}
           {hasMainSpec && recommendations.length === 0 && <div className="recommend-empty">No new suggestions right now.</div>}
-          {recommendations.map((item) => {
+          {visibleRecommendations.map((item) => {
             const priority = priorityTone(item.priority);
             const id = item.id;
             const isSelected = id != null && selectedSuggestionId === id;
@@ -265,6 +276,31 @@ export function TaskNewPage() {
               </div>
             );
           })}
+          {pageCount > 1 && (
+            <div className="recommend-pager">
+              <button
+                type="button"
+                className="suggestion-nav-btn"
+                onClick={() => setSuggestionPage((page) => Math.max(0, page - 1))}
+                disabled={safeSuggestionPage === 0}
+                aria-label="Previous suggestions"
+              >
+                <ChevronLeft size={15} aria-hidden="true" />
+              </button>
+              <span className="mono" style={{ fontSize: 11.5, color: 'var(--gray-500)' }}>
+                {safeSuggestionPage + 1} / {pageCount}
+              </span>
+              <button
+                type="button"
+                className="suggestion-nav-btn"
+                onClick={() => setSuggestionPage((page) => Math.min(pageCount - 1, page + 1))}
+                disabled={safeSuggestionPage >= pageCount - 1}
+                aria-label="Next suggestions"
+              >
+                <ChevronRight size={15} aria-hidden="true" />
+              </button>
+            </div>
+          )}
         </aside>
       </div>
     </div>

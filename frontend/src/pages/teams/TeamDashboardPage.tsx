@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CalendarDays, Plus, Sprout } from 'lucide-react';
 import * as teamApi from '../../api/teamApi';
 import * as taskApi from '../../api/taskApi';
 import { useAuth } from '../../auth/useAuth';
-import { Alert, Badge, LoadingState, StatTile } from '../../components/ui';
+import { Alert, Badge, Button, LoadingState, StatTile } from '../../components/ui';
 import { GrowthTree } from '../../components/growth/GrowthTree';
 import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
@@ -14,12 +14,39 @@ import type { TeamDashboard, TeamDetail } from '../../types/team';
 export function TeamDashboardPage() {
   const { teamId } = useParams();
   const numericTeamId = Number(teamId);
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [dashboard, setDashboard] = useState<TeamDashboard | null>(null);
   const [todoList, setTodoList] = useState<TodoList | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
+  const [circle, setCircle] = useState<{ x: number; y: number; grown: boolean } | null>(null);
+  const timersRef = useRef<number[]>([]);
+
+  useEffect(() => () => timersRef.current.forEach((id) => window.clearTimeout(id)), []);
+
+  function handleRetroOverall(event: MouseEvent<HTMLButtonElement>) {
+    if (celebrating || circle) {
+      return;
+    }
+    const x = event.clientX || window.innerWidth / 2;
+    const y = event.clientY || window.innerHeight / 2;
+    setCelebrating(true);
+    timersRef.current.push(
+      window.setTimeout(() => {
+        setCircle({ x, y, grown: false });
+        requestAnimationFrame(() => requestAnimationFrame(() => setCircle({ x, y, grown: true })));
+        timersRef.current.push(
+          window.setTimeout(() => {
+            sessionStorage.setItem('wrapup-arrival', '1');
+            navigate(`/teams/${numericTeamId}/wrapup`);
+          }, 700),
+        );
+      }, 900),
+    );
+  }
 
   useEffect(() => {
     async function loadDashboard() {
@@ -57,6 +84,7 @@ export function TeamDashboardPage() {
     dashboard && dashboard.task.totalCount > 0
       ? Math.round((dashboard.task.completedCount / dashboard.task.totalCount) * 100)
       : 0;
+  const isComplete = dashboard != null && dashboard.task.totalCount > 0 && dashboard.task.incompleteCount === 0;
   const greeting = timeOfDayGreeting();
 
   return (
@@ -71,12 +99,18 @@ export function TeamDashboardPage() {
               <h1 className="dashboard-title">
                 {greeting}, {user?.name ?? 'there'}
               </h1>
-              <p className="dashboard-greeting">{team.description || team.name}</p>
+              <p className="dashboard-greeting">
+                {isComplete ? 'Every task is done — the sprint is wrapped.' : team.description || team.name}
+              </p>
             </div>
-            <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
-              <Plus size={15} aria-hidden="true" />
-              Add task
-            </Link>
+            {isComplete ? (
+              <Badge variant="solid">SPRINT COMPLETE</Badge>
+            ) : (
+              <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
+                <Plus size={15} aria-hidden="true" />
+                Add task
+              </Link>
+            )}
           </div>
 
           <div className="kpi-row">
@@ -105,35 +139,44 @@ export function TeamDashboardPage() {
                 <span className="eyebrow">Growth tree</span>
                 <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
               </div>
-              <div className="growth-tree-wrap">
+              <div className="growth-tree-wrap" style={{ position: 'relative' }}>
                 <GrowthTree
                   backlogCount={dashboard.task.backlogCount}
                   inProgressCount={dashboard.task.inProgressCount}
                   completedCount={dashboard.task.completedCount}
                   totalCount={dashboard.task.totalCount}
                 />
+                <div className={celebrating ? 'growth-celebrate-tint on' : 'growth-celebrate-tint'} aria-hidden="true" />
               </div>
               <div className="growth-divider" />
               <div className="growth-footer">
                 <span className="growth-caption">
-                  {dashboard.task.totalCount === 0
-                    ? 'Create a task to plant the first branch.'
-                    : `${dashboard.task.completedCount} of ${dashboard.task.totalCount} tasks completed`}
+                  {isComplete
+                    ? 'The tree is fully grown — sprint complete.'
+                    : dashboard.task.totalCount === 0
+                      ? 'Create a task to plant the first branch.'
+                      : `${dashboard.task.completedCount} of ${dashboard.task.totalCount} tasks completed`}
                 </span>
-                <div className="growth-legend">
-                  <span className="growth-legend-item">
-                    <span style={{ width: 9, height: 9, borderRadius: 999, border: '1.5px solid var(--gray-500)', boxSizing: 'border-box' }} />
-                    backlog
-                  </span>
-                  <span className="growth-legend-item">
-                    <span className="growth-legend-leaf" />
-                    in progress
-                  </span>
-                  <span className="growth-legend-item">
-                    <span className="growth-legend-fruit" />
-                    done
-                  </span>
-                </div>
+                {isComplete ? (
+                  <Button type="button" onClick={handleRetroOverall} isLoading={celebrating}>
+                    RETRO OVERALL
+                  </Button>
+                ) : (
+                  <div className="growth-legend">
+                    <span className="growth-legend-item">
+                      <span style={{ width: 9, height: 9, borderRadius: 999, border: '1.5px solid var(--gray-500)', boxSizing: 'border-box' }} />
+                      backlog
+                    </span>
+                    <span className="growth-legend-item">
+                      <span className="growth-legend-leaf" />
+                      in progress
+                    </span>
+                    <span className="growth-legend-item">
+                      <span className="growth-legend-fruit" />
+                      done
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -161,7 +204,30 @@ export function TeamDashboardPage() {
           </div>
         </div>
       )}
+
+      {circle && <CircleWipe x={circle.x} y={circle.y} grown={circle.grown} />}
     </div>
+  );
+}
+
+/* Green circle that grows from the click point to cover the viewport — the
+   transition into the wrap-up page (which fades it back out on arrival). */
+function CircleWipe({ x, y, grown }: { x: number; y: number; grown: boolean }) {
+  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y)) + 40;
+  return (
+    <div
+      className="retro-circle-overlay"
+      style={{
+        left: x,
+        top: y,
+        width: radius * 2,
+        height: radius * 2,
+        marginLeft: -radius,
+        marginTop: -radius,
+        transform: grown ? 'scale(1)' : 'scale(0)',
+      }}
+      aria-hidden="true"
+    />
   );
 }
 

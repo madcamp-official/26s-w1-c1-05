@@ -14,5 +14,7 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
 
 	List<TeamMember> findByTeamIdOrderByRoleAscJoinedAtAsc(Long teamId);
 
+	List<TeamMember> findByUserIdOrderByJoinedAtAsc(Long userId);
+
 	void deleteByTeamIdAndUserId(Long teamId, Long userId);
 }

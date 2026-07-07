@@ -12,6 +12,9 @@ public record UpdateProfileRequest(
 		String title,
 
 		@Size(max = 500)
-		String bio
+		String bio,
+
+		@Size(max = 200)
+		String contact
 ) {
 }

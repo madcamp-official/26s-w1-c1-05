@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, ListChecks, CalendarDays, FileText, RotateCcw, Users, Settings, ChevronsUpDown, LogOut, Trophy } from 'lucide-react';
+import { LayoutDashboard, ListChecks, CalendarDays, FileText, RotateCcw, Users, Settings, ChevronsUpDown, LogOut, Sparkles, Trophy } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
 import * as meetingApi from '../../api/meetingApi';
@@ -72,6 +72,9 @@ export function TeamLayout() {
     { to: `${basePath}/spec-documents`, label: 'Spec', icon: FileText, count: specCount },
     { to: `${basePath}/tasks`, label: 'Task', icon: ListChecks, count: dashboard?.task.incompleteCount },
     { to: `${basePath}/retrospectives`, label: 'Retro', icon: RotateCcw, count: dashboard?.retrospective.totalCount },
+    ...(dashboard && dashboard.task.totalCount > 0 && dashboard.task.incompleteCount === 0
+      ? [{ to: `${basePath}/wrapup`, label: 'Wrap-up', icon: Sparkles } satisfies NavItem]
+      : []),
     { to: `${basePath}/members`, label: 'Members', icon: Users, count: dashboard?.memberCount },
     { to: `${basePath}/settings`, label: 'Settings', icon: Settings },
   ];

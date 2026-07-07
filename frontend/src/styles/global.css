@@ -1098,7 +1098,24 @@ p {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 14px;
-  align-items: start;
+  /* stretch: every column fills the row, so dropping in the blank space
+     under a column's cards still lands in that column */
+  align-items: stretch;
+}
+
+.board-column-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1;
+  min-height: 40px;
+}
+
+/* More than 4 tasks: the column stops growing and scrolls inside */
+.board-column-list-capped {
+  max-height: 520px;
+  overflow-y: auto;
+  flex: none;
 }
 
 .board-column {
@@ -1292,6 +1309,32 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.task-card-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.task-card-avatars > * {
+  box-shadow: 0 0 0 2px var(--paper);
+  border-radius: var(--radius-full);
+}
+
+.task-card-avatars > * + * {
+  margin-left: -8px;
+}
+
+.task-card-avatar-more {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: var(--gray-150);
+  color: var(--gray-600);
+  font-size: 10.5px;
+  font-weight: 600;
 }
 
 .composer-card {
@@ -2619,4 +2662,12 @@ p {
   .wrap-scroll-cue {
     animation: none;
   }
+}
+
+.recommend-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 4px;
 }

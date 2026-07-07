@@ -109,6 +109,9 @@ public class TaskService {
 		requireMembership(teamId, currentUserId);
 		User createdBy = findUser(currentUserId);
 		validateAssignees(teamId, request.assigneeUserIds());
+		if (taskRepository.existsByTeamIdAndTitleIgnoreCase(teamId, request.title().trim())) {
+			throw new BusinessException(ErrorCode.TASK_TITLE_DUPLICATE);
+		}
 
 		Task task = Task.create(
 				team,
@@ -174,6 +177,9 @@ public class TaskService {
 		Team team = task.getTeam();
 		requireMembership(team.getId(), currentUserId);
 		validateAssignees(team.getId(), request.assigneeUserIds());
+		if (taskRepository.existsByTeamIdAndTitleIgnoreCaseAndIdNot(team.getId(), request.title().trim(), taskId)) {
+			throw new BusinessException(ErrorCode.TASK_TITLE_DUPLICATE);
+		}
 
 		task.update(
 				request.title().trim(),

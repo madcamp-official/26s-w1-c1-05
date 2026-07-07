@@ -30,6 +30,9 @@ public class User {
 	@Column(length = 500)
 	private String bio;
 
+	@Column(length = 200)
+	private String contact;
+
 	@Column(name = "password_hash", nullable = false, length = 255)
 	private String passwordHash;
 
@@ -84,6 +87,10 @@ public class User {
 		return bio;
 	}
 
+	public String getContact() {
+		return contact;
+	}
+
 	public String getPasswordHash() {
 		return passwordHash;
 	}
@@ -96,9 +103,10 @@ public class User {
 		return updatedAt;
 	}
 
-	public void updateProfile(String name, String title, String bio) {
+	public void updateProfile(String name, String title, String bio, String contact) {
 		this.name = name;
 		this.title = title;
 		this.bio = bio;
+		this.contact = contact;
 	}
 }

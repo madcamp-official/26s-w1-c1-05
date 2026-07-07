@@ -4,6 +4,7 @@ export type UserSummary = {
   email: string;
   title: string | null;
   bio: string | null;
+  contact: string | null;
 };
 
 export type AuthResponse = {
@@ -26,4 +27,5 @@ export type UpdateProfileRequest = {
   name: string;
   title?: string | null;
   bio?: string | null;
+  contact?: string | null;
 };

@@ -408,7 +408,13 @@ export function TaskDetailPage() {
             <FieldTextarea
               value={commentContent}
               onChange={(event) => setCommentContent(event.target.value)}
-              placeholder="Add a comment…"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                  event.preventDefault();
+                  event.currentTarget.form?.requestSubmit();
+                }
+              }}
+              placeholder="Add a comment… (Enter to post, Shift+Enter for a new line)"
               style={{ minHeight: 64 }}
             />
             <div className="comment-submit-row">

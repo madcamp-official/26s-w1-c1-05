@@ -17,7 +17,7 @@ export function TeamTodoPage() {
   const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(null);
   const [isPromptCopied, setIsPromptCopied] = useState(false);
-  const [isSuggestedOpen, setIsSuggestedOpen] = useState(true);
+  const [isSuggestedOpen, setIsSuggestedOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const saveQueueRef = useRef(Promise.resolve());
   const latestTodoIdsRef = useRef<number[]>([]);
@@ -165,38 +165,42 @@ export function TeamTodoPage() {
         </section>
       )}
 
-      {recommendedTasks.length > 0 && (
-        <section className="todo-recommend-section">
-          <button
-            type="button"
-            className={isSuggestedOpen ? 'todo-recommend-head todo-recommend-head-toggle' : 'todo-recommend-head todo-recommend-head-toggle collapsed'}
-            aria-expanded={isSuggestedOpen}
-            onClick={() => setIsSuggestedOpen((open) => !open)}
-          >
-            <span className="eyebrow">Suggested ({recommendedTasks.length})</span>
-            <span className="todo-recommend-copy">
-              Open tasks assigned to you.{' '}
-              {isSuggestedOpen ? (
-                <ChevronUp size={14} aria-hidden="true" />
-              ) : (
-                <ChevronDown size={14} aria-hidden="true" />
-              )}
-            </span>
-          </button>
-          {isSuggestedOpen && (
-            <div className="todo-recommend-list">
-              {recommendedTasks.map((task) => (
+      <section className="todo-recommend-section">
+        <button
+          type="button"
+          className={isSuggestedOpen ? 'todo-recommend-head todo-recommend-head-toggle' : 'todo-recommend-head todo-recommend-head-toggle collapsed'}
+          aria-expanded={isSuggestedOpen}
+          onClick={() => setIsSuggestedOpen((open) => !open)}
+        >
+          <span className="eyebrow">Suggested ({recommendedTasks.length})</span>
+          <span className="todo-recommend-copy">
+            Open tasks assigned to you.{' '}
+            {isSuggestedOpen ? (
+              <ChevronUp size={14} aria-hidden="true" />
+            ) : (
+              <ChevronDown size={14} aria-hidden="true" />
+            )}
+          </span>
+        </button>
+        {isSuggestedOpen && (
+          <div className="todo-recommend-list">
+            {recommendedTasks.length === 0 ? (
+              <p className="todo-recommend-copy" style={{ margin: 0 }}>
+                No suggestions right now.
+              </p>
+            ) : (
+              recommendedTasks.map((task) => (
                 <RecommendedTodoTask
                   task={task}
                   onAdd={() => addRecommendedTask(task.id)}
                   teamId={numericTeamId}
                   key={task.id}
                 />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+              ))
+            )}
+          </div>
+        )}
+      </section>
 
       {tasks.length === 0 ? (
         <EmptyState

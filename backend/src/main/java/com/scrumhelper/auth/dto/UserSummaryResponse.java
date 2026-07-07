@@ -7,7 +7,8 @@ public record UserSummaryResponse(
 		String name,
 		String email,
 		String title,
-		String bio
+		String bio,
+		String contact
 ) {
 	public static UserSummaryResponse from(User user) {
 		return new UserSummaryResponse(
@@ -15,7 +16,8 @@ public record UserSummaryResponse(
 				user.getName(),
 				user.getEmail(),
 				user.getTitle(),
-				user.getBio()
+				user.getBio(),
+				user.getContact()
 		);
 	}
 }

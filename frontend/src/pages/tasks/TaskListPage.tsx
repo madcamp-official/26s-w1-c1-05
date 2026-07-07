@@ -393,6 +393,7 @@ function TaskColumn({
         </span>
         <span className="board-column-count">{tasks.length}</span>
       </div>
+      <div className={tasks.length > 4 ? 'board-column-list board-column-list-capped' : 'board-column-list'}>
       {tasks.map((task, index) => {
         const isDone = task.status === 'DONE';
         const priority = priorityTone(task.priority);
@@ -423,7 +424,16 @@ function TaskColumn({
               </Link>
               <div className="task-card-footer">
                 <div className="task-card-actions">
-                  {task.assignees[0] && <Avatar name={task.assignees[0].name} size="sm" />}
+                  {task.assignees.length > 0 && (
+                    <div className="task-card-avatars" title={task.assignees.map((assignee) => assignee.name).join(', ')}>
+                      {task.assignees.slice(0, 3).map((assignee) => (
+                        <Avatar name={assignee.name} size="sm" key={assignee.id} />
+                      ))}
+                      {task.assignees.length > 3 && (
+                        <span className="task-card-avatar-more">+{task.assignees.length - 3}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -432,6 +442,7 @@ function TaskColumn({
       })}
       {dropIndex === tasks.length && <div className="board-drop-indicator" />}
       {tasks.length === 0 && <div className="board-column-empty">{emptyLabel}</div>}
+      </div>
     </section>
   );
 }

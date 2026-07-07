@@ -17,4 +17,8 @@ public interface TaskRepository extends JpaRepository<Task, Long>, JpaSpecificat
 	long countByTeamIdAndStatus(Long teamId, TaskStatus status);
 
 	long countByTeamIdAndStatusIsNullAndCompletedFalse(Long teamId);
+
+	boolean existsByTeamIdAndTitleIgnoreCase(Long teamId, String title);
+
+	boolean existsByTeamIdAndTitleIgnoreCaseAndIdNot(Long teamId, String title, Long id);
 }

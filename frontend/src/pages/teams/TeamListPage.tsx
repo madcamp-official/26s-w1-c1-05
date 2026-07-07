@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { KeyRound, LogOut, Plus, Search, Users } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import * as teamApi from '../../api/teamApi';
 import { useAuth } from '../../auth/useAuth';
 import { Alert, Avatar, Button, Card, EmptyState, Field, FieldInput, LoadingState } from '../../components/ui';
@@ -126,10 +126,10 @@ export function TeamListPage() {
         <header className="simple-topbar">
           <span className="simple-topbar-brand">Scrum Helper</span>
           <div className="topbar-actions">
-            <div className="user-chip">
+            <Link to="/profile" className="user-chip user-chip-link">
               <Avatar name={user?.name ?? 'You'} size="sm" />
               <span>{user?.name ?? 'You'}</span>
-            </div>
+            </Link>
             <button type="button" className="logout-btn" onClick={handleLogout}>
               <LogOut size={15} aria-hidden="true" />
               Log out

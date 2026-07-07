@@ -205,10 +205,8 @@ public class MeetingService {
 	private String buildSummaryPrompt(String title, java.time.LocalDateTime meetingAt, String summary, String rawContent) {
 		return """
 				Summarize the following scrum meeting transcript in Korean for Scrum Helper.
-				Write 5 to 8 concise bullet points. Highlight decisions, owners, blockers, and next actions when present.
+				Write 5 to 8 concise bullet points. Highlight decisions, owners, and next actions when present.
 				Do not invent facts that are not present in the transcript.
-				Only label something as a blocker when the transcript explicitly says it is blocked, blocking, 막힘, or 블로커.
-				If someone asks for help, write it as 지원 필요 or 확인 필요, not as a blocker.
 				Return bullet points only. Do not include headings, meeting title, meeting time, or preface text.
 
 				Meeting title: %s
@@ -229,8 +227,6 @@ public class MeetingService {
 				다음 회의록을 Scrum Helper의 회의 요약 필드에 저장할 수 있게 한국어로 요약해줘.
 				요약은 5~8개의 짧은 bullet로 작성하고, 결정사항/담당자/다음 액션이 있으면 명확히 드러내줘.
 				확인되지 않은 내용은 만들지 말고, 원문에 근거한 내용만 작성해줘.
-				원문에서 blocked, blocking, 막힘, 블로커라고 명시한 경우에만 블로커로 표기해줘.
-				도움이 필요하다는 표현은 블로커가 아니라 지원 필요 또는 확인 필요로 표기해줘.
 				제목, 회의 시간, 도입 문장 없이 bullet 목록만 반환해줘.
 
 				회의 제목: %s

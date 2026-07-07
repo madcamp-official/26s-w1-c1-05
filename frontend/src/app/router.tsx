@@ -7,6 +7,7 @@ import { useAuth } from '../auth/useAuth';
 import { LoginPage } from '../pages/auth/LoginPage';
 import { SignupPage } from '../pages/auth/SignupPage';
 import { TeamListPage } from '../pages/teams/TeamListPage';
+import { UserProfilePage } from '../pages/profile/UserProfilePage';
 import { TeamDashboardPage } from '../pages/teams/TeamDashboardPage';
 import { TeamLeaderboardPage } from '../pages/teams/TeamLeaderboardPage';
 import { TeamMembersPage } from '../pages/teams/TeamMembersPage';
@@ -70,6 +71,7 @@ export const router = createBrowserRouter([
         children: [
           { path: '/', element: <Navigate to="/teams" replace /> },
           { path: '/teams', element: <TeamListPage /> },
+          { path: '/profile', element: <UserProfilePage /> },
           {
             path: '/teams/:teamId',
             element: <TeamLayout />,

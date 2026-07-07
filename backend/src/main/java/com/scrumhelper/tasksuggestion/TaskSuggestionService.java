@@ -21,10 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class TaskSuggestionService {
@@ -53,21 +54,20 @@ public class TaskSuggestionService {
 
 	@Transactional
 	public void generateForSpecFinalization(SpecDocument previousMain, SpecDocument newMain) {
-		List<TaskSuggestion> pending = taskSuggestionRepository
-				.findByTeamIdAndStatusOrderByCreatedAtAsc(newMain.getTeam().getId(), TaskSuggestionStatus.PENDING);
-		Set<String> pendingTitles = pending.stream()
-				.map(suggestion -> suggestion.getTitle().trim().toLowerCase())
-				.collect(Collectors.toSet());
+		// A new main spec replaces the old context entirely: wipe the pending
+		// queue and rebuild it from the new document, uncapped.
+		taskSuggestionRepository.deleteByTeamIdAndStatus(newMain.getTeam().getId(), TaskSuggestionStatus.PENDING);
 
 		List<SuggestionDraft> drafts = remoteTaskSuggestionEnabled
-				? geminiSpecDraftClient.generateJson(buildComparisonPrompt(previousMain, newMain, pending))
+				? geminiSpecDraftClient.generateJson(buildGenerationPrompt(previousMain, newMain))
 						.flatMap(this::parseDrafts)
 						.filter(parsedDrafts -> !parsedDrafts.isEmpty())
 						.orElseGet(() -> buildLocalDrafts(newMain))
 				: buildLocalDrafts(newMain);
 
+		Set<String> seenTitles = new HashSet<>();
 		drafts.stream()
-				.filter(draft -> !pendingTitles.contains(draft.title().trim().toLowerCase()))
+				.filter(draft -> seenTitles.add(draft.title().trim().toLowerCase()))
 				.forEach(draft -> taskSuggestionRepository.save(TaskSuggestion.create(
 						newMain.getTeam(),
 						newMain,
@@ -81,8 +81,20 @@ public class TaskSuggestionService {
 	public List<TaskSuggestionResponse> getQueuedSuggestions(Long currentUserId, Long teamId) {
 		requireMembership(teamId, currentUserId);
 		return taskSuggestionRepository.findByTeamIdAndStatusOrderByCreatedAtAsc(teamId, TaskSuggestionStatus.PENDING).stream()
+				.sorted(Comparator.comparingInt((TaskSuggestion suggestion) -> priorityRank(suggestion.getPriority()))
+						.thenComparing(TaskSuggestion::getCreatedAt))
 				.map(TaskSuggestionResponse::from)
 				.toList();
+	}
+
+	private int priorityRank(TaskPriority priority) {
+		if (priority == TaskPriority.HIGH) {
+			return 0;
+		}
+		if (priority == TaskPriority.MEDIUM) {
+			return 1;
+		}
+		return 2;
 	}
 
 	@Transactional
@@ -124,30 +136,24 @@ public class TaskSuggestionService {
 		}
 	}
 
-	private String buildComparisonPrompt(SpecDocument previousMain, SpecDocument newMain, List<TaskSuggestion> pending) {
+	private String buildGenerationPrompt(SpecDocument previousMain, SpecDocument newMain) {
 		String previousContent = previousMain == null ? "(이전 메인 스펙 없음)" : compactForPrompt(previousMain.getContent(), 3000);
-		String pendingTitles = pending.isEmpty()
-				? "(아직 큐에 쌓인 task 후보 없음)"
-				: pending.stream().map(suggestion -> "- " + suggestion.getTitle()).collect(Collectors.joining("\n"));
 
 		return """
-				아래는 팀의 이전 메인 스펙 문서와 새로 메인으로 지정된 스펙 문서, 그리고 이미 큐에 쌓여 있는 task 후보 목록이다.
-				이전 스펙과 새 스펙을 비교해서 새로 추가되었거나 변경된 요구사항에서 도출되는 task 후보만 JSON 배열로 작성해줘.
-				이미 큐에 있는 항목과 중복되거나 의미가 같은 task는 다시 만들지 마.
+				아래는 팀의 새 메인 스펙 문서이다. 이 스펙을 구현하는 데 필요한 task 후보를 JSON 배열로 작성해줘.
+				개수 제한 없이, 도출할 수 있는 task 후보를 모두 작성해줘.
+				서로 중복되거나 의미가 같은 task는 하나로 합쳐줘.
 				각 항목은 title, description, priority 필드를 가져야 해.
 				priority는 LOW, MEDIUM, HIGH 중 하나만 사용해.
-				설명이나 마크다운 없이 JSON 배열만 반환해. 새로 추가할 task가 없다면 빈 배열 []을 반환해.
+				설명이나 마크다운 없이 JSON 배열만 반환해. 도출할 task가 없다면 빈 배열 []을 반환해.
 
-				이전 메인 스펙 문서:
+				참고용 이전 메인 스펙 문서:
 				%s
 
 				새 메인 스펙 문서 제목: %s
 				새 메인 스펙 문서 내용:
 				%s
-
-				이미 큐에 있는 task 후보 목록:
-				%s
-				""".formatted(previousContent, newMain.getTitle(), compactForPrompt(newMain.getContent(), 5000), pendingTitles);
+				""".formatted(previousContent, newMain.getTitle(), compactForPrompt(newMain.getContent(), 5000));
 	}
 
 	private Optional<List<SuggestionDraft>> parseDrafts(String content) {

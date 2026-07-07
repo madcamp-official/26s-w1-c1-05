@@ -136,9 +136,10 @@ export function updateTodoList(teamId: number, data: SaveTodoListRequest) {
   }).then(normalizeTodoList);
 }
 
-export function generateTodoPrompt(teamId: number) {
+export function generateTodoPrompt(teamId: number, taskIds: number[] = []) {
   return request<TodoPrompt>(`/teams/${teamId}/todos/prompt`, {
     method: 'POST',
+    body: { taskIds },
   });
 }
 

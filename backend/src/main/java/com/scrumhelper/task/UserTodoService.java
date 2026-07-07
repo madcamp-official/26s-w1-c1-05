@@ -109,9 +109,15 @@ public class UserTodoService {
 	}
 
 	@Transactional(readOnly = true)
-	public TodoPromptResponse generateCompletionPrompt(Long currentUserId, Long teamId) {
+	public TodoPromptResponse generateCompletionPrompt(Long currentUserId, Long teamId, List<Long> taskIds) {
 		requireMembership(teamId, currentUserId);
 		List<TaskResponse> selectedTasks = getSelectedTasks(teamId, currentUserId);
+		if (!taskIds.isEmpty()) {
+			Set<Long> wanted = Set.copyOf(taskIds);
+			selectedTasks = selectedTasks.stream()
+					.filter(task -> wanted.contains(task.id()))
+					.toList();
+		}
 		if (selectedTasks.isEmpty()) {
 			throw new BusinessException(ErrorCode.VALIDATION_ERROR, "Todo list에 task를 1개 이상 추가하세요.");
 		}

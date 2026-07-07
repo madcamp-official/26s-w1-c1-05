@@ -6,7 +6,7 @@ export function AuthLayout() {
       <div className="auth-container">
         <div className="auth-brand">
           <span className="auth-brand-name">Scrum Helper</span>
-          <span className="auth-tagline">Plan sprints, track tasks, ship together.</span>
+          <span className="auth-tagline">Plan projects, track tasks, ship together.</span>
         </div>
         <Outlet />
       </div>

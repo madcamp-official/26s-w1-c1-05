@@ -224,7 +224,7 @@ export function TeamListPage() {
             {isLoading ? (
               <LoadingState label="Loading teams…" />
             ) : teams.length === 0 ? (
-              <EmptyState title="No teams yet." description="Create the first team to start a sprint." />
+              <EmptyState title="No teams yet." description="Create the first team to start a project." />
             ) : (
               <div className="team-grid">
                 {teams.map((team) => (

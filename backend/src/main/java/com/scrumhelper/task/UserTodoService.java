@@ -7,6 +7,7 @@ import com.scrumhelper.domain.task.Task;
 import com.scrumhelper.domain.task.TaskAssignee;
 import com.scrumhelper.domain.task.TaskAssigneeRepository;
 import com.scrumhelper.domain.task.TaskCommentRepository;
+import com.scrumhelper.domain.task.TaskPriority;
 import com.scrumhelper.domain.task.TaskRepository;
 import com.scrumhelper.domain.task.TaskStatus;
 import com.scrumhelper.domain.task.UserTodoTask;
@@ -32,6 +33,9 @@ import java.util.Set;
 
 @Service
 public class UserTodoService {
+	private static final int TODO_RECOMMENDATION_LIMIT = 3;
+	private static final int TODO_RECOMMENDATION_MAX_SELECTED_COUNT = 5;
+
 	private final UserTodoTaskRepository userTodoTaskRepository;
 	private final TaskRepository taskRepository;
 	private final TaskAssigneeRepository taskAssigneeRepository;
@@ -148,14 +152,31 @@ public class UserTodoService {
 		Set<Long> selectedIds = userTodoTaskRepository.findByTeamIdAndUserIdOrderBySortOrderAscCreatedAtAsc(teamId, userId).stream()
 				.map(todo -> todo.getTask().getId())
 				.collect(java.util.stream.Collectors.toSet());
+		if (selectedIds.size() >= TODO_RECOMMENDATION_MAX_SELECTED_COUNT) {
+			return List.of();
+		}
 
 		return taskAssigneeRepository.findByTeamIdAndUserId(teamId, userId).stream()
 				.map(TaskAssignee::getTask)
 				.filter(this::isTodoEligible)
 				.filter(task -> !selectedIds.contains(task.getId()))
-				.sorted(Comparator.comparing(Task::getCreatedAt))
+				.sorted(Comparator.comparingInt(this::todoRecommendationPriorityRank)
+						.thenComparing(Task::getCreatedAt)
+						.thenComparing(Task::getId))
+				.limit(TODO_RECOMMENDATION_LIMIT)
 				.map(this::toResponse)
 				.toList();
+	}
+
+	private int todoRecommendationPriorityRank(Task task) {
+		TaskPriority priority = task.getPriority();
+		if (priority == TaskPriority.HIGH) {
+			return 0;
+		}
+		if (priority == TaskPriority.MEDIUM) {
+			return 1;
+		}
+		return 2;
 	}
 
 	private String buildCompletionPromptRequest(List<TaskResponse> selectedTasks) {

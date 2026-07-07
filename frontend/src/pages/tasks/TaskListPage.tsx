@@ -41,7 +41,7 @@ export function TaskListPage() {
       ]);
       setTasks(taskData);
       setTodoTaskIds(new Set((todoData?.selectedTasks ?? []).map((task) => task.id)));
-      setSuggestionCount(suggestions.length);
+      setSuggestionCount(suggestions.filter((suggestion) => suggestion.id != null).length);
     } catch (error) {
       setErrorMessage(error instanceof ApiError ? error.message : 'Could not load the task board.');
     } finally {
@@ -64,7 +64,7 @@ export function TaskListPage() {
           user?.id != null &&
           task.assignees.some((assignee) => assignee.id === user.id) &&
           !todoTaskIds.has(task.id),
-      ),
+      ).sort(compareTaskRecommendations),
     [tasks, todoTaskIds, user?.id],
   );
 
@@ -148,7 +148,7 @@ export function TaskListPage() {
     setSuggestionIndex((index) => Math.min(suggestionCandidates.length - 1, index + 1));
   }
 
-  async function handleAddToFocus(task: Task) {
+  async function handleAddToTodo(task: Task) {
     try {
       setIsSubmitting(true);
       setErrorMessage(null);
@@ -157,7 +157,7 @@ export function TaskListPage() {
       void refreshTeamChrome();
       window.dispatchEvent(new CustomEvent('todo-list-updated', { detail: { teamId: numericTeamId } }));
     } catch (error) {
-      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the task to your focus.');
+      setErrorMessage(error instanceof ApiError ? error.message : 'Could not add the task to your todo.');
     } finally {
       setIsSubmitting(false);
     }
@@ -234,11 +234,11 @@ export function TaskListPage() {
               <Button
                 type="button"
                 size="sm"
-                onClick={() => void handleAddToFocus(currentSuggestion)}
+                onClick={() => void handleAddToTodo(currentSuggestion)}
                 isLoading={isSubmitting}
               >
                 <Plus size={13} aria-hidden="true" />
-                Add to focus
+                Add to Todo
               </Button>
             </div>
           </>
@@ -320,6 +320,28 @@ export function TaskListPage() {
       )}
     </div>
   );
+}
+
+function compareTaskRecommendations(left: Task, right: Task) {
+  const priorityDiff = taskPriorityRank(left.priority) - taskPriorityRank(right.priority);
+  if (priorityDiff !== 0) {
+    return priorityDiff;
+  }
+  const createdDiff = left.createdAt.localeCompare(right.createdAt);
+  if (createdDiff !== 0) {
+    return createdDiff;
+  }
+  return left.id - right.id;
+}
+
+function taskPriorityRank(priority: Task['priority']) {
+  if (priority === 'HIGH') {
+    return 0;
+  }
+  if (priority === 'MEDIUM') {
+    return 1;
+  }
+  return 2;
 }
 
 type TaskColumnProps = {

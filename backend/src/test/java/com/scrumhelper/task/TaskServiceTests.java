@@ -115,6 +115,42 @@ class TaskServiceTests {
 	}
 
 	@Test
+	void todoRecommendationsPreferHighPriorityThenOldestAndLimitToThree() {
+		TestContext context = createContext();
+		TaskResponse low = createTask(context.ownerId(), context.team().id(), "낮은 중요도", List.of(context.memberId()), TaskPriority.LOW);
+		TaskResponse oldHigh = createTask(context.ownerId(), context.team().id(), "오래된 높은 중요도", List.of(context.memberId()), TaskPriority.HIGH);
+		TaskResponse newHigh = createTask(context.ownerId(), context.team().id(), "새 높은 중요도", List.of(context.memberId()), TaskPriority.HIGH);
+		TaskResponse medium = createTask(context.ownerId(), context.team().id(), "중간 중요도", List.of(context.memberId()), TaskPriority.MEDIUM);
+
+		TodoListResponse todoList = userTodoService.getTodoList(context.memberId(), context.team().id());
+
+		assertThat(todoList.recommendedTasks())
+				.extracting(TaskResponse::id)
+				.containsExactly(oldHigh.id(), newHigh.id(), medium.id());
+		assertThat(todoList.recommendedTasks()).extracting(TaskResponse::id).doesNotContain(low.id());
+	}
+
+	@Test
+	void todoRecommendationsAreEmptyWhenUserAlreadyHasFiveTodoTasks() {
+		TestContext context = createContext();
+		TaskResponse first = createTask(context.ownerId(), context.team().id(), "선택 1", List.of(context.memberId()));
+		TaskResponse second = createTask(context.ownerId(), context.team().id(), "선택 2", List.of(context.memberId()));
+		TaskResponse third = createTask(context.ownerId(), context.team().id(), "선택 3", List.of(context.memberId()));
+		TaskResponse fourth = createTask(context.ownerId(), context.team().id(), "선택 4", List.of(context.memberId()));
+		TaskResponse fifth = createTask(context.ownerId(), context.team().id(), "선택 5", List.of(context.memberId()));
+		createTask(context.ownerId(), context.team().id(), "추천되면 안 되는 task", List.of(context.memberId()), TaskPriority.HIGH);
+
+		TodoListResponse todoList = userTodoService.updateTodoList(
+				context.memberId(),
+				context.team().id(),
+				new SaveTodoListRequest(List.of(first.id(), second.id(), third.id(), fourth.id(), fifth.id()))
+		);
+
+		assertThat(todoList.selectedTasks()).hasSize(5);
+		assertThat(todoList.recommendedTasks()).isEmpty();
+	}
+
+	@Test
 	void outsiderCannotGetMyTasksForTeam() {
 		TestContext context = createContext();
 
@@ -125,13 +161,17 @@ class TaskServiceTests {
 	}
 
 	private TaskResponse createTask(Long currentUserId, Long teamId, String title, List<Long> assigneeUserIds) {
+		return createTask(currentUserId, teamId, title, assigneeUserIds, TaskPriority.MEDIUM);
+	}
+
+	private TaskResponse createTask(Long currentUserId, Long teamId, String title, List<Long> assigneeUserIds, TaskPriority priority) {
 		return taskService.createTask(
 				currentUserId,
 				teamId,
 				new SaveTaskRequest(
 						title,
 						"내 담당 task API 검증",
-						TaskPriority.MEDIUM,
+						priority,
 						assigneeUserIds
 				)
 		);

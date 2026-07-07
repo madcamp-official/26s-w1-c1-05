@@ -67,10 +67,10 @@ export function TeamLayout() {
   const basePath = `/teams/${teamId}`;
   const navItems: NavItem[] = [
     { to: basePath, end: true, label: 'Dashboard', icon: LayoutDashboard },
-    { to: `${basePath}/tasks`, label: 'Task', icon: ListChecks, count: dashboard?.task.incompleteCount },
     { to: `${basePath}/leaderboard`, label: 'Leaderboard', icon: Trophy },
     { to: `${basePath}/meetings`, label: 'Meetings', icon: CalendarDays, count: meetingCount },
     { to: `${basePath}/spec-documents`, label: 'Spec', icon: FileText, count: specCount },
+    { to: `${basePath}/tasks`, label: 'Task', icon: ListChecks, count: dashboard?.task.incompleteCount },
     { to: `${basePath}/retrospectives`, label: 'Retro', icon: RotateCcw, count: dashboard?.retrospective.totalCount },
     { to: `${basePath}/members`, label: 'Members', icon: Users, count: dashboard?.memberCount },
     { to: `${basePath}/settings`, label: 'Settings', icon: Settings },

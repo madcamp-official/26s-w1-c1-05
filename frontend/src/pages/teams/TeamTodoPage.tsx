@@ -82,6 +82,15 @@ export function TeamTodoPage() {
     persistSelectedIds([...currentIds, taskId]);
   }
 
+  function addAllRecommendedTasks() {
+    const currentIds = latestSaveIdsRef.current;
+    const nextIds = Array.from(new Set([...currentIds, ...recommendedTasks.map((task) => task.id)]));
+    if (nextIds.length === currentIds.length) {
+      return;
+    }
+    persistSelectedIds(nextIds);
+  }
+
   function persistSelectedIds(nextIds: number[]) {
     setSelectedIds(nextIds);
     setSavedMessage(null);
@@ -172,7 +181,9 @@ export function TeamTodoPage() {
         <section className="todo-recommend-section">
           <div className="todo-recommend-head">
             <span className="eyebrow">Suggested</span>
-            <span className="todo-recommend-copy">Open tasks assigned to you.</span>
+            <Button type="button" variant="secondary" size="sm" onClick={addAllRecommendedTasks}>
+              Add all
+            </Button>
           </div>
           <div className="todo-recommend-list">
             {recommendedTasks.map((task) => (

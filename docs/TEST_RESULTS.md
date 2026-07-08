@@ -210,3 +210,24 @@ failedCount: 0
 현재 최신 코드 기준으로 핵심 MVP 기능의 API 정책, 권한, 데이터 무결성, 주요 화면 렌더링은 통과했다.
 
 제출 전에는 MySQL 비밀번호 환경 변수를 설정한 뒤 `backend`를 새로 기동하고, `docs/TEST_SCENARIOS.md`의 최종 데모 시나리오를 브라우저에서 한 번 완주하면 된다.
+
+## 8. 2026-07-08 배포 시연 검증
+
+대상: `https://anjonghwa.madcamp-kaist.org`
+
+| 항목 | 결과 | 메모 |
+|---|---|---|
+| baseline API 상태 | PASS | Team A 34/34 DONE, Team B 30 tasks 확인 |
+| 회원가입/팀 생성 | PASS | 신규 사용자와 신규 팀 생성 성공 |
+| 녹음 파일 script 변환 | PASS | 회의록 업로드 분석 API 호출 성공 |
+| 회의록 -> Spec -> Task | PASS | 회의록 기반 Spec 생성, Task 생성 흐름 확인 |
+| Todo 추가/프롬프트 생성 | PASS | Todo 추가, Generate prompt 결과 표시 |
+| Done 처리 | PASS | Task 완료 후 Todo에서 제거되는 흐름 확인 |
+| 비밀번호 팀 가입 | PASS | Team B 비밀번호 `team1234` 가입 확인 |
+| 초대코드 팀 가입 | PASS | Team A 초대코드 `5QZ2B4T6` 가입 확인 |
+| Task 댓글/담당자/상태 변경 | PASS | 상세 화면 협업 흐름 확인 |
+| 리더보드/Wrap-up/회고 | PASS | 완료 프로젝트 요약과 회고 화면 확인 |
+| 브라우저 smoke | PASS | 로그인, 팀 목록, Todo, Wrap-up 화면 확인 |
+| 제출용 화면 캡처 | PASS | `docs/assets/demo/` 아래 5개 PNG 생성 |
+
+주의: 검증 과정에서 일부 live data를 의도적으로 변경했다. 공식 발표 전에는 반드시 baseline DB reset을 수행한다.

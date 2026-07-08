@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Plus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import * as retrospectiveApi from '../../api/retrospectiveApi';
 import * as teamApi from '../../api/teamApi';
@@ -10,6 +10,9 @@ import { ApiError } from '../../types/api';
 import type { Retrospective } from '../../types/retrospective';
 import type { TeamMember } from '../../types/team';
 import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
+
+// 2-column grid → 4 rows per page keeps the list within one viewport.
+const RETROS_PER_PAGE = 8;
 
 export function RetrospectiveListPage() {
   const { teamId } = useParams();
@@ -23,6 +26,7 @@ export function RetrospectiveListPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [page, setPage] = useState(0);
   const [form, setForm] = useState({
     title: '',
     yesterdayWork: '',
@@ -75,6 +79,7 @@ export function RetrospectiveListPage() {
       });
       setForm({ title: '', yesterdayWork: '', todayPlan: '', note: '', collaboratorUserIds: [] });
       setCreateOpen(false);
+      setPage(0); // the new entry lands on the first (newest) page
       await loadPage();
       void refreshTeamChrome();
     } catch (error) {
@@ -93,12 +98,20 @@ export function RetrospectiveListPage() {
     }));
   }
 
+  const sortedRetrospectives = useMemo(
+    () => [...retrospectives].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [retrospectives],
+  );
+  const pageCount = Math.max(1, Math.ceil(sortedRetrospectives.length / RETROS_PER_PAGE));
+  const safePage = Math.min(page, pageCount - 1);
+  const visibleRetrospectives = sortedRetrospectives.slice(safePage * RETROS_PER_PAGE, (safePage + 1) * RETROS_PER_PAGE);
+
   if (isLoading) {
     return <LoadingState label="Loading retro entries…" />;
   }
 
   return (
-    <div className="page-container">
+    <div className="page-container retro-list-page">
       <div className="page-header">
         <div>
           <h1 className="page-title">Retro</h1>
@@ -173,7 +186,7 @@ export function RetrospectiveListPage() {
         />
       ) : (
         <div className="retro-grid">
-          {retrospectives.map((retro) => (
+          {visibleRetrospectives.map((retro) => (
             <Card
               key={retro.id}
               interactive
@@ -200,6 +213,32 @@ export function RetrospectiveListPage() {
               </div>
             </Card>
           ))}
+        </div>
+      )}
+
+      {pageCount > 1 && (
+        <div className="recommend-pager" style={{ paddingTop: 16 }}>
+          <button
+            type="button"
+            className="suggestion-nav-btn"
+            onClick={() => setPage(Math.max(0, safePage - 1))}
+            disabled={safePage === 0}
+            aria-label="Previous entries"
+          >
+            <ChevronLeft size={15} aria-hidden="true" />
+          </button>
+          <span className="mono" style={{ fontSize: 11.5, color: 'var(--gray-500)' }}>
+            {safePage + 1} / {pageCount}
+          </span>
+          <button
+            type="button"
+            className="suggestion-nav-btn"
+            onClick={() => setPage(Math.min(pageCount - 1, safePage + 1))}
+            disabled={safePage >= pageCount - 1}
+            aria-label="Next entries"
+          >
+            <ChevronRight size={15} aria-hidden="true" />
+          </button>
         </div>
       )}
     </div>

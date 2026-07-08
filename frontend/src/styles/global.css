@@ -1991,7 +1991,19 @@ p {
 .retro-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
+  gap: 20px 14px;
+}
+
+/* The retro list page pins its pager to the bottom of the content area so it
+   doesn't jump upward on pages with fewer cards. */
+.retro-list-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.retro-list-page .recommend-pager {
+  margin-top: auto;
 }
 
 .retro-card {

@@ -30,6 +30,17 @@ export function TeamDashboardPage() {
   useEffect(() => () => timersRef.current.forEach((id) => window.clearTimeout(id)), []);
 
   const projectEnded = Boolean(team?.endedAt);
+  const [treePalette, setTreePalette] = useState<'mono' | 'green'>(() =>
+    localStorage.getItem(`tree-palette-${Number(teamId)}`) === 'mono' ? 'mono' : 'green',
+  );
+  // Monotone while the project runs; green once wrapped (or while the ending
+  // celebration plays — that's the moment the leaves slowly turn green).
+  const treeGreen = celebrating || (projectEnded && treePalette === 'green');
+
+  function selectTreePalette(palette: 'mono' | 'green') {
+    setTreePalette(palette);
+    localStorage.setItem(`tree-palette-${numericTeamId}`, palette);
+  }
 
   async function handleEndProject(event: MouseEvent<HTMLButtonElement>) {
     if (celebrating || circle) {
@@ -58,7 +69,7 @@ export function TeamDashboardPage() {
             navigate(`/teams/${numericTeamId}/wrapup`);
           }, 700),
         );
-      }, 900),
+      }, projectEnded ? 900 : 1800), // first end: give the leaves time to turn green
     );
   }
 
@@ -155,7 +166,7 @@ export function TeamDashboardPage() {
           </div>
 
           <div className="dashboard-grid">
-            <div className="growth-panel">
+            <div className={treeGreen ? 'growth-panel tree-green' : 'growth-panel'}>
               <div className="growth-progress-block">
                 <div className="progress-card-head">
                   <span className="eyebrow">Project progress</span>
@@ -172,16 +183,27 @@ export function TeamDashboardPage() {
               <div className="growth-divider" />
               <div className="growth-panel-head">
                 <span className="eyebrow">Growth tree</span>
-                <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
+                {projectEnded ? (
+                  <div className="tree-palette-toggle" role="group" aria-label="Tree color">
+                    <button type="button" className={treePalette === 'green' ? 'active' : ''} onClick={() => selectTreePalette('green')}>
+                      Green
+                    </button>
+                    <button type="button" className={treePalette === 'mono' ? 'active' : ''} onClick={() => selectTreePalette('mono')}>
+                      Mono
+                    </button>
+                  </div>
+                ) : (
+                  <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
+                )}
               </div>
-              <div className="growth-tree-wrap" style={{ position: 'relative' }}>
+              <div className="growth-tree-wrap">
                 <GrowthTree
                   backlogCount={dashboard.task.backlogCount}
                   inProgressCount={dashboard.task.inProgressCount}
                   completedCount={dashboard.task.completedCount}
                   totalCount={dashboard.task.totalCount}
+                  palette={treeGreen ? 'green' : 'mono'}
                 />
-                <div className={celebrating ? 'growth-celebrate-tint on' : 'growth-celebrate-tint'} aria-hidden="true" />
               </div>
               <div className="growth-divider" />
               <div className="growth-footer">

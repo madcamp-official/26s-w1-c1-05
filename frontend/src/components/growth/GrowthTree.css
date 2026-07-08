@@ -1,5 +1,35 @@
-.growth-tree-svg { display: block; width: 270px; max-width: 100%; height: 230px; overflow: visible; }
-.tree-shadow { fill: var(--gray-150); opacity: .72; }
+.growth-tree-svg {
+  display: block;
+  width: 270px;
+  max-width: 100%;
+  height: 230px;
+  overflow: visible;
+  /* Monotone palette — the tree while the project is still running. */
+  --tree-leaf: var(--gray-500);
+  --tree-leaf-deep: var(--gray-700);
+  --tree-fruit: var(--ink);
+  --tree-sprout-fill: var(--paper);
+  --tree-sprout-stroke: var(--gray-600);
+  --tree-bud-fill: var(--paper);
+  --tree-bud-stroke: var(--gray-500);
+  --tree-bud-grown: var(--gray-600);
+  --tree-shadow: var(--gray-150);
+}
+/* Green palette — once the project has been wrapped up. Works both as a class
+   on the svg (palette prop) and on an ancestor (so legends can follow along). */
+.tree-green .growth-tree-svg,
+.growth-tree-svg.tree-green {
+  --tree-leaf: oklch(0.66 0.12 142);
+  --tree-leaf-deep: oklch(0.52 0.12 150);
+  --tree-fruit: oklch(0.38 0.1 152);
+  --tree-sprout-fill: oklch(0.9 0.05 135);
+  --tree-sprout-stroke: oklch(0.55 0.1 145);
+  --tree-bud-fill: oklch(0.9 0.05 135);
+  --tree-bud-stroke: oklch(0.55 0.1 145);
+  --tree-bud-grown: oklch(0.66 0.12 142);
+  --tree-shadow: oklch(0.93 0.025 140);
+}
+.tree-shadow { fill: var(--tree-shadow); opacity: .72; }
 .tree-ground, .tree-limb, .tree-twig, .tree-trunk-highlight, .tree-crown-bud path { fill: none; stroke-linecap: round; }
 .tree-ground { stroke: var(--gray-300); stroke-width: 1.4; }
 .tree-trunk { fill: var(--ink); }
@@ -7,16 +37,29 @@
 .tree-limb { stroke: var(--ink); stroke-width: 3; }
 .tree-twig { stroke: var(--ink); stroke-width: 1.6; }
 .tree-branch { transform-origin: 124px 180px; animation: branch-grow .45s cubic-bezier(.2,.8,.2,1) both; }
-.tree-sprout path { fill: none; stroke: var(--gray-600); stroke-width: 1.4; stroke-linecap: round; }
-.tree-sprout ellipse { fill: var(--paper); stroke: var(--gray-600); stroke-width: 1.2; }
-.tree-leaves ellipse { fill: var(--gray-500); }
-.tree-done-leaf { fill: var(--gray-700); }
-.tree-fruit { fill: var(--ink); transform-box: fill-box; transform-origin: center; animation: fruit-pop .4s .3s cubic-bezier(.2,1.6,.4,1) both; }
-.tree-crown-bud path { stroke: var(--gray-500); stroke-width: 1.5; }
-.tree-crown-bud ellipse { fill: var(--paper); stroke: var(--gray-500); stroke-width: 1.2; }
-.tree-crown-bud.is-grown ellipse { fill: var(--gray-600); stroke: var(--gray-600); }
-.growth-legend-leaf { width: 11px; height: 7px; border-radius: 80% 20% 80% 20%; background: var(--gray-500); transform: rotate(-18deg); }
-.growth-legend-fruit { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); }
+.tree-sprout path { fill: none; stroke: var(--tree-sprout-stroke); stroke-width: 1.4; stroke-linecap: round; }
+.tree-sprout ellipse { fill: var(--tree-sprout-fill); stroke: var(--tree-sprout-stroke); stroke-width: 1.2; }
+.tree-leaves ellipse { fill: var(--tree-leaf); }
+.tree-done-leaf { fill: var(--tree-leaf-deep); }
+.tree-fruit { fill: var(--tree-fruit); transform-box: fill-box; transform-origin: center; animation: fruit-pop .4s .3s cubic-bezier(.2,1.6,.4,1) both; }
+.tree-crown-bud path { stroke: var(--tree-bud-stroke); stroke-width: 1.5; }
+.tree-crown-bud ellipse { fill: var(--tree-bud-fill); stroke: var(--tree-bud-stroke); stroke-width: 1.2; }
+.tree-crown-bud.is-grown ellipse { fill: var(--tree-bud-grown); stroke: var(--tree-bud-grown); }
+/* Palette swaps animate: leaves turn green branch by branch (staggered per
+   branch via --tree-stagger), the rest follows without delay. */
+.tree-leaves ellipse, .tree-done-leaf, .tree-fruit, .tree-sprout path, .tree-sprout ellipse {
+  transition: fill 1.1s ease var(--tree-stagger, 0s), stroke 1.1s ease var(--tree-stagger, 0s);
+}
+.tree-shadow, .tree-crown-bud path, .tree-crown-bud ellipse {
+  transition: fill 1.1s ease, stroke 1.1s ease;
+}
+.growth-legend-leaf { width: 11px; height: 7px; border-radius: 80% 20% 80% 20%; background: var(--gray-500); transform: rotate(-18deg); transition: background 1.1s ease; }
+.growth-legend-fruit { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); transition: background 1.1s ease; }
+.tree-green .growth-legend-leaf { background: oklch(0.66 0.12 142); }
+.tree-green .growth-legend-fruit { background: oklch(0.38 0.1 152); }
+.tree-palette-toggle { display: inline-flex; border: var(--border-hairline); border-radius: 999px; overflow: hidden; }
+.tree-palette-toggle button { border: none; background: transparent; font-family: var(--font-mono); font-size: 10px; letter-spacing: .07em; text-transform: uppercase; padding: 3px 10px; color: var(--gray-500); cursor: pointer; }
+.tree-palette-toggle button.active { background: var(--ink); color: var(--paper); }
 @keyframes branch-grow { from { opacity: 0; transform: scale(.72); } to { opacity: 1; transform: scale(1); } }
 @keyframes fruit-pop { from { opacity: 0; transform: scale(.2); } to { opacity: 1; transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .tree-branch, .tree-fruit { animation: none; } }

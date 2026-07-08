@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import './GrowthTree.css';
 
 type GrowthTreeProps = {
@@ -5,6 +6,8 @@ type GrowthTreeProps = {
   inProgressCount: number;
   completedCount: number;
   totalCount: number;
+  /** 'mono' while the project runs; 'green' once it has been wrapped up. */
+  palette?: 'mono' | 'green';
 };
 
 type TaskStage = 'backlog' | 'progress' | 'done';
@@ -25,7 +28,7 @@ const branches = [
   { side: 1, y: 54, x: 145, endY: 22 },
 ];
 
-export function GrowthTree({ backlogCount, inProgressCount, completedCount, totalCount }: GrowthTreeProps) {
+export function GrowthTree({ backlogCount, inProgressCount, completedCount, totalCount, palette = 'green' }: GrowthTreeProps) {
   const visibleCount = Math.min(totalCount, MAX_BRANCHES);
   const stages = Array.from({ length: visibleCount }, (_, index): TaskStage => {
     const taskIndex = Math.floor((index * totalCount) / visibleCount);
@@ -36,7 +39,7 @@ export function GrowthTree({ backlogCount, inProgressCount, completedCount, tota
   const maturity = totalCount === 0 ? 0 : completedCount / totalCount;
 
   return (
-    <svg viewBox="0 0 240 220" className="growth-tree-svg" role="img" aria-label={`${backlogCount} backlog, ${inProgressCount} in progress, and ${completedCount} done tasks`}>
+    <svg viewBox="0 0 240 220" className={`growth-tree-svg${palette === 'green' ? ' tree-green' : ''}`} role="img" aria-label={`${backlogCount} backlog, ${inProgressCount} in progress, and ${completedCount} done tasks`}>
       <ellipse className="tree-shadow" cx="120" cy="205" rx="61" ry="7" />
       <path className="tree-ground" d="M43 202 C75 198 92 204 120 201 C148 198 169 204 198 201" />
 
@@ -49,7 +52,7 @@ export function GrowthTree({ backlogCount, inProgressCount, completedCount, tota
           const twigX = branch.x - branch.side * 13;
           const twigY = branch.endY - 12;
           return (
-            <g className={`tree-branch tree-branch-${stage}`} style={{ animationDelay: `${index * 55}ms` }} key={index}>
+            <g className={`tree-branch tree-branch-${stage}`} style={{ animationDelay: `${index * 55}ms`, '--tree-stagger': `${index * 90}ms` } as CSSProperties} key={index}>
               <path className="tree-limb" d={`M124 ${branch.y} C${controlX} ${branch.y - 5}, ${twigX} ${branch.endY + 8}, ${branch.x} ${branch.endY}`} />
               <path className="tree-twig" d={`M${twigX} ${branch.endY + 7} Q${twigX - branch.side * 2} ${twigY + 4} ${twigX - branch.side * 8} ${twigY}`} />
               {stage === 'backlog' && (

@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { CalendarDays, Plus, Sprout } from 'lucide-react';
 import * as teamApi from '../../api/teamApi';
 import * as taskApi from '../../api/taskApi';
 import { useAuth } from '../../auth/useAuth';
 import { Alert, Badge, Button, LoadingState, StatTile } from '../../components/ui';
 import { GrowthTree } from '../../components/growth/GrowthTree';
+import type { TeamLayoutContext } from '../../components/layout/TeamLayout';
 import { priorityTone } from '../../utils/format';
 import { ApiError } from '../../types/api';
 import type { Task, TodoList } from '../../types/task';
@@ -16,6 +17,7 @@ export function TeamDashboardPage() {
   const numericTeamId = Number(teamId);
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshTeamChrome } = useOutletContext<TeamLayoutContext>();
   const [team, setTeam] = useState<TeamDetail | null>(null);
   const [dashboard, setDashboard] = useState<TeamDashboard | null>(null);
   const [todoList, setTodoList] = useState<TodoList | null>(null);
@@ -27,13 +29,36 @@ export function TeamDashboardPage() {
 
   useEffect(() => () => timersRef.current.forEach((id) => window.clearTimeout(id)), []);
 
-  function handleRetroOverall(event: MouseEvent<HTMLButtonElement>) {
+  const projectEnded = Boolean(team?.endedAt);
+  const [treePalette, setTreePalette] = useState<'mono' | 'green'>(() =>
+    localStorage.getItem(`tree-palette-${Number(teamId)}`) === 'mono' ? 'mono' : 'green',
+  );
+  // Monotone while the project runs; green once wrapped (or while the ending
+  // celebration plays — that's the moment the leaves slowly turn green).
+  const treeGreen = celebrating || (projectEnded && treePalette === 'green');
+
+  function selectTreePalette(palette: 'mono' | 'green') {
+    setTreePalette(palette);
+    localStorage.setItem(`tree-palette-${numericTeamId}`, palette);
+  }
+
+  async function handleEndProject(event: MouseEvent<HTMLButtonElement>) {
     if (celebrating || circle) {
       return;
     }
     const x = event.clientX || window.innerWidth / 2;
     const y = event.clientY || window.innerHeight / 2;
     setCelebrating(true);
+    if (!projectEnded) {
+      try {
+        await teamApi.endTeam(numericTeamId);
+        void refreshTeamChrome();
+      } catch (error) {
+        setCelebrating(false);
+        setErrorMessage(error instanceof ApiError ? error.message : 'Could not end the project.');
+        return;
+      }
+    }
     timersRef.current.push(
       window.setTimeout(() => {
         setCircle({ x, y, grown: false });
@@ -44,7 +69,7 @@ export function TeamDashboardPage() {
             navigate(`/teams/${numericTeamId}/wrapup`);
           }, 700),
         );
-      }, 900),
+      }, projectEnded ? 900 : 1800), // first end: give the leaves time to turn green
     );
   }
 
@@ -100,11 +125,31 @@ export function TeamDashboardPage() {
                 {greeting}, {user?.name ?? 'there'}
               </h1>
               <p className="dashboard-greeting">
-                {isComplete ? 'Every task is done — the sprint is wrapped.' : team.description || team.name}
+                {isComplete
+                  ? 'Every task is done — the sprint is wrapped.'
+                  : projectEnded
+                    ? 'This project has ended, but the work continues.'
+                    : team.description || team.name}
               </p>
             </div>
             {isComplete ? (
-              <Badge variant="solid">SPRINT COMPLETE</Badge>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Badge variant="solid">{projectEnded ? 'PROJECT ENDED' : 'SPRINT COMPLETE'}</Badge>
+                <Button type="button" onClick={handleEndProject} isLoading={celebrating}>
+                  {projectEnded ? 'SEE WRAP-UP AGAIN' : 'END PROJECT'}
+                </Button>
+              </div>
+            ) : projectEnded ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <Badge variant="outline">PROJECT ENDED · CONTINUING</Badge>
+                <Button type="button" variant="secondary" onClick={handleEndProject} isLoading={celebrating}>
+                  SEE WRAP-UP AGAIN
+                </Button>
+                <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
+                  <Plus size={15} aria-hidden="true" />
+                  Add task
+                </Link>
+              </div>
             ) : (
               <Link to={`/teams/${numericTeamId}/tasks/new`} className="ds-btn ds-btn-primary ds-btn-md">
                 <Plus size={15} aria-hidden="true" />
@@ -117,10 +162,11 @@ export function TeamDashboardPage() {
             <StatTile label="Active tasks" value={dashboard.task.incompleteCount} caption="Not yet completed" />
             <StatTile label="Completed" value={dashboard.task.completedCount} caption="This project" />
             <StatTile label="Members" value={dashboard.memberCount} caption="On this team" />
+            <StatTile label="Retros" value={dashboard.retrospective.totalCount} caption="Written so far" />
           </div>
 
           <div className="dashboard-grid">
-            <div className="growth-panel">
+            <div className={treeGreen ? 'growth-panel tree-green' : 'growth-panel'}>
               <div className="growth-progress-block">
                 <div className="progress-card-head">
                   <span className="eyebrow">Project progress</span>
@@ -137,46 +183,53 @@ export function TeamDashboardPage() {
               <div className="growth-divider" />
               <div className="growth-panel-head">
                 <span className="eyebrow">Growth tree</span>
-                <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
+                {projectEnded ? (
+                  <div className="tree-palette-toggle" role="group" aria-label="Tree color">
+                    <button type="button" className={treePalette === 'green' ? 'active' : ''} onClick={() => selectTreePalette('green')}>
+                      Green
+                    </button>
+                    <button type="button" className={treePalette === 'mono' ? 'active' : ''} onClick={() => selectTreePalette('mono')}>
+                      Mono
+                    </button>
+                  </div>
+                ) : (
+                  <Sprout size={20} color="var(--gray-500)" aria-hidden="true" />
+                )}
               </div>
-              <div className="growth-tree-wrap" style={{ position: 'relative' }}>
+              <div className="growth-tree-wrap">
                 <GrowthTree
                   backlogCount={dashboard.task.backlogCount}
                   inProgressCount={dashboard.task.inProgressCount}
                   completedCount={dashboard.task.completedCount}
                   totalCount={dashboard.task.totalCount}
+                  palette={treeGreen ? 'green' : 'mono'}
                 />
-                <div className={celebrating ? 'growth-celebrate-tint on' : 'growth-celebrate-tint'} aria-hidden="true" />
               </div>
               <div className="growth-divider" />
               <div className="growth-footer">
                 <span className="growth-caption">
                   {isComplete
                     ? 'The tree is fully grown — sprint complete.'
-                    : dashboard.task.totalCount === 0
-                      ? 'Create a task to plant the first branch.'
-                      : `${dashboard.task.completedCount} of ${dashboard.task.totalCount} tasks completed`}
+                    : projectEnded
+                      ? 'The project has ended — the tree keeps growing.'
+                      : dashboard.task.totalCount === 0
+                        ? 'Create a task to plant the first branch.'
+                        : `${dashboard.task.completedCount} of ${dashboard.task.totalCount} tasks completed`}
                 </span>
-                {isComplete ? (
-                  <Button type="button" onClick={handleRetroOverall} isLoading={celebrating}>
-                    RETRO OVERALL
-                  </Button>
-                ) : (
-                  <div className="growth-legend">
-                    <span className="growth-legend-item">
-                      <span style={{ width: 9, height: 9, borderRadius: 999, border: '1.5px solid var(--gray-500)', boxSizing: 'border-box' }} />
-                      backlog
-                    </span>
-                    <span className="growth-legend-item">
-                      <span className="growth-legend-leaf" />
-                      in progress
-                    </span>
-                    <span className="growth-legend-item">
-                      <span className="growth-legend-fruit" />
-                      done
-                    </span>
-                  </div>
-                )}
+                <div className="growth-legend">
+                  <span className="growth-legend-item">
+                    <span style={{ width: 9, height: 9, borderRadius: 999, border: '1.5px solid var(--gray-500)', boxSizing: 'border-box' }} />
+                    backlog
+                  </span>
+                  <span className="growth-legend-item">
+                    <span className="growth-legend-leaf" />
+                    in progress
+                  </span>
+                  <span className="growth-legend-item">
+                    <span className="growth-legend-fruit" />
+                    done
+                  </span>
+                </div>
               </div>
             </div>
 

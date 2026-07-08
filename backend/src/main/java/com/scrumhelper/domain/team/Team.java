@@ -38,6 +38,9 @@ public class Team {
 	@JoinColumn(name = "leader_user_id", nullable = false)
 	private User leader;
 
+	@Column(name = "ended_at")
+	private LocalDateTime endedAt;
+
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private LocalDateTime createdAt;
 
@@ -95,6 +98,10 @@ public class Team {
 		return leader;
 	}
 
+	public LocalDateTime getEndedAt() {
+		return endedAt;
+	}
+
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
 	}
@@ -122,5 +129,11 @@ public class Team {
 
 	public void changeLeader(User leader) {
 		this.leader = leader;
+	}
+
+	public void markEnded() {
+		if (endedAt == null) {
+			endedAt = LocalDateTime.now();
+		}
 	}
 }

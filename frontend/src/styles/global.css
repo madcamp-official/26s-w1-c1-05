@@ -2619,20 +2619,7 @@ p {
   animation: cueBounce 1.6s ease-in-out infinite;
 }
 
-/* Celebration transition: dashboard tree tint + green circle wipe */
-.growth-celebrate-tint {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 42%, oklch(0.94 0.06 145), transparent 72%);
-  opacity: 0;
-  transition: opacity 0.9s ease;
-  pointer-events: none;
-}
-
-.growth-celebrate-tint.on {
-  opacity: 1;
-}
-
+/* Celebration transition: green circle wipe */
 .retro-circle-overlay {
   position: fixed;
   border-radius: 50%;
@@ -2648,14 +2635,14 @@ p {
   background: oklch(0.62 0.13 145);
   z-index: 80;
   pointer-events: none;
-  transition: opacity 0.55s ease;
+  clip-path: circle(150% at 50% 50%);
+  transition: clip-path 0.7s cubic-bezier(0.7, 0.1, 0.6, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .wrap-step,
   .retro-circle-overlay,
-  .wrap-arrival-overlay,
-  .growth-celebrate-tint {
+  .wrap-arrival-overlay {
     transition: none;
   }
 

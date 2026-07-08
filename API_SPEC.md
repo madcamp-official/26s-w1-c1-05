@@ -617,12 +617,15 @@ Response `200`:
       "email": "owner@example.com"
     },
     "myRole": "LEADER",
+    "endedAt": null,
     "createdAt": "2026-07-02T12:00:00",
     "updatedAt": "2026-07-02T12:00:00"
   },
   "message": "ok"
 }
 ```
+
+`endedAt`은 프로젝트를 종료(wrap-up)한 시각이며, 종료 전에는 `null`이다.
 
 Errors:
 
@@ -1019,6 +1022,25 @@ Errors:
 | `LEADER_ONLY` | 403 | 팀장이 아님 |
 | `TARGET_NOT_TEAM_MEMBER` | 400 | 새 팀장이 팀원이 아님 |
 | `ALREADY_LEADER` | 409 | 이미 팀장인 사용자 지정 |
+
+### 5.15 프로젝트 종료
+
+```http
+POST /api/teams/{teamId}/end
+```
+
+권한: 팀원
+
+`teams.ended_at`을 현재 시각으로 기록한다. 이미 종료된 팀이면 기존 `ended_at`을 유지한다(멱등). 종료 후에도 task 추가 등 팀 활동은 계속 가능하다.
+
+Response `200`: 팀 상세 조회(5.3)와 동일한 형태이며 `endedAt`이 채워진다.
+
+Errors:
+
+| Code | HTTP | 조건 |
+|---|---:|---|
+| `TEAM_NOT_FOUND` | 404 | 팀 없음 |
+| `NOT_TEAM_MEMBER` | 403 | 팀원이 아님 |
 
 ## 6. Task API
 

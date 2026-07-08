@@ -130,6 +130,14 @@ public class TeamController {
 		return ApiResponse.ok(teamService.updateTeam(currentUserId(authentication), teamId, request));
 	}
 
+	@PostMapping("/{teamId}/end")
+	public ApiResponse<TeamDetailResponse> endProject(
+			@PathVariable Long teamId,
+			Authentication authentication
+	) {
+		return ApiResponse.ok(teamService.endProject(currentUserId(authentication), teamId));
+	}
+
 	@PatchMapping("/{teamId}/password")
 	public ApiResponse<TeamPasswordResponse> updatePassword(
 			@PathVariable Long teamId,

@@ -8,6 +8,7 @@ export { Alert } from './Alert';
 export { SegmentedControl } from './SegmentedControl';
 export { MarkdownView } from './MarkdownView';
 export { StatTile } from './StatTile';
+export { GrowthTree } from '../growth/GrowthTree';
 export { Avatar } from './Avatar';
 export { StatusDot } from './StatusDot';
 export { IconButton } from './IconButton';

@@ -21,6 +21,7 @@ export type TeamDetail = {
   inviteCode: string | null;
   leader: UserSummary;
   myRole: TeamRole;
+  endedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };

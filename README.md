@@ -98,16 +98,4 @@ Gemini 기반 기능을 사용하려면 백엔드 실행 전에 `GEMINI_API_KEY`
 | DB 스키마 | [docs/submission/WEEK1_DB_SCHEMA.md](docs/submission/WEEK1_DB_SCHEMA.md) |
 | API 문서 | [docs/submission/WEEK1_API_SPEC.md](docs/submission/WEEK1_API_SPEC.md) |
 | 배포/실행 문서 | [docs/RUNBOOK.md](docs/RUNBOOK.md) |
-| 테스트 결과 | [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md) |
-| 발표 스크립트 | [docs/DEMO_PRESENTATION_SCRIPT.md](docs/DEMO_PRESENTATION_SCRIPT.md) |
 | 회고 문서 | [docs/submission/RETROSPECTIVE.md](docs/submission/RETROSPECTIVE.md) |
-| Notion 작성 초안 | [docs/submission/NOTION_PAGE_DRAFT.md](docs/submission/NOTION_PAGE_DRAFT.md) |
-| Notion 쇼케이스 초안 | [docs/submission/NOTION_SHOWCASE_PAGE.md](docs/submission/NOTION_SHOWCASE_PAGE.md) |
-
-## Verification
-
-- Backend unit/service tests: PASS
-- Frontend production build: PASS
-- Deployed API demo flow: PASS
-- Browser smoke test on deployed service: PASS
-- Demo screenshots: prepared under `docs/assets/demo/`

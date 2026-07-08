@@ -41,6 +41,7 @@
 | 필수 속성 작성 | 수동 필요 |
 | 추가 링크 속성 | 선택 |
 | 본문 작성 | `docs/submission/NOTION_PAGE_DRAFT.md` 사용 |
+| 쇼케이스형 본문 | `docs/submission/NOTION_SHOWCASE_PAGE.md` 사용 |
 | GitHub 링크 연결 | 수동 필요 |
 | 배포 링크 연결 | 수동 필요 |
 

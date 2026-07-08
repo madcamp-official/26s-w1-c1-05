@@ -1,0 +1,138 @@
+.ds-markdown {
+  border: var(--border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--paper);
+  padding: 16px 18px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ds-markdown-empty {
+  color: var(--gray-400);
+  font-size: 13.5px;
+}
+
+.ds-markdown h1,
+.ds-markdown h2,
+.ds-markdown h3,
+.ds-markdown h4 {
+  margin: 18px 0 8px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+.ds-markdown h1:first-child,
+.ds-markdown h2:first-child,
+.ds-markdown h3:first-child,
+.ds-markdown p:first-child {
+  margin-top: 0;
+}
+
+.ds-markdown h1 {
+  font-size: 20px;
+  padding-bottom: 6px;
+  border-bottom: var(--border-hairline);
+}
+
+.ds-markdown h2 {
+  font-size: 17px;
+}
+
+.ds-markdown h3 {
+  font-size: 15px;
+}
+
+.ds-markdown h4 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-600);
+}
+
+.ds-markdown p {
+  margin: 0 0 10px;
+}
+
+.ds-markdown ul,
+.ds-markdown ol {
+  margin: 0 0 10px;
+  padding-left: 22px;
+}
+
+.ds-markdown li {
+  margin: 3px 0;
+}
+
+.ds-markdown li > ul,
+.ds-markdown li > ol {
+  margin-bottom: 0;
+}
+
+.ds-markdown code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  background: var(--gray-100);
+  border-radius: var(--radius-sm);
+  padding: 1.5px 5px;
+}
+
+.ds-markdown pre {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: var(--gray-100);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+}
+
+.ds-markdown pre code {
+  background: none;
+  padding: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.ds-markdown blockquote {
+  margin: 0 0 10px;
+  padding: 4px 14px;
+  border-left: 3px solid var(--gray-300);
+  color: var(--gray-600);
+}
+
+.ds-markdown hr {
+  border: none;
+  border-top: var(--border-hairline);
+  margin: 16px 0;
+}
+
+.ds-markdown table {
+  border-collapse: collapse;
+  margin: 0 0 12px;
+  font-size: 13px;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.ds-markdown th,
+.ds-markdown td {
+  border: var(--border-hairline);
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.ds-markdown th {
+  background: var(--bg);
+  font-weight: 600;
+}
+
+.ds-markdown a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ds-markdown input[type='checkbox'] {
+  margin-right: 6px;
+}

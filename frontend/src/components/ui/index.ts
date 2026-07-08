@@ -6,6 +6,7 @@ export { EmptyState } from './EmptyState';
 export { LoadingState } from './LoadingState';
 export { Alert } from './Alert';
 export { SegmentedControl } from './SegmentedControl';
+export { MarkdownView } from './MarkdownView';
 export { StatTile } from './StatTile';
 export { Avatar } from './Avatar';
 export { StatusDot } from './StatusDot';

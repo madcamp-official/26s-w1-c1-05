@@ -37,6 +37,12 @@ export function getDashboard(teamId: number) {
   return request<TeamDashboard>(`/teams/${teamId}/dashboard`);
 }
 
+export function endTeam(teamId: number) {
+  return request<TeamDetail>(`/teams/${teamId}/end`, {
+    method: 'POST',
+  });
+}
+
 export function getLeaderboard(teamId: number) {
   return request<TeamLeaderboardRow[]>(`/teams/${teamId}/leaderboard`);
 }

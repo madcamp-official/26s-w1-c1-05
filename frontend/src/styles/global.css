@@ -2648,7 +2648,8 @@ p {
   background: oklch(0.62 0.13 145);
   z-index: 80;
   pointer-events: none;
-  transition: opacity 0.55s ease;
+  clip-path: circle(150% at 50% 50%);
+  transition: clip-path 0.7s cubic-bezier(0.7, 0.1, 0.6, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

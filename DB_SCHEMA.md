@@ -88,6 +88,7 @@ erDiagram
     VARCHAR password_hash
     VARCHAR invite_code UQ
     BIGINT leader_user_id FK_NN
+    DATETIME ended_at
     DATETIME created_at NN
     DATETIME updated_at NN
   }
@@ -233,10 +234,13 @@ erDiagram
 | `password_hash` | `VARCHAR(255)` | N |  | 팀 가입 비밀번호 해시 |
 | `invite_code` | `VARCHAR(16)` | N | UQ | 팀 가입 초대코드 |
 | `leader_user_id` | `BIGINT` | Y | FK | 현재 팀장 사용자 ID |
+| `ended_at` | `DATETIME(6)` | N |  | 프로젝트 종료(wrap-up) 시각 |
 | `created_at` | `DATETIME(6)` | Y |  | 생성 시각 |
 | `updated_at` | `DATETIME(6)` | Y |  | 수정 시각 |
 
 제약:
+
+- `ended_at`이 `NULL`이면 아직 종료하지 않은 프로젝트다. 종료 후에도 팀 활동은 계속 가능하다.
 
 - `name`은 unique다.
 - `password_hash`가 `NULL`이면 공개 팀이다.
@@ -499,6 +503,7 @@ CREATE TABLE teams (
   password_hash VARCHAR(255) NULL,
   invite_code VARCHAR(16) NULL,
   leader_user_id BIGINT NOT NULL,
+  ended_at DATETIME(6) NULL,
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),

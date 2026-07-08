@@ -72,7 +72,8 @@ export function TeamLayout() {
     { to: `${basePath}/spec-documents`, label: 'Spec', icon: FileText, count: specCount },
     { to: `${basePath}/tasks`, label: 'Task', icon: ListChecks, count: dashboard?.task.incompleteCount },
     { to: `${basePath}/retrospectives`, label: 'Retro', icon: RotateCcw, count: dashboard?.retrospective.totalCount },
-    ...(dashboard && dashboard.task.totalCount > 0 && dashboard.task.incompleteCount === 0
+    // Only appears once the project has been ended from the dashboard.
+    ...(team?.endedAt
       ? [{ to: `${basePath}/wrapup`, label: 'Wrap-up', icon: Sparkles } satisfies NavItem]
       : []),
     { to: `${basePath}/members`, label: 'Members', icon: Users, count: dashboard?.memberCount },

@@ -13,6 +13,7 @@ public record TeamDetailResponse(
 		String inviteCode,
 		UserSummaryResponse leader,
 		TeamRole myRole,
+		LocalDateTime endedAt,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt
 ) {

@@ -13,7 +13,6 @@ import type { Retrospective } from '../../types/retrospective';
 import type { TeamDetail, TeamLeaderboardRow, TeamMember } from '../../types/team';
 
 const LEAF_GREENS = ['oklch(0.72 0.11 138)', 'oklch(0.62 0.13 145)', 'oklch(0.5 0.12 150)', 'oklch(0.62 0.13 145)', 'oklch(0.76 0.1 132)'];
-const SPLIT_COLORS = ['oklch(0.5 0.12 148)', 'var(--gray-600)', 'var(--gray-400)', 'var(--gray-300)', 'var(--gray-150)'];
 
 export function TeamWrapUpPage() {
   const { teamId } = useParams();
@@ -28,9 +27,10 @@ export function TeamWrapUpPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [arriving, setArriving] = useState(() => sessionStorage.getItem('wrapup-arrival') === '1');
-  const introSeenKey = `wrapup-intro-seen-${numericTeamId}`;
+  // Arriving from the dashboard's "End project" button plays the animated intro;
+  // opening the sidebar Wrap-up tab goes straight to the clean report.
   const [mode, setMode] = useState<'intro' | 'static'>(() =>
-    localStorage.getItem(`wrapup-intro-seen-${Number(teamId)}`) ? 'static' : 'intro',
+    sessionStorage.getItem('wrapup-arrival') === '1' ? 'intro' : 'static',
   );
   const [step, setStep] = useState(0);
   const lastNavRef = useRef(0);
@@ -72,30 +72,24 @@ export function TeamWrapUpPage() {
       return;
     }
     sessionStorage.removeItem('wrapup-arrival');
-    const id = window.setTimeout(() => setArriving(false), 600);
+    const id = window.setTimeout(() => setArriving(false), 800);
     return () => window.clearTimeout(id);
   }, [arriving]);
 
   const stats = useMemo(() => computeWrapStats(tasks, meetings, retros, leaderboard), [tasks, meetings, retros, leaderboard]);
 
   const cards = useMemo(
-    () => buildCards(stats, members.map((m) => m.user.name)),
-    [stats, members],
+    () => buildCards(stats, members.map((m) => m.user.name), leaderboard),
+    [stats, members, leaderboard],
   );
 
   const stepCount = cards.length + 2; // hero + cards + outro
 
   const stepBy = useCallback(
     (dir: number) => {
-      setStep((current) => {
-        const next = Math.max(0, Math.min(stepCount - 1, current + dir));
-        if (next === stepCount - 1) {
-          localStorage.setItem(introSeenKey, '1');
-        }
-        return next;
-      });
+      setStep((current) => Math.max(0, Math.min(stepCount - 1, current + dir)));
     },
-    [stepCount, introSeenKey],
+    [stepCount],
   );
 
   useEffect(() => {
@@ -154,11 +148,11 @@ export function TeamWrapUpPage() {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, textAlign: 'center' }}>
       <p style={{ margin: 0, fontSize: 15, color: 'var(--gray-600)' }}>See you next sprint, team.</p>
       <div style={{ display: 'flex', gap: 10 }}>
-        <Button variant="secondary" size="sm" onClick={() => window.print()}>
-          Export report
-        </Button>
-        <Button variant="ghost" size="sm" onClick={() => setMode('static')}>
+        <Button variant="secondary" size="sm" onClick={() => setMode('static')}>
           View full report
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/teams/${numericTeamId}`)}>
+          Back to dashboard
         </Button>
       </div>
     </div>
@@ -166,7 +160,7 @@ export function TeamWrapUpPage() {
 
   return (
     <div className="page-container">
-      {arriving && <div className="wrap-arrival-overlay" ref={fadeOutOnMount} />}
+      {arriving && <div className="wrap-arrival-overlay" ref={wipeOutOnMount} />}
       <Alert message={errorMessage} />
 
       {mode === 'intro' ? (
@@ -196,9 +190,6 @@ export function TeamWrapUpPage() {
               <Button variant="ghost" size="sm" onClick={() => navigate(`/teams/${numericTeamId}`)}>
                 ← Back to dashboard
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => window.print()}>
-                Export report
-              </Button>
             </div>
           </div>
 
@@ -215,13 +206,12 @@ export function TeamWrapUpPage() {
   );
 }
 
-/* The arrival overlay starts opaque green (continuing the dashboard's circle
-   wipe) and fades out once mounted. */
-function fadeOutOnMount(el: HTMLDivElement | null) {
+/* The arrival overlay starts as solid green (continuing the dashboard's circle
+   wipe) and shrinks back into a disappearing circle, revealing the wrap-up. */
+function wipeOutOnMount(el: HTMLDivElement | null) {
   if (!el) return;
-  el.style.opacity = '1';
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    el.style.opacity = '0';
+    el.style.clipPath = 'circle(0% at 50% 50%)';
   }));
 }
 
@@ -280,14 +270,6 @@ function computeWrapStats(tasks: Task[], meetings: Meeting[], retros: Retrospect
   const mostCreated = maxEntry(createdCounts);
   const mostRetros = maxEntry(retroCounts);
 
-  // How the completed tasks split across assignees (multi-assignee → "Paired").
-  const splitCounts = new Map<string, number>();
-  for (const task of doneTasks) {
-    const key = task.assignees.length > 1 ? 'Paired' : task.assignees[0]?.name ?? 'Unassigned';
-    splitCounts.set(key, (splitCounts.get(key) ?? 0) + 1);
-  }
-  const split = [...splitCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-
   // Longest retrospective / meeting by content length.
   const longestRetro = retros
     .map((r) => ({ retro: r, length: (r.yesterdayWork ?? '').length + (r.todayPlan ?? '').length + (r.note ?? '').length }))
@@ -328,14 +310,13 @@ function computeWrapStats(tasks: Task[], meetings: Meeting[], retros: Retrospect
     topContributor,
     mostCreated,
     mostRetros,
-    split,
     longestRetro,
     longestMeeting,
     chemistry,
   };
 }
 
-function buildCards(stats: WrapStats, memberNames: string[]): WrapCard[] {
+function buildCards(stats: WrapStats, memberNames: string[], leaderboard: TeamLeaderboardRow[]): WrapCard[] {
   const cards: WrapCard[] = [];
 
   cards.push({
@@ -426,22 +407,33 @@ function buildCards(stats: WrapStats, memberNames: string[]): WrapCard[] {
               </div>
             )}
           </div>
-          {stats.split.length > 0 && (
+          {leaderboard.length > 0 && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: 'var(--border-hairline)' }}>
               <span className="eyebrow" style={{ display: 'block', marginBottom: 10 }}>
-                How the {stats.tasksCompleted} tasks split
+                Final leaderboard
               </span>
-              <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', gap: 2 }} aria-hidden="true">
-                {stats.split.map(([name, count], i) => (
-                  <span style={{ flex: count, background: SPLIT_COLORS[i] }} key={name} />
-                ))}
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', marginTop: 10, fontSize: 12.5, color: 'var(--gray-600)' }}>
-                {stats.split.map(([name, count], i) => (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }} key={name}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: SPLIT_COLORS[i] }} />
-                    {firstName(name)} {count}
-                  </span>
+              <div style={{ display: 'grid', gap: 10 }}>
+                {leaderboard.slice(0, 5).map((row) => (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }} key={row.user.id}>
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: 12,
+                        width: 22,
+                        fontWeight: row.rank === 1 ? 600 : 400,
+                        color: row.rank === 1 ? 'oklch(0.5 0.12 148)' : 'var(--gray-500)',
+                      }}
+                    >
+                      #{row.rank}
+                    </span>
+                    <Avatar name={row.user.name} size="sm" />
+                    <span style={{ flex: 1, fontSize: 13.5, fontWeight: row.rank === 1 ? 600 : 400 }}>
+                      {firstName(row.user.name)}
+                    </span>
+                    <span className="mono" style={{ fontSize: 12, color: 'var(--gray-500)' }}>
+                      {row.completedTaskCount} tasks · {row.points} pts
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>

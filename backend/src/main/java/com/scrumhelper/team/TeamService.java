@@ -261,6 +261,14 @@ public class TeamService {
 	}
 
 	@Transactional
+	public TeamDetailResponse endProject(Long currentUserId, Long teamId) {
+		Team team = findTeam(teamId);
+		TeamMember membership = requireMembership(teamId, currentUserId);
+		team.markEnded();
+		return toDetailResponse(team, membership.getRole());
+	}
+
+	@Transactional
 	public TeamPasswordResponse updatePassword(Long currentUserId, Long teamId, UpdateTeamPasswordRequest request) {
 		Team team = findTeam(teamId);
 		requireLeader(teamId, currentUserId);
@@ -353,6 +361,7 @@ public class TeamService {
 				team.getInviteCode(),
 				UserSummaryResponse.from(team.getLeader()),
 				myRole,
+				team.getEndedAt(),
 				team.getCreatedAt(),
 				team.getUpdatedAt()
 		);

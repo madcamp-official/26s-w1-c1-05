@@ -1,5 +1,6 @@
 # Local planning notes that are not part of the deliverable.
 local-notes/
+tmp/
 
 # Environment and secrets.
 .env

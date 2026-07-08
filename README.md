@@ -102,6 +102,7 @@ Gemini 기반 기능을 사용하려면 백엔드 실행 전에 `GEMINI_API_KEY`
 | 발표 스크립트 | [docs/DEMO_PRESENTATION_SCRIPT.md](docs/DEMO_PRESENTATION_SCRIPT.md) |
 | 회고 문서 | [docs/submission/RETROSPECTIVE.md](docs/submission/RETROSPECTIVE.md) |
 | Notion 작성 초안 | [docs/submission/NOTION_PAGE_DRAFT.md](docs/submission/NOTION_PAGE_DRAFT.md) |
+| Notion 쇼케이스 초안 | [docs/submission/NOTION_SHOWCASE_PAGE.md](docs/submission/NOTION_SHOWCASE_PAGE.md) |
 
 ## Verification
 

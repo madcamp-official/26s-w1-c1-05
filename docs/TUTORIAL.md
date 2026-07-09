@@ -2,7 +2,7 @@
 
 Scrum Helper를 처음 사용하는 팀원을 위한 단계별 가이드입니다. 회원가입부터 프로젝트를 마무리하는 Wrap-up까지, 실제 사용 순서대로 따라갈 수 있게 구성했습니다.
 
-- 배포 서비스: <https://anjonghwa.madcamp-kaist.org>
+- 배포 서비스: <https://scrumhelper.madcamp-kaist.org>
 - 로컬 실행 방법: [RUNBOOK.md](RUNBOOK.md)
 
 ## 한눈에 보는 흐름
